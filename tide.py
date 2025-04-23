@@ -67,6 +67,8 @@ class Tide:
         self.last_ndbc_time = current_time
         self.last_alert_time = current_time
         self.last_weather_time = current_time
+        self.last_station1_time = current_time
+        self.last_station2_time = current_time
         self.main_loop_count = 0
         self.tide1 = 0
         self.tide2 = 0
@@ -173,14 +175,18 @@ class Tide:
                 station = int(tide_readings['S'])
                 volts = float(tide_readings['V'])/1000
                 rssi = int(tide_readings['P'])
-                if station == 1 and self.stationid == 1:
-                    self.display.station1_battery_voltage_tk_var.set(str(volts))    
-                    self.display.station1_signal_strength_tk_var.set(str(rssi))    
-                    tide = round(self.station1cal-tide_mm/304.8, 2)
-                elif station == 2 and self.stationid == 2:
-                    self.display.station2_battery_voltage_tk_var.set(str(volts))    
-                    self.display.station2_signal_strength_tk_var.set(str(rssi))    
-                    tide = round(self.station2cal-tide_mm/304.8, 2)
+                if station == 1:
+                    self.last_station1_time = current_time
+                    if self.stationid == 1:
+                        self.display.station_battery_voltage_tk_var.set(str(volts))    
+                        self.display.station_signal_strength_tk_var.set(str(rssi))    
+                        tide = round(self.station1cal-tide_mm/304.8, 2)
+                elif station == 2:
+                    self.last_station2_time = current_time
+                    if self.stationid == 2:
+                        self.display.station_battery_voltage_tk_var.set(str(volts))    
+                        self.display.station_signal_strength_tk_var.set(str(rssi))    
+                        tide = round(self.station2cal-tide_mm/304.8, 2)
                 if tide != 0:
                     self.tide_list = self.process.update_tide_list(self.tide_list, tide)
             except Exception as errmsg:
@@ -237,6 +243,24 @@ class Tide:
             self.display.active_station_tk_var.set(str(self.stationid))    
             predict_list = predict.tide_predict()
             self.display.tide(predict_list, self.tide_list)
+            alt_station = 2 if self.stationid == 1 else 1
+            if ((self.stationid == 1 and current_time > 
+              self.last_station1_time + timedelta(minutes=5)) or
+              (self.stationid == 2 and current_time > 
+              self.last_station2_time + timedelta(minutes=5))):
+                twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
+                email_recipient = cons.ADMIN_EMAIL[0]
+                text = (f'Station {self.stationid} has not reported in '+
+                  f'over 5 minutes, switching to Station {str(alt_station)}')
+                notify.send_SMS(twilio_phone_recipient, text)
+                email_headers = ["From: " + cons.EMAIL_USERNAME,
+                  "Subject: BBI Tide Station Alert Message", "To: "
+                  +email_recipient,"MIME-Versiion:1.0",
+                  "Content-Type:text/html"]
+                email_headers =  "\r\n".join(email_headers)
+                notify.send_email(email_recipient, email_headers, text)
+                self.stationid = alt_station
+                db.update_stationid(alt_station)                
             #print (tide_list)
 #
 # Start the ball rolling

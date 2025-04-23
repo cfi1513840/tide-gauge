@@ -208,3 +208,9 @@ class DbManage:
             
         except Exception as errmsg:
             logging.warning('fetch_tide_24h: '+str(errmsg))
+
+    def update_stationid(self, stationid):
+        self.sql_cursor.execute(f"update iparams set stationid = {stationid}")
+        self.sql_connection.commit()
+        
+        

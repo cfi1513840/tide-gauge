@@ -55,10 +55,8 @@ class TideDisplay:
         self.ndbc_title_tk_var = StringVar()
         self.tk_display_width_tk_var = StringVar()
         self.display_predicted_tide_tk_var = StringVar()
-        self.station1_battery_voltage_tk_var = StringVar()
-        self.station2_battery_voltage_tk_var = StringVar()
-        self.station1_signal_strength_tk_var = StringVar()
-        self.station2_signal_strength_tk_var = StringVar()
+        self.station_battery_voltage_tk_var = StringVar()
+        self.station_signal_strength_tk_var = StringVar()
         self.active_station_tk_var = StringVar()
         self.active_station_tk_var.set(str(self.active_station))
         self.tk_display_width_tk_var.set('1')
@@ -236,33 +234,19 @@ class TideDisplay:
             font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
             width = 14, borderwidth = 0, highlightthickness=0).grid(
             row = 2, column = 2, sticky = tk.NSEW)
-        if self.active_station == 1:
-            tk.Label(sel_frame,bg = 'snow', textvariable =
-                    self.station1_battery_voltage_tk_var,
-                    font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                    width = 5).grid(row = 2, column = 3,
-                    sticky = tk.NSEW)
-        else:
-            tk.Label(sel_frame,bg = 'snow', textvariable =
-                    self.station2_battery_voltage_tk_var,
-                    font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                    width = 5).grid(row = 2, column = 3,
-                    sticky = tk.NSEW)
+        tk.Label(sel_frame,bg = 'snow', textvariable =
+                self.station_battery_voltage_tk_var,
+                font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
+                width = 5).grid(row = 2, column = 3,
+                sticky = tk.NSEW)
         tk.Label(sel_frame,bg = 'LightBlue1', text = 'Sig Strength',
                 font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
                 width = 12).grid(row = 2, column = 4, sticky = tk.NSEW)
-        if self.active_station == 1:
-            tk.Label(sel_frame,bg = 'snow', textvariable =
-                    self.station1_signal_strength_tk_var,
-                    font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                    width = 8).grid(row = 2, column = 5,
-                    sticky = tk.NSEW)
-        else:
-            tk.Label(sel_frame,bg = 'snow', textvariable =
-                    self.station2_signal_strength_tk_var,
-                    font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                    width = 8).grid(row = 2, column = 5,
-                    sticky = tk.NSEW)
+        tk.Label(sel_frame,bg = 'snow', textvariable =
+                self.station_signal_strength_tk_var,
+                font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
+                width = 8).grid(row = 2, column = 5,
+                sticky = tk.NSEW)
         tk.Label(sel_frame,bg = 'LightBlue1', text = 'Plot Span',
                 font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
                 width = 12, borderwidth = 0, highlightthickness=0).grid(
