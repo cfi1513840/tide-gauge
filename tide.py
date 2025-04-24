@@ -11,31 +11,13 @@ weather reports. Combine current observations with atmospheric and marine
 forecasts for local display and website presentation.
 """
 import sys
-import json
-import math
-import smtplib
-import socket
-import sqlite3
-import time
-import smtplib
-import tkinter as tk
-from tkinter import StringVar
-from datetime import datetime, timedelta, timezone
-from influxdb_client import InfluxDBClient, Point, WritePrecision
-from influxdb_client.client.write_api import SYNCHRONOUS
-from cryptography.fernet import Fernet
-from suntime import Sun, SunTimeException
-from twilio.rest import Client
-import feedparser
-#import serial
-import requests
+from datetime import datetime, timedelta
 import logging
 import tidehelper
 import tideget
 import tidedatabase
 import tidepredict
 import tideprocess
-
 #
 # Setup Logging to console and file
 #
@@ -60,6 +42,7 @@ sensor = tideget.ReadSensor(cons, state)
 predict = tidepredict.TidePredict(cons, db)
 
 class Tide:
+    """The Tide class is the primary tide station processor and scheduler"""
     def __init__(self):
         current_time = datetime.now()
         self.display = None
@@ -83,7 +66,10 @@ class Tide:
                 name, value = arg.split("=", 1)
                 if name == "test":
                     state.test_mode = int(value)
-        self.tk_mode = False if 'notk' in sys.argv else True
+        if 'notk' in sys.argv:
+            self.tk_mode = False
+        else:
+            self.tk_mode = True
         if self.tk_mode:
             import tidedisplay
             self.iparams_dict = db.fetch_iparams()
@@ -101,13 +87,13 @@ class Tide:
             twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
             email_recipient = cons.ADMIN_EMAIL[0]
             text = f'Tide Station startup at {str(datetime.now())}'
-            #notify.send_SMS(twilio_phone_recipient, text)
+            notify.send_SMS(twilio_phone_recipient, text)
             email_headers = ["From: " + cons.EMAIL_USERNAME,
               "Subject: BBI Tide Station Alert Message", "To: "
               +email_recipient,"MIME-Versiion:1.0",
               "Content-Type:text/html"]
             email_headers =  "\r\n".join(email_headers)
-            #notify.send_email(email_recipient, email_headers, text)
+            notify.send_email(email_recipient, email_headers, text)
             weather = getwx.weather_underground()
             if not weather:
                 weather = getwx.open_weather_map()
@@ -117,7 +103,7 @@ class Tide:
             ndbc_data = getndbc.read_station()
             #print (state.ndbc_data)
             if ndbc_data:
-                db.insert_ndbc_data(ndbc_data)            
+                db.insert_ndbc_data(ndbc_data)
             self.display.update(weather, ndbc_data)
             if 'noaa' in sys.argv:
                 noaa_tide = getnoaa.noaa_tide()
@@ -135,8 +121,9 @@ class Tide:
             if predict_list and self.tide_list:
                 self.display.tide(predict_list, tide_list)
             self.display.master.mainloop()
-    
+
     def main(self):
+        """The primary scheduling loop"""
         current_time = datetime.now()
         current_day = datetime.strftime(current_time, "%d")
         if self.display:
@@ -154,8 +141,8 @@ class Tide:
                   tdelta.microseconds+tdelta.seconds*1000000)/5000)
                 self.display.master.after(5000-correction, self.main)
                 self.newtime = self.newtime + timedelta(seconds=5)
-   
-        self.main_loop_count += 1 
+
+        self.main_loop_count += 1
         #
         # The task scheduler operates as a loop that executes once every
         # five seconds. The tide sensor is read every iteration. Other tasks
@@ -163,11 +150,11 @@ class Tide:
         # the databases are scheduled at different intervals during
         # each minute to distribute CPU time and to avoid database access
         # conflicts. NOAA tide predictions are updated daily.
-        #    
+        #
         tide_readings = sensor.read_sensor()
         if tide_readings:
             db.insert_tide(tide_readings)
-            tide = 0
+            tide_ft = 0
             volts = 0
             rssi = 0
             try:
@@ -178,21 +165,26 @@ class Tide:
                 if station == 1:
                     self.last_station1_time = current_time
                     if self.stationid == 1:
-                        self.display.station_battery_voltage_tk_var.set(str(volts))    
-                        self.display.station_signal_strength_tk_var.set(str(rssi))    
-                        tide = round(self.station1cal-tide_mm/304.8, 2)
+                        self.display.station_battery_voltage_tk_var.set(
+                          str(volts))
+                        self.display.station_signal_strength_tk_var.set(
+                          str(rssi))
+                        tide_ft = round(self.station1cal-tide_mm/304.8, 2)
                 elif station == 2:
                     self.last_station2_time = current_time
                     if self.stationid == 2:
-                        self.display.station_battery_voltage_tk_var.set(str(volts))    
-                        self.display.station_signal_strength_tk_var.set(str(rssi))    
-                        tide = round(self.station2cal-tide_mm/304.8, 2)
-                if tide != 0:
-                    self.tide_list = self.process.update_tide_list(self.tide_list, tide)
-            except Exception as errmsg:
+                        self.display.station_battery_voltage_tk_var.set(
+                          str(volts))
+                        self.display.station_signal_strength_tk_var.set(
+                          str(rssi))
+                        tide_ft = round(self.station2cal-tide_mm/304.8, 2)
+                if tide_ft != 0:
+                    self.tide_list = self.process.update_tide_list(
+                      self.tide_list, tide_ft)
+            except:
                 pass
 
-        if (self.main_loop_count == 2 and 
+        if (self.main_loop_count == 2 and
           current_time >= self.last_weather_time + timedelta(minutes=3)):
             #
             # Local weather is updated every three minutes
@@ -207,8 +199,8 @@ class Tide:
             if weather:
                 db.insert_weather(weather)
                 self.display.update(weather, ndbc_data)
-                
-        if (self.main_loop_count == 4 and 
+
+        if (self.main_loop_count == 4 and
           current_time >= self.last_ndbc_time + timedelta(minutes=10)):
             #
             # The marine observation is updated every 10 minutes
@@ -225,7 +217,7 @@ class Tide:
             #
             # The display title bar and NOAA tide predictions are update daily
             #
-            self.save_the_day = current_day              
+            self.save_the_day = current_day
             display_date_and_time = sunny.get_suntimes(cons)
             self.display.master.title("BBI Tide Monitor Panel "+
               display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
@@ -233,20 +225,20 @@ class Tide:
             noaa_tide = getnoaa.noaa_tide()
             if noaa_tide:
                 db.insert_tide_predicts(noaa_tide)
-                 
+
         if self.main_loop_count >= 12:
             self.main_loop_count = 0
             self.iparams_dict = db.fetch_iparams()
             self.stationid = self.iparams_dict.get('stationid')
             self.station1cal = self.iparams_dict.get('station1cal')
             self.station2cal = self.iparams_dict.get('station2cal')
-            self.display.active_station_tk_var.set(str(self.stationid))    
+            self.display.active_station_tk_var.set(str(self.stationid))
             predict_list = predict.tide_predict()
             self.display.tide(predict_list, self.tide_list)
             alt_station = 2 if self.stationid == 1 else 1
-            if ((self.stationid == 1 and current_time > 
+            if ((self.stationid == 1 and current_time >
               self.last_station1_time + timedelta(minutes=5)) or
-              (self.stationid == 2 and current_time > 
+              (self.stationid == 2 and current_time >
               self.last_station2_time + timedelta(minutes=5))):
                 twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
                 email_recipient = cons.ADMIN_EMAIL[0]
@@ -260,13 +252,9 @@ class Tide:
                 email_headers =  "\r\n".join(email_headers)
                 notify.send_email(email_recipient, email_headers, text)
                 self.stationid = alt_station
-                db.update_stationid(alt_station)                
+                db.update_stationid(alt_station)
             #print (tide_list)
 #
 # Start the ball rolling
 #
 tide = Tide()
-
-
-    
-
