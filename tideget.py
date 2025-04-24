@@ -21,7 +21,8 @@ class GetWeather:
           self.cons.TIME_FORMAT)
         try:
             wxundurl = ('https://api.weather.com/v2/pws/observations/'+
-                    'current?stationId=KSCSAINT41&format=json&units=e&'+
+                    f'current?stationId={self.cons.WX_UND_STATION_ID}&'+
+                    'format=json&units=e&'+
                     f'apiKey={self.cons.WEATHER_UNDERGROUND_API}')
             response = requests.get(wxundurl)
         except Exception as errmsg:

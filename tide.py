@@ -100,7 +100,7 @@ class Tide:
             self.main()
             twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
             email_recipient = cons.ADMIN_EMAIL[0]
-            text = f'testing at {str(datetime.now())}'
+            text = f'Tide Station startup at {str(datetime.now())}'
             #notify.send_SMS(twilio_phone_recipient, text)
             email_headers = ["From: " + cons.EMAIL_USERNAME,
               "Subject: BBI Tide Station Alert Message", "To: "

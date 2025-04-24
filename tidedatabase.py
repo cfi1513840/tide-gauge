@@ -9,22 +9,14 @@ class DbManage:
     """Manages access to the sqlite3 and InfluxDB databases"""
     def __init__(self, cons):
         
-        #self.sqlpath = cons.SQLPATH
         self.cons = cons
-        self.sqlpath = 'tides.db'
+        self.sqlpath = cons.SQLPATH
         self.influxdb_org = cons.INFLUXDB_ORG
         self.influxdb_client = cons.INFLUXDB_CLIENT
         self.influxdb_query_api = cons.INFLUXDB_QUERY_API
         self.sql_connection = sqlite3.connect(f'{self.sqlpath}')
         self.sql_cursor = self.sql_connection.cursor()
         self.local_tz = pytz.timezone('US/Eastern')
-
-        #self.influx_query = f'from(bucket:"TideData") \
-        #   |> range(start: -5m) \
-        #   |> filter(fn:(r) => r._measurement == "tide_station") \
-        #   |> filter(fn: (r) => r.location == "Beaufort River SC") \
-        #   |> filter(fn: (r) => r.sensor_num == "1") \
-        #   |> filter(fn: (r) => r._field == "sensor_measurement_mm")'
    
     def insert_weather(self, weather):
         now = datetime.now()
@@ -34,7 +26,7 @@ class DbManage:
           weather.get('temperature'), 
           weather.get('baro'), 
           weather.get('humidity'), 
-          weather.get('wind_speed'), 
+          weather.get('wind_speed'),           
           weather.get('wind_direction_degrees'), 
           weather.get('wind_gust'),0,
           #weather.get('baro_trend'), 

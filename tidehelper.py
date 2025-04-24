@@ -10,6 +10,8 @@ from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from cryptography.fernet import Fernet
 import logging
+import os
+from dotenv import load_dotenv, find_dotenv
 
 class Constants:
     """
@@ -71,15 +73,23 @@ class Constants:
     OPEN_WEATHERMAP_API = secure_dict['WXOPENAPI']
     WEATHER_UNDERGROUND_API = secure_dict['WXUNDAPI']
 
-    LATITUDE = 32.4
-    LONGITUDE = -80.7
+    #LATITUDE = 32.4
+    #LONGITUDE = -80.7
+    envfile = find_dotenv('tide.env')
+    if load_dotenv(envfile):
+        LATITUDE = float(os.getenv('STATION_LATITUDE'))
+        LONGITUDE = float(os.getenv('STATION_LONGITUDE'))
+        SQLPATH = os.getenv('SQLPATH')
+        NDBC_STATIONS = os.getenv('NDBC_STATIONS').split(",")
+        NOAA_STATION = os.getenv('NOAA_STATION')
+        WX_UND_STATION_ID = os.getenv('WX_UND_STATION_ID')
+
+    else:
+        print ('Unable to load Environment file')
 
     FULL_TIDE = math.pi
     HALF_TIDE = math.pi/2
     HOSTNAME = socket.gethostname()
-    #INFLUXDB_CLIENT = InfluxDBClient(
-    #        url='http://localhost:8086',
-    #        token=INFLUXDB_TOKEN, org=INFLUXDB_ORG)
     INFLUXDB_COLUMN_NAMES = {
         "S": "sensor_num",
         "C": "message_count",
@@ -88,13 +98,11 @@ class Constants:
         "V": "battery_milliVolts",
         "P": "signal_strength",
         }
-    LOGFILE_PATH = 'bbitest.log'
-    PREDICTED_TIDE_TABLE_NAME = 'predicts'
     RADIANS_PER_SECOND = math.pi*2/91080
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-    SQLPATH = 'bbitides.db'
-    NDBC_STATIONS = ['41033', '41067']
-    NOAA_STATION = '8668686'
+    #SQLPATH = 'bbitides.db'
+    #NDBC_STATIONS = ['41033', '41067']
+    #NOAA_STATION = '8668686'
 
 class TideState:
     
