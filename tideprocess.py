@@ -9,7 +9,6 @@ class ProcTide:
         self.max_tide = -99
         self.min_tide = 99
         for index, entry in enumerate(self.tide_list):
-            self.tide_list[index][2] = self.trend
             self.index = index
             if entry[1] > self.max_tide:
                 self.max_tide = entry[1]
