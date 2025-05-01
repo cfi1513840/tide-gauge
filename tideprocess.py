@@ -1,5 +1,9 @@
 class ProcTide:
-    """Process incoming tide data and set high and low tide tags"""
+    """
+    Process tide data and set high and low tide tags.
+    The __init__ method analyzes the previous 24 hours of
+    tide measurements to detect the high and low tide events.
+    """
     def __init__(self, tide_list):
         self.tide_list = tide_list
         self.trend = ''
@@ -8,7 +12,9 @@ class ProcTide:
         self.last_average = 0
         self.max_tide = -99
         self.min_tide = 99
+        new_tide_list = []
         for index, entry in enumerate(self.tide_list):
+            new_tide_list.append([entry[0], entry[1], self.trend])
             self.index = index
             if entry[1] > self.max_tide:
                 self.max_tide = entry[1]

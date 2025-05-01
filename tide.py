@@ -18,6 +18,7 @@ import tideget
 import tidedatabase
 import tidepredict
 import tideprocess
+import tidealerts
 #
 # Setup Logging to console and file
 #
@@ -40,6 +41,7 @@ getndbc = tideget.GetNDBC(cons, notify, state)
 getnoaa = tideget.GetNOAA(cons, state)
 sensor = tideget.ReadSensor(cons, state)
 predict = tidepredict.TidePredict(cons, db)
+alerts = tidealerts.TideAlerts(cons, db, notify)
 
 class Tide:
     """The Tide class is the primary tide station processor and scheduler"""
@@ -53,8 +55,12 @@ class Tide:
         self.last_station1_time = current_time
         self.last_station2_time = current_time
         self.main_loop_count = 0
+        self.debug = 0
         self.tide1 = 0
         self.tide2 = 0
+        self.tide_ft = 99
+        self.weather = {}
+        self.ndbc_data = {}
         self.save_the_day = datetime.strftime(current_time, "%d")
         self.iparams_dict = db.fetch_iparams()
         #
@@ -78,7 +84,10 @@ class Tide:
             self.station2cal = self.iparams_dict.get('station2cal')
             self.s1enable = self.iparams_dict.get('s1enable')
             self.s2enable = self.iparams_dict.get('s2enable')
+            self.debug = self.iparams_dict.get('debug')
             display_date_and_time = sunny.get_suntimes(cons)
+            self.sunrise = display_date_and_time[3]
+            self.sunset = display_date_and_time[4]            
             self.display = tidedisplay.TideDisplay(self.stationid, cons)
             self.display.master.title("BBI Tide Monitor Panel "+
               display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
@@ -87,24 +96,23 @@ class Tide:
             twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
             email_recipient = cons.ADMIN_EMAIL[0]
             text = f'Tide Station startup at {str(datetime.now())}'
-            notify.send_SMS(twilio_phone_recipient, text)
+            notify.send_SMS(twilio_phone_recipient, text, self.debug)
             email_headers = ["From: " + cons.EMAIL_USERNAME,
               "Subject: BBI Tide Station Alert Message", "To: "
               +email_recipient,"MIME-Versiion:1.0",
               "Content-Type:text/html"]
             email_headers =  "\r\n".join(email_headers)
-            notify.send_email(email_recipient, email_headers, text)
-            weather = getwx.weather_underground()
-            if not weather:
-                weather = getwx.open_weather_map()
-            if weather:
-                db.insert_weather(weather)
+            notify.send_email(email_recipient, email_headers, text, self.debug,)
+            self.weather = getwx.weather_underground()
+            if not self.weather:
+                self.weather = getwx.open_weather_map()
+            if self.weather:
+                db.insert_weather(self.weather)
             #print ('get ndbcdata')
-            ndbc_data = getndbc.read_station()
-            #print (state.ndbc_data)
-            if ndbc_data:
-                db.insert_ndbc_data(ndbc_data)
-            self.display.update(weather, ndbc_data)
+            self.ndbc_data = getndbc.read_station()
+            if self.ndbc_data:
+                db.insert_ndbc_data(self.ndbc_data)
+            self.display.update(self.weather, self.ndbc_data)
             if 'noaa' in sys.argv:
                 noaa_tide = getnoaa.noaa_tide()
                 if noaa_tide:
@@ -154,7 +162,6 @@ class Tide:
         tide_readings = sensor.read_sensor()
         if tide_readings:
             db.insert_tide(tide_readings)
-            tide_ft = 0
             volts = 0
             rssi = 0
             try:
@@ -169,7 +176,7 @@ class Tide:
                           str(volts))
                         self.display.station_signal_strength_tk_var.set(
                           str(rssi))
-                        tide_ft = round(self.station1cal-tide_mm/304.8, 2)
+                        self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
                 elif station == 2:
                     self.last_station2_time = current_time
                     if self.stationid == 2:
@@ -177,10 +184,10 @@ class Tide:
                           str(volts))
                         self.display.station_signal_strength_tk_var.set(
                           str(rssi))
-                        tide_ft = round(self.station2cal-tide_mm/304.8, 2)
-                if tide_ft != 0:
+                        self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
+                if self.tide_ft != 99:
                     self.tide_list = self.process.update_tide_list(
-                      self.tide_list, tide_ft)
+                      self.tide_list, self.tide_ft)
             except:
                 pass
 
@@ -190,15 +197,13 @@ class Tide:
             # Local weather is updated every three minutes
             #
             self.last_weather_time = current_time
-            ndbc_data = {}
-            weather = {}
             #print ('Updating Weather')
-            weather = getwx.weather_underground()
-            if not weather:
-                weather = getwx.open_weather_map()
-            if weather:
-                db.insert_weather(weather)
-                self.display.update(weather, ndbc_data)
+            self.weather = getwx.weather_underground()
+            if not self.weather:
+                self.weather = getwx.open_weather_map()
+            if self.weather:
+                db.insert_weather(self.weather)
+                self.display.update(self.weather, self.ndbc_data)
 
         if (self.main_loop_count == 4 and
           current_time >= self.last_ndbc_time + timedelta(minutes=10)):
@@ -206,12 +211,9 @@ class Tide:
             # The marine observation is updated every 10 minutes
             #
             self.last_ndbc_time = current_time
-            weather = {}
-            ndbc_data = []
-            ndbc_data = getndbc.read_station()
-            if ndbc_data:
-                db.insert_ndbc_data(ndbc_data)
-                self.display.update(weather, ndbc_data)
+            self.ndbc_data = getndbc.read_station()
+            if self.ndbc_data:
+                db.insert_ndbc_data(self.ndbc_data)
 
         if (self.main_loop_count == 6 and self.save_the_day != current_day):
             #
@@ -219,6 +221,8 @@ class Tide:
             #
             self.save_the_day = current_day
             display_date_and_time = sunny.get_suntimes(cons)
+            self.sunrise = display_date_and_time[3]
+            self.sunset = display_date_and_time[4]            
             self.display.master.title("BBI Tide Monitor Panel "+
               display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
               " Sunset: "+display_date_and_time[2])
@@ -232,8 +236,10 @@ class Tide:
             self.stationid = self.iparams_dict.get('stationid')
             self.station1cal = self.iparams_dict.get('station1cal')
             self.station2cal = self.iparams_dict.get('station2cal')
+            self.debug = self.iparams_dict.get('debug')
             self.display.active_station_tk_var.set(str(self.stationid))
             predict_list = predict.tide_predict()
+            self.display.update(self.weather, self.ndbc_data)
             self.display.tide(predict_list, self.tide_list)
             alt_station = 2 if self.stationid == 1 else 1
             if ((self.stationid == 1 and current_time >
@@ -244,15 +250,19 @@ class Tide:
                 email_recipient = cons.ADMIN_EMAIL[0]
                 text = (f'Station {self.stationid} has not reported in '+
                   f'over 5 minutes, switching to Station {str(alt_station)}')
-                notify.send_SMS(twilio_phone_recipient, text)
+                notify.send_SMS(twilio_phone_recipient, text, self.debug)
                 email_headers = ["From: " + cons.EMAIL_USERNAME,
                   "Subject: BBI Tide Station Alert Message", "To: "
                   +email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]
                 email_headers =  "\r\n".join(email_headers)
-                notify.send_email(email_recipient, email_headers, text)
+                notify.send_email(email_recipient, email_headers, text,
+                  self.debug)
                 self.stationid = alt_station
                 db.update_stationid(alt_station)
+            if self.tide_ft != 99:
+                alerts.check_alerts(self.tide_ft, self.weather,
+                  self.ndbc_data, self.sunrise, self.sunset, self.debug)
             #print (tide_list)
 #
 # Start the ball rolling

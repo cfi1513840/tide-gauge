@@ -6,6 +6,7 @@ import json
 import socket
 from datetime import datetime, timedelta
 from suntime import Sun, SunTimeException
+import pytz
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from cryptography.fernet import Fernet
@@ -83,6 +84,7 @@ class Constants:
         NDBC_STATIONS = os.getenv('NDBC_STATIONS').split(",")
         NOAA_STATION = os.getenv('NOAA_STATION')
         WX_UND_STATION_ID = os.getenv('WX_UND_STATION_ID')
+        LOCAL_TZ = pytz.timezone(os.getenv('TIME_ZONE'))
 
     else:
         print ('Unable to load Environment file')
@@ -119,13 +121,13 @@ class SunTime:
             current_time = datetime.now()
             display_date = current_time.strftime("%b %d, %Y")
             sun = Sun(cons.LATITUDE, cons.LONGITUDE)
-            sunrise = sun.get_local_sunrise_time()
-            sunset = sun.get_local_sunset_time()
+            sunrise = sun.get_local_sunrise_time(time_zone=cons.LOCAL_TZ)
+            sunset = sun.get_local_sunset_time(time_zone=cons.LOCAL_TZ)
             if sunset < sunrise:
                 sunset = sunset + timedelta(1)
             display_sunrise = sunrise.strftime("%H:%M")
             display_sunset = sunset.strftime("%H:%M")
-            return display_date, display_sunrise, display_sunset
+            return display_date, display_sunrise, display_sunset, sunrise, sunset
         except Exception as errmsg:
             pline = (' Error processing sunrise/sunset - '+str(errmsg))
             return -1, pline
@@ -137,18 +139,24 @@ class Notify:
     def __init__(self, cons):
         self.cons = cons
     
-    def send_SMS(self, twilio_phone_recipient, text_message):
-        """Method to send status or other information via SMS text message"""
+    def send_SMS(self, twilio_phone_recipient, text_message, debug):
+        """Method to send status or alert information via SMS text message"""
+        if debug:
+            print ('SMS notify to '+ twilio_phone_recipient+'\n'+text_message)
+            return        
         try:
             message = self.cons.TWILIO_CLIENT.messages.create(
                     to = twilio_phone_recipient,
                     from_= self.cons.TWILIO_PHONE_SENDER,
                     body = text_message)
         except Exception as errmsg:
-            logging.info(errmsg)
+            logging.warning(errmsg)
 
-    def send_email(self, email_recipient, email_headers, email_message):
-        """Method to send status or other information via email message"""
+    def send_email(self, email_recipient, email_headers, email_message, debug):
+        """Method to send status or alert information via email message"""
+        if debug:
+            print ('Email notify to '+email_recipient+'\n'+email_message)
+            return        
         try:
             session = smtplib.SMTP(self.cons.SMTP_SERVER,
             self.cons.SMTP_PORT)
@@ -161,4 +169,4 @@ class Notify:
                 email_headers+"\r\n\r\n"+email_message)
             session.quit()
         except Exception as errmsg:
-            logging.info(errmsg)
+            logging.warning(errmsg)
