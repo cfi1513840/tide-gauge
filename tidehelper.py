@@ -1,18 +1,28 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+File: tidehelper.py
+Author: K. Howell
+Version: 1.0
+Date: 2025-03-29
+Description:
+Provides the following utility functions: sending email and sms messages,
+acquiring sunrise and sunset times and declaring system constants.
+"""
+import os
 import math
 import smtplib
-from twilio.rest import Client
-import sqlite3
 import json
 import socket
 from datetime import datetime, timedelta
-from suntime import Sun, SunTimeException
+import logging
+from suntime import Sun
 import pytz
+from cryptography.fernet import Fernet
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
-from cryptography.fernet import Fernet
-import logging
-import os
 from dotenv import load_dotenv, find_dotenv
+from twilio.rest import Client
 
 class Constants:
     """
@@ -30,7 +40,7 @@ class Constants:
     #
     # Read encrypted variables from json file
     #
-    with open('tide_constants.json','r') as file:
+    with open('/var/www/html/tide_constants.json','r') as file:
         dictjson = file.read()
     secure_dict = json.loads(dictjson)
     #
@@ -107,16 +117,15 @@ class Constants:
     #NOAA_STATION = '8668686'
 
 class TideState:
-    
+    """Store state variables"""
     def __init__(self):
-    
+
         self.test_mode = 0
         self.last_baro = 0
-    
+
 class SunTime:
-    
+    """Obtain the current date, sunrise and sunset times"""
     def get_suntimes(self, cons):
-        """Method to obtain the current date, sunrise and sunset times"""
         try:
             current_time = datetime.now()
             display_date = current_time.strftime("%b %d, %Y")
@@ -131,32 +140,31 @@ class SunTime:
         except Exception as errmsg:
             pline = (' Error processing sunrise/sunset - '+str(errmsg))
             return -1, pline
-                
+
 class Notify:
-    
-    import logging
-    
+    """Send email and SMS message notifictions"""
+
     def __init__(self, cons):
         self.cons = cons
-    
+
     def send_SMS(self, twilio_phone_recipient, text_message, debug):
         """Method to send status or alert information via SMS text message"""
         if debug:
             print ('SMS notify to '+ twilio_phone_recipient+'\n'+text_message)
-            return        
+            return
         try:
             message = self.cons.TWILIO_CLIENT.messages.create(
                     to = twilio_phone_recipient,
                     from_= self.cons.TWILIO_PHONE_SENDER,
                     body = text_message)
         except Exception as errmsg:
-            logging.warning(errmsg)
+            logging.warning(errmsg+''+message)
 
     def send_email(self, email_recipient, email_headers, email_message, debug):
         """Method to send status or alert information via email message"""
         if debug:
             print ('Email notify to '+email_recipient+'\n'+email_message)
-            return        
+            return
         try:
             session = smtplib.SMTP(self.cons.SMTP_SERVER,
             self.cons.SMTP_PORT)
