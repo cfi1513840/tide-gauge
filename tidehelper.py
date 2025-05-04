@@ -112,9 +112,6 @@ class Constants:
         }
     RADIANS_PER_SECOND = math.pi*2/91080
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-    #SQLPATH = 'bbitides.db'
-    #NDBC_STATIONS = ['41033', '41067']
-    #NOAA_STATION = '8668686'
 
 class TideState:
     """Store state variables"""

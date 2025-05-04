@@ -10,7 +10,7 @@ class TideAlerts:
         self.cons = cons
         self.db = db
         self.notify = notify
-        self.sql_connection = sqlite3.connect(f'/home/tide/bin/tides.db')
+        self.sql_connection = sqlite3.connect(self.cons.SQLPATH)
         self.sql_cursor = self.sql_connection.cursor()
         self.save_alert_list = []
         self.tide_average = [0 for x in range(0,20)]
