@@ -133,6 +133,7 @@ class Tide:
     def main(self):
         """The primary scheduling loop"""
         current_time = datetime.now()
+        message_time = datetime.strftime(current_time, cons.TIME_FORMAT)
         current_day = datetime.strftime(current_time, "%d")
         if self.display:
             #
@@ -248,7 +249,7 @@ class Tide:
               self.last_station2_time + timedelta(minutes=5))):
                 twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
                 email_recipient = cons.ADMIN_EMAIL[0]
-                text = (f'Station {self.stationid} has not reported in '+
+                text = (message_time+f' Station {self.stationid} has not reported in '+
                   f'over 5 minutes, switching to Station {str(alt_station)}')
                 notify.send_SMS(twilio_phone_recipient, text, self.debug)
                 email_headers = ["From: " + cons.EMAIL_USERNAME,

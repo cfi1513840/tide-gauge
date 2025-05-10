@@ -29,6 +29,8 @@ class TideAlerts:
         wind_direction = weather.get('wind_direction_symbol')
         tide_level = tide
         water_temp = ndbc_data.get('Water Temperature')
+        if water_temp:
+            water_temp = float(water_temp)
         #
         # Get the times for the next high and low tides
         #
@@ -89,15 +91,15 @@ class TideAlerts:
                           save_entry['water_temp_status']
                         alert_list[index]['event_repeat'] = \
                           save_entry['event_repeat']
-        if self.tide_count > 5:
-            check_tide = sum(self.tide_average[15:])/5
-            if tide_level > check_tide+1 or tide_level < check_tide-1:
-                print ('invalid tide level')
-                return
         self.tide_count += 1
         self.tide_average = self.tide_average[1:]+[tide_level]
         if self.tide_count < 20:
             return                
+        check_tide = sum(self.tide_average)/20
+        if tide_level > check_tide+1 or tide_level < check_tide-1:
+            print (message_time+' invalid tide level: '+
+              str(tide_level)+'versus 20 minute average: ', str(check_tide))
+            return
         self.average = sum(self.tide_average[10:])/10
         self.last_average = sum(self.tide_average[:10])/10
         for index, alert_dict in enumerate(alert_list):
@@ -121,10 +123,12 @@ class TideAlerts:
             dayonly = alert_dict['tide_level_day_only']
             status = alert_dict['tide_level_status']
             value = alert_dict['tide_level']
+            if value == None:
+                value = ''
             
-            if ((enabled and activated and (not dayonly or (dayonly and 
-              (localtime > sunrise and localtime < sunset)))) and
-              value != ''):
+            if ((enabled and activated and tide_level != None and
+              (not dayonly or (dayonly and (localtime > sunrise and
+              localtime < sunset)))) and value != ''):
                 db_level = float(value)
                 if self.average > self.last_average + 0.05:
                     self.phase = 'Rising'
@@ -206,10 +210,12 @@ class TideAlerts:
             dayonly = alert_dict['air_temp_day_only']
             status = alert_dict['air_temp_status']
             value = alert_dict['air_temp']
+            if value == None:
+                value = ''
             
-            if ((enabled and activated and (not dayonly or (dayonly and 
-              (localtime > sunrise and localtime < sunset)))) and
-              value != ''):
+            if ((enabled and activated and temperature != None and
+              (not dayonly or (dayonly and (localtime > sunrise and
+              localtime < sunset)))) and value != ''):
                 db_level = float(value)
                 email_headers = ["From: " + self.cons.EMAIL_USERNAME,
                   "Subject: Air Temperature Alert", "To: "+
@@ -245,10 +251,12 @@ class TideAlerts:
             dayonly = alert_dict['water_temp_day_only']
             status = alert_dict['water_temp_status']
             value = alert_dict['water_temp']
+            if value == None:
+                value = ''
             
-            if ((enabled and activated and (not dayonly or (dayonly and 
-              (localtime > sunrise and localtime < sunset)))) and
-              value != ''):
+            if ((enabled and activated and water_temp != None and
+              (not dayonly or (dayonly and (localtime > sunrise and
+              localtime < sunset)))) and value != ''):
                 db_level = float(value)
                 email_headers = ["From: " + self.cons.EMAIL_USERNAME,
                   "Subject: Water Temperature Alert", "To: "+
@@ -284,11 +292,13 @@ class TideAlerts:
             dayonly = alert_dict['wind_speed_day_only']
             status = alert_dict['wind_speed_status']
             value = alert_dict['wind_speed']
+            if value == None:
+                value = ''
             direction = alert_dict['wind_direction']
             
-            if ((enabled and activated and (not dayonly or (dayonly and 
-              (localtime > sunrise and localtime < sunset)))) and
-              value != ''):
+            if ((enabled and activated and wind_speed != None and
+              (not dayonly or (dayonly and (localtime > sunrise and
+              localtime < sunset)))) and value != ''):
                 db_level = float(value)
                 email_headers = ["From: " + self.cons.EMAIL_USERNAME,
                   "Subject: Wind Speed Alert", "To: "+
@@ -317,7 +327,7 @@ class TideAlerts:
                               text_message, debug) 
                 
                 else:
-                    if max(wind_samples) < db_level:
+                    if max(self.wind_samples) < db_level:
                         alert_list[index]['wind_speed_status'] = 0
                         text_message = ("From "+self.cons.HOSTNAME+": "+
                           message_time+" - The wind speed has abated to "+
@@ -337,10 +347,12 @@ class TideAlerts:
             dayonly = alert_dict['tidal_variation_day_only']
             status = alert_dict['tidal_variation_status']
             value = alert_dict['tidal_variation']
+            if value == None:
+                value = ''
            
-            if ((enabled and activated and (not dayonly or (dayonly and 
-              (localtime > sunrise and localtime < sunset)))) and
-              value != ''):
+            if ((enabled and activated and tide_level != None and
+              (not dayonly or (dayonly and (localtime > sunrise and
+              localtime < sunset)))) and value != ''):
                 db_level = float(value)
                 email_headers = ["From: " + self.cons.EMAIL_USERNAME,
                   "Subject: Tidal Variation Alert", "To: "+
