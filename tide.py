@@ -206,6 +206,15 @@ class Tide:
                 db.insert_weather(self.weather)
                 self.display.update(self.weather, self.ndbc_data)
 
+        if self.main_loop_count == 3:
+            valkeys = db.fetch_userpass()
+            if valkeys:
+                for valkey in valkeys:
+                    #print (str(valkey[0]),valkey[1])
+                    valtime = datetime.strptime(valkey[0],'%Y-%m-%d %H:%M:%S.%f')
+                    if current_time >= valtime+timedelta(minutes=10):
+                        db.update_userpass(valkey[1], valkey[2], valkey[3])
+                       
         if (self.main_loop_count == 4 and
           current_time >= self.last_ndbc_time + timedelta(minutes=10)):
             #

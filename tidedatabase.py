@@ -4,6 +4,7 @@ from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 import logging
 import pytz
+from cryptography.fernet import Fernet
 
 class DbManage:
     """Manages access to the sqlite3 and InfluxDB databases"""
@@ -205,4 +206,21 @@ class DbManage:
         self.sql_cursor.execute(f"update iparams set stationid = {stationid}")
         self.sql_connection.commit()
         
+    def fetch_userpass(self):
+        self.sql_cursor.execute("select dtime, emailaddr, valstat, valkey from userpass where valkey != ''")
+        return self.sql_cursor.fetchall()
+
+    def update_userpass(self, emailaddr, valstat, valkey):       
+        with open('/home/tide/bin/k1','rb') as kfile:
+           key1 = kfile.read()
+        f1 = Fernet(key1)
+        if valstat == 1:
+            self.sql_cursor.execute(f"UPDATE userpass set valkey = '' where valkey = '{valkey}'")
+        else:
+            self.sql_cursor.execute(f"delete from userpass where valkey = '{valkey}'")
+            self.sql_connection.commit()
+            val_address = emailaddr.encode()
+            val_address = f1.decrypt(val_address).decode()
+            pline = (f'Request window expired for {val_address}')
+            logging.info(pline)
         

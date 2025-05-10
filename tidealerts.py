@@ -326,7 +326,7 @@ class TideAlerts:
                             self.notify.send_SMS(telnbr,
                               text_message, debug) 
                 
-                else:
+                elif status == 1:
                     if max(self.wind_samples) < db_level:
                         alert_list[index]['wind_speed_status'] = 0
                         text_message = ("From "+self.cons.HOSTNAME+": "+
