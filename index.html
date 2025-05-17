@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+<!--
+   .tab {margin-left: 110px;}
+-->
+.center-screen {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      font-size: 1.5em; 
+}
+.dirtab {
+   text-indent: 33%;
+}
+</style>
+<head>
+   <title>Tide Gauge Portal</title>
+</head>
+  <body bgcolor="black">
+    <div class="center-screen" >
+    <span style="border:2px black solid; width: 700px; background-color: #FFE4C4;">
+    <img src="/CoastalMaine.png"
+         width="700" height="300"/>
+      <h1 style="width: 700px;
+        text-align: center;
+        font-size: 25px;
+        font-color: black;
+        padding: 4px;
+        ">Tide Gauge Portal</h1>
+      <p>
+      <form action="/cgi-bin/alertform.cgi" method="post"> 
+            <button type="submit" formaction="/tide.html">Tidal Conditions</button>
+               - Tide and weather graphics, current and predicted<br><br>
+            <button type="submit" formaction="/alertlogin.html">Request Alerts</button>
+               - Alert notifications based on changing conditions<br><br>
+      </form></p>
+    </span>
+    </div>
+  </body>
+</html>

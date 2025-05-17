@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+<!--
+   .tab {margin-left: 110px;}
+-->
+.center-screen {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      font-size: 1.5em; 
+}
+.dirtab {
+   text-indent: 33%;
+}
+</style>
+<head>
+   <title>Tide Alert Request login</title>
+</head>
+  <body bgcolor="black">
+    <div class="center-screen" >
+    <span style="border:2px black solid; width: 450px; background-color: #FFE4C4;">
+    <img src="/CoastalMaine.png"
+         width="400" height="300"/>
+      <h1 style="width: 400px;
+        text-align: center;
+        font-size: 25px;
+        font-color: black;
+        padding: 4px;
+        ">Alert Request Login</h1>
+      <p>
+      <form action="/cgi-bin/alertform.cgi" method="post"> 
+         <label for="eaddr">Email address:</label>
+         <input type="email" name="eaddr" id="eaddr" required value=""><br><br>
+         <label for="passwd">Password:</label>
+         <input type="password" name="passwd" id="passwd" minlength="8" pattern="[A-Za-z0-9]{8-16}" required><br><br>
+         <input type="radio" name="actype" id="login" value="0" checked>
+         <label for="login">Manage Alerts</label><br>
+         <input type="radio" name="actype" id="changepw" value="1">
+         <label for="changepw">Change Password</label><br>
+         <input type="radio" name="actype" id="register" value="2">
+         <label for="register">Register New User</label><br><br>
+         <input type="submit" value="Submit">
+      </form></p>
+      <p>
+      <a href="https://www.springbrookpi.com/forgotpass.html">Forgot Password</a></p>      
+    </span>
+    </div>
+  </body>
+</html>

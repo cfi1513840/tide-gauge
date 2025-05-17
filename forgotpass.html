@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+<!--
+   .tab {margin-left: 110px;}
+-->
+.center-screen {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      font-size: 1.5em; 
+}
+.dirtab {
+   text-indent: 33%;
+}
+</style>
+<head>
+   <title>Tide Alert Password Reset</title>
+</head>
+  <body bgcolor="black"><font size = "4">
+    <div class="center-screen">
+    <span style="border:2px black solid; width: 450px; background-color: #FFE4C4;">
+    <img src="/CoastalMaine.png"
+         width="400" height="300"/>
+      <h1 style="width: 400px; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Tide Alert Password Reset</h1>
+      <p>An email message will be sent to the specified address with a link to select a new password<br>
+      <form action="/cgi-bin/forgotpass.cgi" method="post"> 
+         <label for="eaddr">Email address:</label>
+         <input type="email" name="eaddr" id="eaddr" required value=""><br><br>
+         <input type="submit" value="Submit">
+      </form></p>
+    </span>
+    </div>
+  </body>
+</html>
