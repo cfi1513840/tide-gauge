@@ -149,7 +149,7 @@ class TideAlerts:
                               message_time+" - The tide level is "+
                               format(tide_level, '.2f')+
                               " feet and Rising, please check "+
-                              "https://bbitide.org/bbitide.html "+
+                              f"{self.cons.TIDE_URL} "+
                               "for current conditions")
                             self.notify.send_email(email_recipient,
                               email_headers, text_message, debug)
@@ -167,7 +167,7 @@ class TideAlerts:
                               message_time+" - The tide Level is "+
                               format(tide_level, '.2f')+
                               " feet and Falling, please check "+
-                              "https://bbitide.org/bbitide.html "+
+                              f"{self.cons.TIDE_URL} "+
                               "for current conditions")
                             self.notify.send_email(email_recipient,
                               email_headers, text_message, debug)
@@ -185,7 +185,7 @@ class TideAlerts:
                               message_time+" - The tide level is "+
                               format(tide_level, '.2f')+
                               " feet and Rising, please check "+
-                              "https://bbitide.org/bbitide.html "+
+                              f"{self.cons.TIDE_URL} "+
                               "for current conditions")
                             self.notify.send_email(email_recipient,
                               email_headers, text_message, debug)
@@ -202,7 +202,7 @@ class TideAlerts:
                             text_message = ("From "+self.cons.HOSTNAME+": "+
                               message_time+" - The tide level is "+
                               format(tide_level, '.2f')+" feet and Falling, "+
-                              "please check https://bbitide.org/bbitide.html "+
+                              f"please check {self.cons.TIDE_URL} "+
                               "for current conditions")
                             self.notify.send_email(email_recipient,
                               email_headers, text_message, debug)
@@ -238,7 +238,7 @@ class TideAlerts:
                               message_time+
                               " - The Air Temperature has reached "+
                               str(temperature)+" degrees F"+
-                              ", please check https://bbitide.org/bbitide.html "+
+                              f", please check {self.cons.TIDE_URL} "+
                               "for current conditions")
                             self.notify.send_email(email_recipient,
                               email_headers, text_message, debug)
@@ -279,7 +279,7 @@ class TideAlerts:
                               message_time+
                               " - The Water Temperature has reached "+
                               str(int(round(water_temp)))+" degrees F,"+ 
-                              " please check https://bbitide.org/bbitide.html for "+
+                              f" please check {self.cons.TIDE_URL} for "+
                               "current conditions")
                             self.notify.send_email(email_recipient,
                               email_headers, text_message, debug)
@@ -325,14 +325,14 @@ class TideAlerts:
                               message_time+
                               " The wind speed has exceeded "+str(db_level)+ 
                               " mph "+direction+" - please check "+
-                              "https://bbitide.org/bbitide.html for "+
+                              f"{self.cons.TIDE_URL} for "+
                               "current conditions")
                             self.notify.send_email(email_recipient,
                               email_headers, text_message, debug)
                             if len(telnbr) != 0:
                                 self.notify.send_SMS(telnbr,
                                   text_message, debug) 
-                
+
                 elif status == 1:
                     if max(self.wind_samples) < db_level:
                         logging.debug('db: '+str(db_level)+'stat: '+str(status)+' wind_samples: '+str(self.wind_samples))
@@ -342,7 +342,7 @@ class TideAlerts:
                             text_message = ("From "+self.cons.HOSTNAME+": "+
                               message_time+" - The wind speed has abated to "+
                               "less than "+str(db_level)+" mph, please check "+
-                              "https://bbitide.org/bbitide.html for "+
+                              f"{self.cons.TIDE_URL} for "+
                               "current conditions")
                             self.notify.send_email(email_recipient,
                               email_headers, text_message, debug)
@@ -376,7 +376,7 @@ class TideAlerts:
                     text_message = ("From "+self.cons.HOSTNAME+": "+
                       message_time+" - The tide level is higher than the "+
                       "predicted high tide by "+dispdiff+" feet"+
-                      ", please check https://bbitide.org/bbitide.html for "+
+                      f", please check {self.cons.TIDE_URL} for "+
                       "current conditions")
                     self.notify.send_email(email_recipient,
                       email_headers, text_message, debug)
@@ -390,7 +390,7 @@ class TideAlerts:
                     text_message = ("From "+self.cons.HOSTNAME+": "+
                       message_time+" - The tide level is lower than the "+
                       "predicted low tide by "+dispdiff+" feet"+
-                      ", please check https://bbitide.org/bbitide.html for "+
+                      f", please check {self.cons.TIDE_URL} for "+
                       "current conditions")
                     self.notify.send_email(email_recipient,
                       email_headers, text_message, debug)
