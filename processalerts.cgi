@@ -9,6 +9,7 @@ import math
 import smtplib
 from cryptography.fernet import Fernet
 import json
+from dotenv import load_dotenv, find_dotenv
 
 global userclr, userenc, telclr, telenc, email_address,\
   tmsgaddr, tlevel, sensorloc, daylight, dayair,  enalev, atemp, enaair,\
@@ -618,7 +619,9 @@ SMTP_SERVER = constants_dict['SMTP_SERVER']
 SMTP_PORT = constants_dict['SMTP_PORT']
 EMAIL_USERNAME = constants_dict['EMAIL_USERNAME']
 EMAIL_PASSWORD = constants_dict['EMAIL_PASSWORD']
-SQLPATH = constants_dict['SQLPATH']
+envfile = find_dotenv('/var/www/html/tide.env')
+if load_dotenv(envfile):
+    SQL_PATH = os.getenv('SQL_PATH')
 displaytable = False
 adminreq = False
 activateuser = False
@@ -626,7 +629,7 @@ form = cgi.FieldStorage()
 timeformat = "%Y-%m-%d %H:%M:%S.%f"
 currenttime = datetime.now()
 currentto = datetime.strptime(str(currenttime), timeformat)
-sqlcon = sqlite3.connect(SQLPATH)
+sqlcon = sqlite3.connect(SQL_PATH)
 sqlcur = sqlcon.cursor()
 sqlcur.execute("select * from useralerts")
 column_names = [description[0] for description in sqlcur.description]

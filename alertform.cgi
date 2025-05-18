@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import os
 import cgi, cgitb
 from datetime import datetime
 import sqlite3
@@ -6,6 +7,7 @@ import smtplib
 import secrets
 from cryptography.fernet import Fernet
 import json
+from dotenv import load_dotenv, find_dotenv
 
 global  SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD
   
@@ -49,9 +51,11 @@ SMTP_SERVER = constants_dict['SMTP_SERVER']
 SMTP_PORT = constants_dict['SMTP_PORT']
 EMAIL_USERNAME = constants_dict['EMAIL_USERNAME']
 EMAIL_PASSWORD = constants_dict['EMAIL_PASSWORD']
-SQLPATH = constants_dict['SQLPATH']
+envfile = find_dotenv('/var/www/html/tide.env')
+if load_dotenv(envfile):
+    SQL_PATH = os.getenv('SQL_PATH')
 #with open('/var/www/html/alertform.log', 'a') as logfile:
-#    logfile.write ('SQLPATH: '+SQLPATH+'\n')
+#    logfile.write ('SQL_PATH: '+SQL_PATH+'\n')
 form = cgi.FieldStorage()
 email_address = form["eaddr"].value
 password = form["passwd"].value
@@ -353,7 +357,7 @@ def change_password(email_address,password):
     
 try:
 #if True:
-    sqlcon = sqlite3.connect(SQLPATH)
+    sqlcon = sqlite3.connect(SQL_PATH)
     sqlcur = sqlcon.cursor()
     with open('/var/www/html/k1','rb') as kfile:
         key1 = kfile.read()
