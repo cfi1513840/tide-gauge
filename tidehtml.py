@@ -163,13 +163,14 @@ class CreateHTML:
             else:
                 wind_gust = str(wind_gust)+" mph"
             wind_speed = wind_direction_symbol+str(wind_speed)+" mph"
-            # Check for minimum and maximum tide levels and get
-            # current time and tide level from last tidelist entry
-            #
-            curtime = str(current_time)[:-10]
-            max_tide = -99
-            min_tide = 99
-            tide = '--'
+            
+        # Check for minimum and maximum tide levels and get
+        # current time and tide level from last tidelist entry
+        #
+        curtime = str(current_time)[:-10]
+        max_tide = -99
+        min_tide = 99
+        tide = '--'
         if tidelist:
             for chkent in tidelist:
                 if chkent[1] > max_tide:
