@@ -88,14 +88,14 @@ if test -e tide_constants.tmp; then
   if [ $answ == "Y" ] || [ $answ == "y" ]; then
     /usr/bin/python encrypt_constants.py tide_constants.tmp
     echo "encrypting and writing new constants file to /var/www/html/tide_constants.json"
-    mv tide_constants.tmp ${htmldir}tide_constantsx.json
+    mv tide_constants.tmp ${htmldir}tide_constants.json
   fi  
 else
     cp tide_constants_template.json tide_constants.tmp
     nano tide_constants.tmp
     /usr/bin/python encrypt_constants.py tide_constants.tmp
     echo -e "\e[0mEncrypting and writing new constants file"
-    mv tide_constants.tmp ${htmldir}tide_constantsx.json  
+    mv tide_constants.tmp ${htmldir}tide_constants.json  
 fi  
 echo "Copying SQLite database core to ${htmldir}tides.db"
 sudo cp sqltides.db ${htmldir}tidesx.db
