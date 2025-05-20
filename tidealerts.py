@@ -58,9 +58,9 @@ class TideAlerts:
         secstolow = round((nextlowtime-current_time).total_seconds())
         mintolow = round(secstolow/60)
 
-        with open('/home/tide/bin/k1','rb') as kfile:
+        with open('k1','rb') as kfile:
            key1 = kfile.read()
-        with open('/home/tide/bin/k2','rb') as kfile:
+        with open('k2','rb') as kfile:
            key2 = kfile.read()
         f1 = Fernet(key1)
         f2 = Fernet(key2)

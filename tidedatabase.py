@@ -222,7 +222,7 @@ class DbManage:
         return self.sql_cursor.fetchall()
 
     def update_userpass(self, emailaddr, valstat, valkey):       
-        with open('/home/tide/bin/k1','rb') as kfile:
+        with open('k1','rb') as kfile:
            key1 = kfile.read()
         f1 = Fernet(key1)
         if valstat == 1:
