@@ -243,10 +243,10 @@ class Tide:
             if self.ndbc_data:
                 db.insert_ndbc_data(self.ndbc_data)
 
-        if (self.main_loop_count == 5 and self.current_time.hour == '07' and
-          self.current_time.minute == '00'):
+        if (self.main_loop_count == 5 and self.current_time.hour == 7 and
+          self.current_time.minute == 0):
             #
-            # Visit reports are sent every day at 07:00
+            # Webpage visit reports are sent to admin every day at 07:00
             #
             self.send_visit_report()
 
@@ -322,33 +322,33 @@ class Tide:
         umodcount = int(umodcount)
         with open('/var/log/apache2/access.log.1', 'r') as visfile:
             vislines = visfile.readlines()
-        for line in vislines:
-            if vislinecnt == 0:
-                visfields = line.split()
-                visdate = visfields[3][1:12]
-                break
-            vislinecnt += 1
+        visfields = vislines[0].split()
+        visdate = visfields[3][1:12]
         for email_recip in cons.ADMIN_EMAIL:
             if email_recip == 'None':
                 continue
-            headers = ["From: " + cons.EMAIL_USERNAME, "Subject: BBI Tide Station Visits", "To: "+email_recip,"MIME-Versiion:1.0","Content-Type:text/html"]
+            headers = ["From: " + cons.EMAIL_USERNAME,
+              "Subject: BBI Tide Station Visits", "To: "+
+              email_recip,"MIME-Versiion:1.0","Content-Type:text/html"]
             headers = "\r\n".join(headers)
-            email_message = "From "+cons.HOSTNAME+": "+self.message_time+" - Page Hits on "+visdate+ \
-              "<br />Home Page - "+str(homecount)+ \
-              "<br />Current Tide Page - "+str(tidecount)+ \
-              "<br />User Alert Login Form - "+str(usercount)+ \
-              "<br />User Alert Update - "+str(umodcount)
-            text_message = "From "+cons.HOSTNAME+": "+self.message_time+" - Page Hits on "+visdate+ \
-              "\nHome Page Page - "+str(homecount)+ \
-              "\nCurrent Tide Page - "+str(tidecount)+ \
-              "\nUser Alert Request Form - "+str(usercount)+ \
-              "\nUser Alert Update - "+str(umodcount)
+            email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+              " - Page Hits on "+visdate+
+              "<br />Home Page - "+str(homecount)+
+              "<br />Current Tide Page - "+str(tidecount)+
+              "<br />User Alert Login Form - "+str(usercount)+
+              "<br />User Alert Update - "+str(umodcount))
+            text_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+              " - Page Hits on "+visdate+
+              "\nHome Page - "+str(homecount)+
+              "\nTide Page - "+str(tidecount)+
+              "\nAlert Login Page - "+str(usercount)+
+              "\nAlert Form - "+str(umodcount))
 
             twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
             email_recipient = cons.ADMIN_EMAIL[0]
             notify.send_SMS(twilio_phone_recipient, text_message, self.debug)
             email_headers = ["From: " + cons.EMAIL_USERNAME,
-              f"Subject: {cons.STATION_LOCATION} Tide Visits", "To: "
+              f"Subject: {cons.STATION_LOCATION} Tide Station Visits", "To: "
               +email_recipient,"MIME-Versiion:1.0",
               "Content-Type:text/html"]
             email_headers =  "\r\n".join(email_headers)
