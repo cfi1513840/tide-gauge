@@ -154,15 +154,19 @@ class CreateHTML:
                 wind_direction_symbol = weather['wind_direction_symbol']+' '
             if wind_gust == None and wind_speed != None:
                 wind_gust = wind_speed
+            with open('/var/www/html/tidehtml.log', 'a') as logfile:
+                logfile.write('wind_speed type: '+str(type(wind_speed)))
             if baro_trend != None and baro_trend < -0.01:
                 baro = '&darr; '+str(baro)+' &darr;'
             elif baro_trend != None and baro_trend > 0.01:
                 baro = '&uarr; '+str(baro)+' &uarr;'   
-            if wind_gust < wind_speed+4 and wind_gust > wind_speed-4:
-                wind_gust = '--'
-            else:
+            #if wind_gust < wind_speed+4 and wind_gust > wind_speed-4:
+            #    wind_gust = '--'
+            #else:
+            if wind_gust != None:
                 wind_gust = str(wind_gust)+" mph"
-            wind_speed = wind_direction_symbol+str(wind_speed)+" mph"
+            if wind_speed != None:
+                wind_speed = wind_direction_symbol+str(wind_speed)+" mph"
             
         # Check for minimum and maximum tide levels and get
         # current time and tide level from last tidelist entry
