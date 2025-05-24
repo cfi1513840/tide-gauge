@@ -108,7 +108,6 @@ sudo cp sqltides.db ${htmldir}tidesx.db
 sudo cp tide.env ${htmldir}.
 sudo cp *.png ${htmldir}.
 echo "Copying html and cgi files to destination directories"
-sudo cp k* ${htmldir}.
 sudo cp index.html ${htmldir}tide.html
 sudo cp *.html ${htmldir}.
 sudo cp *.cgi ${cgidir}.
