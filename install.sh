@@ -19,6 +19,7 @@ if [ -z "$apvar" ]; then
    echo "Apache2 and all other supporting modules must be"
    echo " installed prior to running the install.sh script"
    exit
+fi
 echo -e "\e[0mSetting up tide gauge environment for ${USER}"
 echo
 echo "Adding ${USER} to the www-data group"
