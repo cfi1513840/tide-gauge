@@ -54,8 +54,8 @@ EMAIL_PASSWORD = constants_dict['EMAIL_PASSWORD']
 envfile = find_dotenv('/var/www/html/tide.env')
 if load_dotenv(envfile):
     SQL_PATH = os.getenv('SQL_PATH')
-#with open('/var/www/html/alertform.log', 'a') as logfile:
-#    logfile.write ('SQL_PATH: '+SQL_PATH+'\n')
+with open('/var/www/html/alertform.log', 'a') as logfile:
+    logfile.write ('SQL_PATH: '+SQL_PATH+'\n')
 form = cgi.FieldStorage()
 email_address = form["eaddr"].value
 password = form["passwd"].value
