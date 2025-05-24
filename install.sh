@@ -14,7 +14,12 @@ if test -e /var/www/html/tide_constants.json; then
 else
   jsonfound=0
 fi
-echo -e "\e[0mTo prepare for installation, the environment variable file must be edited"
+echo -e "\e[0mSetting up tide gauge environment for ${USER}"
+echo
+echo "Adding ${USER} to the www-data group"
+sudo usermod -a -G "www-data" "$USER"
+echo
+echo "To prepare for installation, the environment variable file must be edited"
 echo "  to include all installation-specific parameters. note that this will"
 echo "  overwrite an existing tide.env file. This feature can also be"
 echo "  used to allow practice installs to temporary directories for testing."
