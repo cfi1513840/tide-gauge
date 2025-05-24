@@ -24,6 +24,14 @@ echo
 echo "Adding ${USER} to the www-data group"
 sudo usermod -a -G "www-data" "$USER"
 echo
+echo "Changing ownership and permission for HTML directory to www-data"
+echo
+sudo chown www-data /var/www
+sudo chgrp www-data /var/www
+sudo chown www-data /var/www/html
+sudo chgrp www-data /var/www/html
+sudo chmod 770 /var/www
+sudo chmod 770 /var/www/html
 echo "To prepare for installation, the environment variable file must be edited"
 echo "  to include all installation-specific parameters. note that this will"
 echo "  overwrite an existing tide.env file. This feature can also be"
