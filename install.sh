@@ -49,6 +49,12 @@ eval cgidir=${vari#*=}
 echo "HTML files will be copied to ${htmldir}"
 echo "CGI files will be copied to $cgidir"
 echo
+sudo cp k* ${htmldir}.
+sudo chown www-data ${htmldir}k*
+sudo chgrp www-data ${htmldir}k*
+sudo chmod 660 ${htmldir}k*
+echo
+echo 'Key files copied to ${htmldir}'
 if [ $jsonfound == 1 ]; then
   echo -e "\e[31mAn encrypted tide_constants.json file already exists."
   echo "  If you proceed with the installation, all encryption keys"
