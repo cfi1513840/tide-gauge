@@ -57,7 +57,7 @@ echo -e "\e[0mThe installation proceeds with the generation of encryption keys a
 echo "  the preparation of the clear-text version of the constants file,"
 echo "  followed by generation of the encrypted tide_constants.json file."
 echo
-makekeys.py
+python makekeys.py
 echo
 grep "HTML_DIRECTORY" tide.env > grep.tmp
 vari="$(cat grep.tmp)"
