@@ -14,7 +14,7 @@ if test -e /var/www/html/tide_constants.json; then
 else
   jsonfound=0
 fi
-apvar = $(dpkg -l | grep apache2)
+apvar=$(dpkg -l | grep apache2)
 if [ -z "$apvar" ]; then
    echo "Apache2 and all other supporting modules must be"
    echo " installed prior to running the install.sh script"
