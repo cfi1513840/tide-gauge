@@ -14,6 +14,11 @@ if test -e /var/www/html/tide_constants.json; then
 else
   jsonfound=0
 fi
+apvar = $(dpkg -l | grep apache2)
+if [ -z "$apvar" ]; then
+   echo "Apache2 and all other supporting modules must be"
+   echo " installed prior to running the install.sh script"
+   exit
 echo -e "\e[0mSetting up tide gauge environment for ${USER}"
 echo
 echo "Adding ${USER} to the www-data group"
@@ -59,7 +64,7 @@ sudo chown www-data ${htmldir}k*
 sudo chgrp www-data ${htmldir}k*
 sudo chmod 660 ${htmldir}k*
 echo
-echo 'Key files copied to ${htmldir}'
+echo "Key files copied to ${htmldir}"
 if [ $jsonfound == 1 ]; then
   echo -e "\e[31mAn encrypted tide_constants.json file already exists."
   echo "  If you proceed with the installation, all encryption keys"
