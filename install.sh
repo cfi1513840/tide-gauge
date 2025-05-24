@@ -123,7 +123,7 @@ else
     sudo mv tide_constants.tmp ${htmldir}tide_constants.json  
 fi  
 echo "Copying SQLite database core to ${htmldir}tides.db"
-sudo cp sqltides.db ${htmldir}tidesx.db
+sudo cp sqltides.db ${htmldir}tides.db
 sudo cp tide.env ${htmldir}.
 sudo cp *.png ${htmldir}.
 echo "Copying html and cgi files to destination directories"
