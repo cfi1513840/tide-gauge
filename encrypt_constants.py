@@ -14,7 +14,7 @@ if os.path.exists(infile):
 else:    
     print ('Non-existent input file specified')
     exit()
-with open('/var/www/html/kux', 'r') as file:
+with open('/var/www/html/ku', 'r') as file:
     key = file.read()
 enkey = Fernet(key)
 #
