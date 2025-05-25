@@ -30,7 +30,7 @@ class TideAlerts:
         wind_direction = weather.get('wind_direction_symbol')
         tide_level = tide
         water_temp = ndbc_data.get('Water Temperature')
-        if isinstance(water_temp, float, int):
+        if isinstance(water_temp, (float, int)):
             water_temp = float(water_temp)
         #
         # Get the times for the next high and low tides
