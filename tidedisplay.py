@@ -349,7 +349,6 @@ class TideDisplay:
         max_y = int(round(max_tide+0.5,0))
         y_divs = int((max_y-min_y))
         self.y_grid_size = (self.canvas_height-self.y_start)/(y_divs+1)
-        print ('max_tide: '+str(max_tide)+' min_tide: '+str(min_tide)+' y_divs: '+str(y_divs))
         self.plot_window.delete("all")
         #
         # Draw grid lines
