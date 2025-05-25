@@ -175,6 +175,7 @@ class CreateHTML:
         max_tide = -99
         min_tide = 99
         tide = '--'
+        offtime = 0
         if tidelist:
             for chkent in tidelist:
                 if chkent[1] > max_tide:
