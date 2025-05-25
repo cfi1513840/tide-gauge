@@ -414,47 +414,48 @@ class TideDisplay:
             start_plot_x = end_plot_x
             start_plot_y = end_plot_y
         """Plot measured tide"""
-        start_time = datetime.strptime(measurements[0][0], "%Y-%m-%d %H:%M:%S")
-        off_time = start_time.timestamp() - start_plot_time.timestamp()
-        for pidx, entry in enumerate(measurements):
-            try:
-                this_time = datetime.strptime(entry[0], "%Y-%m-%d %H:%M:%S")
-                plot_time = this_time.timestamp() - start_time.timestamp()
-                hrmin = datetime.strftime(this_time, "%H:%M")
-                linedate = datetime.strftime(this_time, "%d %b")
-            except:
-                continue
-            end_plot_x = (
-              int((plot_time+off_time)*(self.canvas_width-30)/86400/2+30))
-            end_plot_y = entry[1]*self.y_grid_size+(self.y_grid_size*3)
-            if pidx == 0:
+        if measurements:
+            start_time = datetime.strptime(measurements[0][0], "%Y-%m-%d %H:%M:%S")
+            off_time = start_time.timestamp() - start_plot_time.timestamp()
+            for pidx, entry in enumerate(measurements):
+                try:
+                    this_time = datetime.strptime(entry[0], "%Y-%m-%d %H:%M:%S")
+                    plot_time = this_time.timestamp() - start_time.timestamp()
+                    hrmin = datetime.strftime(this_time, "%H:%M")
+                    linedate = datetime.strftime(this_time, "%d %b")
+                except:
+                    continue
+                end_plot_x = (
+                  int((plot_time+off_time)*(self.canvas_width-30)/86400/2+30))
+                end_plot_y = entry[1]*self.y_grid_size+(self.y_grid_size*3)
+                if pidx == 0:
+                    start_plot_x = end_plot_x
+                    start_plot_y = end_plot_y
+                    continue           
+                self.plot_window.create_line(
+                  start_plot_x, self.canvas_height-start_plot_y, end_plot_x, 
+                  self.canvas_height-end_plot_y, fill="RoyalBlue3", width=3)  
+                thistate = entry[2]
+                hourtime = this_time.hour
+                if thistate != None and (thistate == 'low' or thistate == 'high'):
+                    if (self.tide_turn_time == 0 or 
+                      abs(hourtime-self.tide_turn_time) >= 3):
+                        self.tide_turn_time = hourtime
+                        peaks = format(entry[1],'.2f')+' '+hrmin
+                        abox = self.plot_window.create_text(
+                          start_plot_x,self.canvas_height/2, width=48,
+                          fill="blue", text=peaks, font=("Arial", 12),
+                          justify="center")
+                        aboxcors = self.plot_window.bbox(abox)
+                        aboxwid = self.plot_window.create_rectangle(
+                          aboxcors, outline="blue", fill="white")
+                        self.plot_window.tag_lower(aboxwid,abox)
                 start_plot_x = end_plot_x
                 start_plot_y = end_plot_y
-                continue           
-            self.plot_window.create_line(
-              start_plot_x, self.canvas_height-start_plot_y, end_plot_x, 
-              self.canvas_height-end_plot_y, fill="RoyalBlue3", width=3)  
-            thistate = entry[2]
-            hourtime = this_time.hour
-            if thistate != None and (thistate == 'low' or thistate == 'high'):
-                if (self.tide_turn_time == 0 or 
-                  abs(hourtime-self.tide_turn_time) >= 3):
-                    self.tide_turn_time = hourtime
-                    peaks = format(entry[1],'.2f')+' '+hrmin
-                    abox = self.plot_window.create_text(
-                      start_plot_x,self.canvas_height/2, width=48,
-                      fill="blue", text=peaks, font=("Arial", 12),
-                      justify="center")
-                    aboxcors = self.plot_window.bbox(abox)
-                    aboxwid = self.plot_window.create_rectangle(
-                      aboxcors, outline="blue", fill="white")
-                    self.plot_window.tag_lower(aboxwid,abox)
-            start_plot_x = end_plot_x
-            start_plot_y = end_plot_y
+            tide = measurements[len(measurements)-1][1]
+            tide_text = format(tide, '.2f')+' Ft.'
         current_time = datetime.now()
         curhrmin = datetime.strftime(current_time, "%H:%M")
-        tide = measurements[len(measurements)-1][1]
-        tide_text = format(tide, '.2f')+' Ft.'
         self.plot_window.create_line(
           60, 15, 110, 15, fill="RoyalBlue3", width=3)
         self.plot_window.create_text(190,15,

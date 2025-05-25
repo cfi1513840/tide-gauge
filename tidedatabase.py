@@ -46,7 +46,7 @@ class DbManage:
           "order by reporttime desc limit 1")
         sql_reply = self.sql_cursor.fetchone()
         new_report_time = ndbc_data.get('DateTime')
-        if sql_reply[0] == new_report_time:
+        if sql_reply and sql_reply[0] == new_report_time:
             return            
         database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
         database_values = (
