@@ -52,7 +52,8 @@ getwx = tideget.GetWeather(cons, notify)
 db = tidedatabase.DbManage(cons)
 getndbc = tideget.GetNDBC(cons, notify)
 getnoaa = tideget.GetNOAA(cons)
-sensor = tideget.ReadSensor(cons)
+if 'sim' not in sys.argv:    
+    sensor = tideget.ReadSensor(cons)
 predict = tidepredict.TidePredict(cons, db)
 alerts = tidealerts.TideAlerts(cons, db, notify)
 html = tidehtml.CreateHTML(cons)
@@ -135,7 +136,9 @@ class Tide:
                 if noaa_tide:
                     db.insert_tide_predicts(noaa_tide)
             predict_list = predict.tide_predict()
-            tide_readings = sensor.read_sensor()
+            tide_readings = []
+            if 'sim' not in sys.argv:    
+                tide_readings = sensor.read_sensor()
             if tide_readings:
                 db.insert_tide(tide_readings)
             tide_list = db.fetch_tide_24h(
@@ -178,7 +181,9 @@ class Tide:
         # each minute to distribute CPU time and to avoid database access
         # conflicts. NOAA tide predictions are updated daily.
         #
-        tide_readings = sensor.read_sensor()
+        tide_readings = []
+        if 'sim' not in sys.argv:    
+            tide_readings = sensor.read_sensor()
         if tide_readings:
             db.insert_tide(tide_readings)
             volts = 0
