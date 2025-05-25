@@ -104,6 +104,7 @@ class Constants:
         TIDE_URL = os.getenv('TIDE_URL')
         NWS_LOCAL_GRIDPOINTS = os.getenv('NWS_LOCAL_GRIDPOINTS')
         NWS_MARINE_GRIDPOINTS = os.getenv('NWS_MARINE_GRIDPOINTS')
+        INFLUXDB_NAMES = os.getenv('INFLUXDB_NAMES')
 
     else:
         print ('Unable to load Environment file')
@@ -155,9 +156,9 @@ class Notify:
 
     def send_SMS(self, twilio_phone_recipient, text_message, debug):
         """Method to send status or alert information via SMS text message"""
-        #if debug:
-        #    print ('SMS notify to '+ twilio_phone_recipient+'\n'+text_message)
-        #    return
+        if debug:
+            print ('SMS notify to '+ twilio_phone_recipient+'\n'+text_message)
+            return
         try:
             message = self.cons.TWILIO_CLIENT.messages.create(
                     to = twilio_phone_recipient,
@@ -168,9 +169,9 @@ class Notify:
 
     def send_email(self, email_recipient, email_headers, email_message, debug):
         """Method to send status or alert information via email message"""
-        #if debug:
-        #    print ('Email notify to '+email_recipient+'\n'+email_message)
-        #    return
+        if debug:
+            print ('Email notify to '+email_recipient+'\n'+email_message)
+            return
         try:
             session = smtplib.SMTP(self.cons.SMTP_SERVER,
             self.cons.SMTP_PORT)
