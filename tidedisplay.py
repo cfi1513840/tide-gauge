@@ -414,7 +414,7 @@ class TideDisplay:
             start_plot_x = end_plot_x
             start_plot_y = end_plot_y
         """Plot measured tide"""
-        tide = ''
+        tide = 0
         if measurements:
             start_time = datetime.strptime(measurements[0][0], "%Y-%m-%d %H:%M:%S")
             off_time = start_time.timestamp() - start_plot_time.timestamp()
