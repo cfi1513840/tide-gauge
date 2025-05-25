@@ -330,6 +330,26 @@ class TideDisplay:
 
     def tide(self, predicts, measurements):
         """Plot grid lines, predicted tide level and annotation"""
+        max_tide = -99
+        min_tide = 99
+        y_divs = 12
+        if measurements:
+            for chkent in measurements:
+                if chkent[1] > max_tide:
+                    max_tide = chkent[1]
+                if chkent[1] < min_tide:
+                    min_tide = chkent[1]
+        if predicts:
+            for chkent in predicts:
+                if chkent[2] > max_tide:
+                    max_tide = chkent[2]
+                if chkent[2] < min_tide:
+                    min_tide = chkent[2]
+        min_y = int(round(min_tide-0.5,0))
+        max_y = int(round(max_tide+0.5,0))
+        y_divs = int((max_y-min_y))
+        self.y_grid_size = (self.canvas_height-self.y_start)/(y_divs+1)
+        print ('max_tide: '+str(max_tide)+' min_tide: '+str(min_tide)+' y_divs: '+str(y_divs))
         self.plot_window.delete("all")
         #
         # Draw grid lines
@@ -340,8 +360,8 @@ class TideDisplay:
         self.plot_window.create_line(
           self.canvas_width-1, self.y_plot_start, self.canvas_width-1,
           self.canvas_height-self.y_grid_size, fill="black")
-        for x in range(0,13):
-            if x == 12 or x == 0:
+        for x in range(0,y_divs+1):
+            if x == y_divs or x == 0:
                  self.plot_window.create_line(
                    self.x_plot_start,self.y_grid_size*x+self.y_plot_start,
                    self.canvas_width, self.y_grid_size*x+self.y_plot_start,
@@ -353,7 +373,7 @@ class TideDisplay:
                    fill="gray")
             self.plot_window.create_text(
               10,self.canvas_height-((x+1)*self.y_grid_size),
-              fill="black", text=str(x-2), font=("Arial", 10))
+              fill="black", text=str(x+min_y), font=("Arial", 10))
    
         mid_point = (self.canvas_width-30)/2+30
         self.plot_window.create_line(mid_point, self.y_plot_start, mid_point,
