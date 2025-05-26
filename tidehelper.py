@@ -105,6 +105,8 @@ class Constants:
         NWS_LOCAL_GRIDPOINTS = os.getenv('NWS_LOCAL_GRIDPOINTS')
         NWS_MARINE_GRIDPOINTS = os.getenv('NWS_MARINE_GRIDPOINTS')
         INFLUXDB_NAMES = os.getenv('INFLUXDB_NAMES')
+        TIME_ZONE = os.getenv('TIME_ZONE')
+        NWS_RADAR = os.getenv('NWS_RADAR')
 
     else:
         print ('Unable to load Environment file')

@@ -5,6 +5,7 @@ import pytz
 from datetime import datetime, timedelta
 import time
 import sqlite3
+from dotenv import load_dotenv, find_dotenv
 
 class CreateWxHTML:
     
@@ -144,7 +145,7 @@ class CreateWxHTML:
             self.outfile.write (f'<p>{name}:</p><p class="wx">{detext}</p>\n')   
         self.outfile.write ('</td>\n')
         self.outfile.write (f'<td class="gif">\n')
-        self.outfile.write ('<img style="display: block;-webkit-user-select: none;margin: auto;background-color: hsl(0, 0%, 90%);" src="https://radar.weather.gov/ridge/standard/KCLX_loop.gif">\n')
+        self.outfile.write (f'<img style="display: block;-webkit-user-select: none;margin: auto;background-color: hsl(0, 0%, 90%);" src="{self.cons.NWS_RADAR}">\n')
         self.outfile.write ('</td>\n')
        #self.outfile.write ('<td class="gif">test</td>\n')
         self.outfile.write ('</tr>\n')
@@ -152,25 +153,17 @@ class CreateWxHTML:
         self.outfile.write ('<table>\n')      
         self.outfile.write ('<tr valign="middle">\n')
         self.outfile.write (f'<th colspan="{nbrcols}" style="background-color: #1A53FF;"><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
-        self.outfile.write (f'Hourly Marine Point Forecast - 5NM SE Fripp Island - Location: 32.279N 80.406W\n')
+        self.outfile.write (f'Hourly Marine Point Forecast - {self.cons.NDBC_LOCATION} - Location: {self.cons.NDBC_LATITUDE} {self.cons.NDBC_LONGITUDE}\n')
         self.outfile.write ('</th>\n')
         self.outfile.write ('</tr>\n')
         headers = {'User-Agent': '(bbitide.org, alert@bbitidereport.com)'}
-        fcurl = f"https://api.weather.gov/gridpoints/{self.marine_points}/" # 5 NM SE Fripp Island
-       #fcurl = "https://api.weather.gov/gridpoints/CHS/64,49/" # Bay Point Reach
-       #fcurl = "https://api.weather.gov/gridpoints/GYX/114,101/" # Pen Bay 5NM ESE Belfast
-       #fcurl = "https://api.weather.gov/gridpoints/GYX/117,93/" # Pen Bay 12NM ENE Rockland
+        fcurl = f"https://api.weather.gov/gridpoints/{self.marine_points}/" 
         response = requests.get(fcurl, headers=headers)
         if str(response) != '<Response [200]>':
             print (str(current_time),'Error response from api.weather.gov call')
             self.outfile.close()
             return -1
         result=response.json()
-       #with open('result2.json', 'w', encoding='utf-8') as f:
-       #    json.dump(result, f, ensure_ascii=False, indent=4)
-       #with open('result2.json', 'r', encoding='utf-8') as f:
-       #   result = json.load(f)
-       #exit()
         tempList = []
         windDirList = []
         windSpeedList = []
@@ -508,11 +501,8 @@ class CreateWxHTML:
             if outidx > 9:
                 EaglesSoar = False
             current_time = nextTime
-          #print ('display time:',dispTime)
-          #print (tempTime,'temperature:',thisTemp,'\n',windSpeedTime,'wind speed:',thisWindSpeed,'\n',windDirTime,'wind direction:',thisWindDir, \
-          #      '\n',windGustTime,'wind gust:',thisWindGust, \
-          #      '\n',waveHeightTime,'wave height:',thisWaveHeight,'\n',wavePeriodTime,'wave period:',thisWavePeriod,'\n',waveDirTime,'wave direction:',thisWaveDir)
         windDispComp = []
+        
         for widx, windspeed in enumerate(windSpeedOut):
             winddir = windDirOut[widx]
             windgust = windGustOut[widx]
