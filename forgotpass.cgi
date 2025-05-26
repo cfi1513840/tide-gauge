@@ -73,7 +73,7 @@ print ('</style>')
 print ('<title>Tide Alert Login Request</title>')
 
 try: 
-   sqlcon = sqlite3.connect(f'{SQL_PATH')
+   sqlcon = sqlite3.connect(f'{SQL_PATH}')
    sqlcur = sqlcon.cursor()
    with open(f'{HTML_DIRECTORY}k1','rb') as kfile:
       key1 = kfile.read()
