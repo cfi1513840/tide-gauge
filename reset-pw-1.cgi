@@ -4,6 +4,7 @@ from datetime import datetime
 import sqlite3
 import smtplib
 from cryptography.fernet import Fernet
+import os
 from dotenv import load_dotenv, find_dotenv
 
 form = cgi.FieldStorage()

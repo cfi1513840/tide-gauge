@@ -6,6 +6,7 @@ import smtplib
 import secrets
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv, find_dotenv
+import os
 import json
 global  SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD, email_message, \
        EMAIL_RECIP, headers

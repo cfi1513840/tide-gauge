@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import cgi, cgitb
+import os
 from datetime import datetime
 import sqlite3
 import smtplib
