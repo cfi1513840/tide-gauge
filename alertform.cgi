@@ -56,8 +56,6 @@ if load_dotenv(envfile):
     SQL_PATH = os.getenv('SQL_PATH')
     CGI_URL = os.getenv('CGI_URL')
     HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
-with open(f'{HTML_DIRECTORY}alertform.log', 'a') as logfile:
-    logfile.write ('SQL_PATH: '+SQL_PATH+'\n')
 form = cgi.FieldStorage()
 email_address = form["eaddr"].value
 password = form["passwd"].value
