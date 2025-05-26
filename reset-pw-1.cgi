@@ -34,7 +34,7 @@ print ('text-align: center;')
 print ('</style>')
 print ('<title>Tide Alert Login Request</title>')
 try: 
-   sqlcon = sqlite3.connect(f'{SQL_PATH')
+   sqlcon = sqlite3.connect(f'{SQL_PATH}')
    sqlcur = sqlcon.cursor()
    with open(f'{HTML_DIRECTORY}k1','rb') as kfile:
       key1 = kfile.read()
@@ -82,7 +82,9 @@ try:
       print ('</body>')
       print ('</html>')
 except Exception as errmsg:
-   print (f'<p>Error: {errmsg}</p>')
+   with open('/var/www/html/reset-pw-1.log', 'a') as logfile:
+      logfile.write(dbtime+' '+str(errmsg))       
+   #print (f'<p>Error: {errmsg}</p>')
    print ('</div>')
    print ('</body>')
    print ('</html>')
