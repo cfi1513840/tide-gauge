@@ -5,6 +5,7 @@ import sqlite3
 import smtplib
 import secrets
 from cryptography.fernet import Fernet
+from dotenv import load_dotenv, find_dotenv
 import json
 global  SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD, email_message, \
        EMAIL_RECIP, headers
@@ -23,12 +24,17 @@ def send_email():
 #
 # Read and decrypt secure variable names & values
 #
+envfile = find_dotenv('/var/www/html/tide.env')
+if load_dotenv(envfile):
+    SQL_PATH = os.getenv('SQL_PATH')
+    CGI_URL = os.getenv('CGI_URL')
+    HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
 constants_dict = {}
 admin_email = []
-with open('/var/www/html/ku', 'r') as file:
+with open(f'{HTML_DIRECTORY}ku', 'r') as file:
    key = file.read()
 enkey = Fernet(key)
-with open('/var/www/html/tide_constants.json','r') as file:
+with open(f'{HTML_DIRECTORY}tide_constants.json','r') as file:
    dictjson = file.read()
 constants_dict = json.loads(dictjson)
 for ent in constants_dict:
@@ -66,9 +72,9 @@ print ('</style>')
 print ('<title>Tide Alert Login Request</title>')
 
 try: 
-   sqlcon = sqlite3.connect('/var/www/html/tides.db')
+   sqlcon = sqlite3.connect(f'{SQL_PATH')
    sqlcur = sqlcon.cursor()
-   with open('/var/www/html/k1','rb') as kfile:
+   with open(f'{HTML_DIRECTORY}k1','rb') as kfile:
       key1 = kfile.read()
    f1 = Fernet(key1)
    emailAddressByte = emailAddress.encode()
@@ -106,7 +112,7 @@ try:
       headers = ["From: " + EMAIL_USERNAME, "Subject: Tide Alert Request", "To: "+EMAIL_RECIP,"MIME-Versiion:1.0","Content-Type:text/html"]
       headers = "\r\n".join(headers)
       email_message = 'Please select the link to enter a new password for your alert request<br>'+ \
-                     f'https://www.springbrookpi.com/cgi-bin/reset-pw.cgi?valkey={valkey}'
+                     f'{CGI_URL}reset-pw.cgi?valkey={valkey}'
       send_email()
       print ('</head>')
       print('<body bgcolor="black"><font size = "5">')

@@ -4,6 +4,7 @@ from datetime import datetime
 import sqlite3
 import smtplib
 from cryptography.fernet import Fernet
+from dotenv import load_dotenv, find_dotenv
 
 form = cgi.FieldStorage()
 valkey = form.getvalue("valkey")
@@ -14,6 +15,11 @@ dbtime = str(curtime)[:-7]
 found = False
 valid = False
 badpass = False
+envfile = find_dotenv('/var/www/html/tide.env')
+if load_dotenv(envfile):
+    SQL_PATH = os.getenv('SQL_PATH')
+    HTML_URL = os.getenv('HTML_URL')
+    HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
 print ("Content-type:text/html\r\n\r\n")
 print ('<html>')
 print ('<head>')
@@ -27,11 +33,11 @@ print ('text-align: center;')
 print ('</style>')
 print ('<title>Tide Alert Login Request</title>')
 try: 
-   sqlcon = sqlite3.connect('/var/www/html/tides.db')
+   sqlcon = sqlite3.connect(f'{SQL_PATH')
    sqlcur = sqlcon.cursor()
-   with open('/var/www/html/k1','rb') as kfile:
+   with open(f'{HTML_DIRECTORY}k1','rb') as kfile:
       key1 = kfile.read()
-   with open('/var/www/html/k3','rb') as kfile:
+   with open(f'{HTML_DIRECTORY}k3','rb') as kfile:
       key3 = kfile.read()
    f1 = Fernet(key1)
    f3 = Fernet(key3)
@@ -55,7 +61,7 @@ try:
       print ('<h1 style="width: 430px; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Tide Alert Password Change</h1>')
       print ('<p style="width: 438px; text-align: center; font-size: 25px; padding: 4px; border: 2px solid black;">')
       print (f'Password updated for {databaseEmailAddress}<br><br>')
-      print ('<a href="https://www.springbrookpi.com/alertlogin.html">Go to Login Screen</a></p>')     
+      print (f'<a href="{HTML_URL}alertlogin.html">Go to Login Screen</a></p>')     
       print ('</span>')
       print ('</div>')
       print ('</body>')
@@ -69,7 +75,7 @@ try:
       print ('<h1 style="width: 430px; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Tide Alert Password Change</h1>')
       print ('<p style="width: 438px; text-align: center; font-size: 25px; padding: 4px; border: 2px solid red;">')
       print (f'The password update request has expired<br><br>')
-      print ('<a href="https://www.springbrookpi.com/alertlogin.html">Go to Login Screen</a></p>')     
+      print (f'<a href="{HTML_URL}alertlogin.html">Go to Login Screen</a></p>')     
       print ('</span>')
       print ('</div>')
       print ('</body>')

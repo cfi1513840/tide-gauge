@@ -54,7 +54,9 @@ EMAIL_PASSWORD = constants_dict['EMAIL_PASSWORD']
 envfile = find_dotenv('/var/www/html/tide.env')
 if load_dotenv(envfile):
     SQL_PATH = os.getenv('SQL_PATH')
-with open('/var/www/html/alertform.log', 'a') as logfile:
+    CGI_URL = os.getenv('CGI_URL')
+    HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
+with open(f'{HTML_DIRECTORY}alertform.log', 'a') as logfile:
     logfile.write ('SQL_PATH: '+SQL_PATH+'\n')
 form = cgi.FieldStorage()
 email_address = form["eaddr"].value
@@ -472,7 +474,7 @@ try:
             print ('</html>')
             subject = 'Tide Alert Request'
             email_message = 'You have requested access to Tide Station Alerts, please select the following link to validate your email address<br>'+ \
-                                f'https://www.springbrookpi.com/cgi-bin/valuser.cgi?valkey={dbvalkey}'
+                                f'{CGI_URL}valuser.cgi?valkey={dbvalkey}'
             send_email(email_address, subject, email_message)     
         elif actype == '0':
             display_userform(email_address,password)
@@ -484,7 +486,7 @@ try:
         sqlcon.commit()
         subject = 'Tide Alert Request'
         email_message = 'You have requested access to Tide Station Alerts, please select the following link to validate your email address<br>'+ \
-                            f'https://www.springbrookpi.com/cgi-bin/valuser.cgi?valkey={valkey}'
+                            f'{CGI_URL}valuser.cgi?valkey={valkey}'
         send_email(email_address, subject, email_message)     
         print ("Content-type:text/html\r\n\r\n")
         print ('<html>')
@@ -543,7 +545,7 @@ try:
         print ('</html>')
         subject = 'Tide Alert Request'
         email_message = 'You have requested access to Tide Station Alerts, please select the following link to validate your email address<br>'+ \
-                            f'https://www.springbrookpi.com/cgi-bin/valuser.cgi?valkey={dbvalkey}'
+                            f'{CGI_URL}valuser.cgi?valkey={dbvalkey}'
         send_email(email_address, subject, email_message)     
      
     else:

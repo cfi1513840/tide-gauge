@@ -4,14 +4,21 @@ from datetime import datetime
 import sqlite3
 import smtplib
 from cryptography.fernet import Fernet
+from dotenv import load_dotenv, find_dotenv
+
+envfile = find_dotenv('/var/www/html/tide.env')
+if load_dotenv(envfile):
+    SQL_PATH = os.getenv('SQL_PATH')
+    HTML_URL = os.getenv('HTML_URL')
+    HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
 form = cgi.FieldStorage()
 valkeyform = form.getvalue("valkey")
-sqlcon = sqlite3.connect('/var/www/html/tides.db')
+sqlcon = sqlite3.connect(f'{SQL_PATH}')
 sqlcur = sqlcon.cursor()
-with open('/var/www/html/k1','rb') as kfile:
+with open(f'{HTML_DIRECTORY}k1','rb') as kfile:
    key1 = kfile.read()
 f1 = Fernet(key1)
-with open('/var/www/html/k3','rb') as kfile:
+with open(f'{HTML_DIRECTORY}k3','rb') as kfile:
    key3 = kfile.read()
 f3 = Fernet(key3)
 sqlcur.execute(f"select * from userpass")
@@ -56,7 +63,7 @@ if found:
    print ('<h1 style="width: 430px; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Tide Alert Password Change</h1>')
    print ('<p style="width: 438px; text-align: center; font-size: 25px; padding: 4px; border: 2px solid black;">')
    print (f'Success - your email address has been validated, you may now login<br><br>')
-   print ('<a href="https://www.springbrookpi.com/alertlogin.html">Go to Login Screen</a></p>')     
+   print (f'<a href="{HTML_URL}alertlogin.html">Go to Login Screen</a></p>')     
    print ('</span>')
    print ('</div>')
    print ('</body>')
@@ -86,7 +93,7 @@ else:
    print ('<h1 style="width: 430px; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Tide Alert Password Change</h1>')
    print ('<p style="width: 438px; text-align: center; font-size: 25px; padding: 4px; border: 2px solid black;">')
    print (f'Error - registration link expired, please register again<br><br>')
-   print ('<a href="https://www.springbrookpi.com/alertlogin.html">Go to Login Screen</a></p>')     
+   print (f'<a href="{HTML_URL}alertlogin.html">Go to Login Screen</a></p>')     
    print ('</span>')
    print ('</div>')
    print ('</body>')
