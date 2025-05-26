@@ -19,6 +19,7 @@ import math
 import re
 from pytz import timezone
 import logging
+from dotenv import load_dotenv, find_dotenv
 
 class CreateHTML:
     def __init__(self, cons):
@@ -30,6 +31,9 @@ class CreateHTML:
         self.lastidesams = [0 for x in range(0,5)]
         self.samcnt = 0
         self.wxexit = ''
+        envfile = find_dotenv('/var/www/html/tide.env')
+        if load_dotenv(envfile):
+            self.NDBC_URL = os.getenv('NDBC_URL')
 
     def create(self, weather, ndbcdata, predicts, tidelist, iparams):
         self.wxexit = ''
@@ -416,21 +420,21 @@ class CreateHTML:
           'text-decoration: none;">\n')
         if ndbc_currency == 0:
             outfile.write (
-              f'<a href="https://www.ndbc.noaa.gov/station_page.php?station=41067" '+
+              f'<a href="{self.NDBC_URL}" '+
               f'style="color: white">NDBC Marine Observation - '+
               f'{self.cons.NDBC_LOCATION} - '+
               f'Location: {str(self.cons.NDBC_LATITUDE)} '+
               f'{str(self.cons.NDBC_LONGITUDE)}</a></span></p>\n')
         elif ndbc_currency == 1:
             outfile.write (
-              f'<a href="https://www.ndbc.noaa.gov/station_page.php?station=41067" '+
+              f'<a href="{self.NDBC_URL}" '+
               f'style="color: white">NDBC Marine Observation - {self.cons.NDBC_LOCATION} - '+
               f'Location: {str(self.cons.NDBC_LATITUDE)} '+
               f'{str(self.cons.NDBC_LONGITUDE)}<font color="#FF9999"> '+
               f'(This report is more than 2 hours old)</font></a></span></p>\n')
         elif ndbc_currency == 2:
             outfile.write (
-              f'<a href="https://www.ndbc.noaa.gov/station_page.php?station=41067" '+
+              f'<a href="{self.NDBC_URL}" '+
               f'style="color: white">NDBC Marine Observation - {self.cons.NDBC_LOCATION} - '+
               f'Location: {str(self.cons.NDBC_LATITUDE)} '+
               f'{str(self.cons.NDBC_LONGITUDE)}<font color="red"> '+
