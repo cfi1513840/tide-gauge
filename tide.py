@@ -63,6 +63,8 @@ class Tide:
     """The Tide class is the primary tide station processor and scheduler"""
     def __init__(self):
         self.current_time = datetime.now()
+        self.message_time = datetime.strftime(
+          self.current_time, cons.TIME_FORMAT)
         self.display = None
         self.newtime = 0
         self.last_ndbc_time = self.current_time
@@ -101,7 +103,7 @@ class Tide:
             self.s1enable = self.iparams_dict.get('s1enable')
             self.s2enable = self.iparams_dict.get('s2enable')
             self.debug = self.iparams_dict.get('debug')
-            display_date_and_time = sunny.get_suntimes(cons)
+            display_date_and_time = sunny.get_suntimes(cons, db)
             self.sunrise = display_date_and_time[3]
             self.sunset = display_date_and_time[4]
             self.display = tidedisplay.TideDisplay(self.stationid, cons)
@@ -112,7 +114,7 @@ class Tide:
             self.main()
             twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
             email_recipient = cons.ADMIN_EMAIL[0]
-            text = f'Tide Station startup at {str(datetime.now())}'
+            text = f'Tide Station startup at {self.message_time}'
             notify.send_SMS(twilio_phone_recipient, text, self.debug)
             email_headers = ["From: " + cons.EMAIL_USERNAME,
               F"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
@@ -260,7 +262,7 @@ class Tide:
             # The display title bar and NOAA tide predictions are update daily
             #
             self.save_the_day = current_day
-            display_date_and_time = sunny.get_suntimes(cons)
+            display_date_and_time = sunny.get_suntimes(cons, db)
             self.sunrise = display_date_and_time[3]
             self.sunset = display_date_and_time[4]
             self.display.master.title(f"{cons.STATION_LOCATION} Tide Monitor Panel "+

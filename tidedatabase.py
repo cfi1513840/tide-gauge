@@ -235,3 +235,7 @@ class DbManage:
             pline = (f'Request window expired for {val_address}')
             logging.info(pline)
         
+    def update_datetime(self, date, sunrise, sunset):
+        self.sql_cursor.execute(f"update banner set dispdate = '{date}',"+
+          f"sunrise = '{sunrise}', sunset = '{sunset}'")
+        self.sql_connection.commit()

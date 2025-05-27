@@ -134,7 +134,7 @@ class TideState:
 
 class SunTime:
     """Obtain the current date, sunrise and sunset times"""
-    def get_suntimes(self, cons):
+    def get_suntimes(self, cons, db):
         try:
             current_time = datetime.now()
             display_date = current_time.strftime("%b %d, %Y")
@@ -145,10 +145,11 @@ class SunTime:
                 sunset = sunset + timedelta(1)
             display_sunrise = sunrise.strftime("%H:%M")
             display_sunset = sunset.strftime("%H:%M")
+            db.update_datetime(display_date, display_sunrise, display_sunset)
             return display_date, display_sunrise, display_sunset, sunrise, sunset
         except Exception as errmsg:
-            pline = (' Error processing sunrise/sunset - '+str(errmsg))
-            return -1, pline
+            logging.warning('Error processing sunrise/sunset - '+str(errmsg))
+            return -1
 
 class Notify:
     """Send email and SMS message notifictions"""
