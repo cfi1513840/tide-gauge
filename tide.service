@@ -1,0 +1,16 @@
+[Unit]
+Description=Tide Station
+After=network.target
+
+[Service]
+TimeoutSec=5min
+ExecStartPre=/bin/sleep 180
+Environment=DISPLAY=:0
+ExecStart=/usr/bin/python3  /home/tide/bin/tide.py
+WorkingDirectory=/home/tide/bin
+StandardOutput=inherit
+StandardError=inherit
+User=tide
+
+[Install]
+WantedBy=multi-user.target
