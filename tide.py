@@ -81,6 +81,7 @@ class Tide:
         self.ndbc_data = {}
         self.save_the_day = datetime.strftime(self.current_time, "%d")
         self.iparams_dict = db.fetch_iparams()
+        self.visit = False
         #
         # Extract the value of the test argument, if specified. This will be
         # used to determine the test cases to be run on various modules.
@@ -251,7 +252,7 @@ class Tide:
                 db.insert_ndbc_data(self.ndbc_data)
 
         if (self.main_loop_count == 5 and self.current_time.hour == 7 and
-          self.current_time.minute == 0):
+          self.current_time.minute == 0 and not self.visit):
             #
             # Webpage visit reports are sent to admin every day at 07:00
             #
@@ -261,6 +262,7 @@ class Tide:
             #
             # The display title bar and NOAA tide predictions are update daily
             #
+            self.visit = False
             self.save_the_day = current_day
             display_date_and_time = sunny.get_suntimes(cons, db)
             self.sunrise = display_date_and_time[3]
@@ -315,6 +317,7 @@ class Tide:
 
     def send_visit_report(self):
 
+        self.visit = True
         grephome = ["grep -o 'CoastalMaine.png' /var/log/apache2/access.log.1  | wc -l"]
         greptide = ["grep -o 'POST /tide.html' /var/log/apache2/access.log.1  | wc -l"]
         grepuser = ["grep -o 'GET /alertlogin.html' /var/log/apache2/access.log.1  | wc -l"]
