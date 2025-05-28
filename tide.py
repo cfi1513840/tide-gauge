@@ -280,6 +280,8 @@ class Tide:
             self.stationid = self.iparams_dict.get('stationid')
             self.station1cal = self.iparams_dict.get('station1cal')
             self.station2cal = self.iparams_dict.get('station2cal')
+            self.s1enable = self.iparams_dict.get('s1enable')
+            self.s2enable = self.iparams_dict.get('s2enable')
             self.debug = self.iparams_dict.get('debug')
             #print (self.ndbc_data)
             #print (self.weather)
@@ -296,10 +298,16 @@ class Tide:
               self.last_station1_time + timedelta(minutes=5)) or
               (self.stationid == 2 and self.current_time >
               self.last_station2_time + timedelta(minutes=5))):
+                msgsuff = ''
+                if ((alt_station == 1 and self.s1enable) or
+                  (alt_station == 2 and self.s2enable)):
+                    self.stationid = alt_station
+                    db.update_stationid(alt_station)
+                    msgsuff = f', switching to Station {str(alt_station)}'
                 twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
                 email_recipient = cons.ADMIN_EMAIL[0]
                 text = (self.message_time+f' Station {self.stationid} has not reported in '+
-                  f'over 5 minutes, switching to Station {str(alt_station)}')
+                  f'over 5 minutes{msgsuff}')
                 notify.send_SMS(twilio_phone_recipient, text, self.debug)
                 email_headers = ["From: " + cons.EMAIL_USERNAME,
                   f"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
@@ -307,9 +315,9 @@ class Tide:
                   "Content-Type:text/html"]
                 email_headers =  "\r\n".join(email_headers)
                 notify.send_email(email_recipient, email_headers, text,
-                  self.debug)
-                self.stationid = alt_station
-                db.update_stationid(alt_station)
+                  self.debug)                    
+                self.last_station1_time = self.current_time
+                self.last_station2_time = self.current_time
             if self.tide_ft != 99:
                 alerts.check_alerts(self.tide_ft, self.weather,
                   self.ndbc_data, self.sunrise, self.sunset, self.debug)
