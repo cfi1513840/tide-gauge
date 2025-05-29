@@ -36,11 +36,12 @@ class TidePredict:
         except Exception as errmsg:
             logging.warning('Unable to fetch predicted tide '+str(errmsg))
             return None
-
+        print ('len(predicted_tides): '+str(len(predicted_tides)))
         for line in predicted_tides:
             this_time = line[0]
             thisto = datetime.strptime(this_time,"%Y-%m-%d %H:%M:%S")
             delta = round(thisto.timestamp()-maketime.timestamp(),2)
+            print ('delta: '+str(delta))
             thistide = float(line[1])
             thistate = line[2]
             if lastime == '':
@@ -63,6 +64,7 @@ class TidePredict:
                 tidesecs = 0
                 startproc = True
                 restart = True
+                print ('predicted time found')
    
             if startproc:
                 #
@@ -123,5 +125,5 @@ class TidePredict:
             lastime = thisto
             lasttide = thistide
             lastdelta = delta
-        print ('len(predicted_tide_list: '+str(len(predicted_tide_list)))
+        print ('len(predicted_tide_list): '+str(len(predicted_tide_list)))
         return predicted_tide_list
