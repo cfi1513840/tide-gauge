@@ -329,7 +329,7 @@ class TideDisplay:
             self.ndbc_baro_tk_var.set(ndbc_data['Atmospheric Pressure'])
 
     def tide(self, predicts, measurements):
-        """Plot grid lines, predicted tide level and annotation"""
+        """Plot grid lines,  predicted tide level and annotation"""
         max_tide = -99
         min_tide = 99
         y_divs = 12
