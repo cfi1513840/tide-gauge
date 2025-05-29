@@ -34,7 +34,7 @@ class Constants:
     #
     # Prepare encryption key
     #
-    with open('ku', 'r') as file:
+    with open('/var/www/html/ku', 'r') as file:
         key = file.read()
     enkey = Fernet(key)
     #
