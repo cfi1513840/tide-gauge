@@ -123,4 +123,5 @@ class TidePredict:
             lastime = thisto
             lasttide = thistide
             lastdelta = delta
+        print ('len(predicted_tide_list: '+str(len(predicted_tide_list)))
         return predicted_tide_list
