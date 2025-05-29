@@ -66,6 +66,8 @@ echo
 read -p "Do you want copy the service file to the systemd directory? Y/N: " answ
 if [ $answ == "Y" ] || [ $answ == "y" ]; then
   sudo cp -v tide.service /lib/systemd/system/
+fi
+sudo systemctl enable tide
 python makekeys.py
 echo
 grep "HTML_DIRECTORY" tide.env > grep.tmp
