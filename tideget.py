@@ -341,7 +341,7 @@ class GetNOAA:
             pline = 'Issuing new data request to NOAA website'
             logging.info(pline)
             tidetime = current_time - timedelta(hours=36)
-            begin = datetime.strftime(current_time, "%Y%m%d")
+            begin = datetime.strftime(tidetime, "%Y%m%d")
             stationid = self.cons.NOAA_STATION
             response = requests.get("https://tidesandcurrents.noaa.gov/"
               "api/datagetter?product=predictions&"
