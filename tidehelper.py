@@ -43,13 +43,14 @@ class Constants:
     with open('/var/www/html/tide_constants.json','r') as file:
         dictjson = file.read()
     secure_dict = json.loads(dictjson)
+    tide_dictionary = {}
     #
     # Save decrypted attributes in dictionary 'secure_dict'
     #
     for ent in secure_dict:
         clearval = enkey.decrypt(secure_dict[ent].encode())
         secure_dict[ent] = clearval.decode()
-        #print (ent, secure_dict[ent])
+        tide_dictionary[ent] = secure_dict[ent]
     #
     # Initialize secure instance attributes
     #
@@ -84,6 +85,26 @@ class Constants:
     OPEN_WEATHERMAP_API = secure_dict['WXOPENAPI']
     WEATHER_UNDERGROUND_API = secure_dict['WXUNDAPI']
 
+    with open('tide.env', 'r') as infile:
+        lines = infile.readlines()
+    for line in lines:
+        line1 = line.replace(' ','')
+        line1 = line.replace('\n','')
+        if len(line1) == 0:
+           continue
+        if line1[0] == '#':
+           continue
+        com = line1.find('#')
+        if com != -1:
+            line1 = line1[:com]
+            print (line1)
+        line2 = line1.split('=')
+        key = line2[0].replace(' ','')
+        value = line2[1]
+        value = value.replace("'","")
+        value = value.strip()
+        tide_dictionary[key] = value
+        
     envfile = find_dotenv('tide.env')
     if load_dotenv(envfile):
         LATITUDE = float(os.getenv('STATION_LATITUDE'))
@@ -124,6 +145,20 @@ class Constants:
         }
     RADIANS_PER_SECOND = math.pi*2/91080
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+    
+    tide_dictionary['FULL_TIDE'] = str(math.pi)
+    tide_dictionary['HALF_TIDE'] = str(math.pi/2)
+    tide_dictionary['HOSTNAME'] = socket.gethostname()
+    tide_dictionary['INFLUXDB_COLUMN_NAMES'] = {
+        "S": "sensor_num",
+        "C": "message_count",
+        "R": "sensor_measurement_mm",
+        "M": "correlation_count",
+        "V": "battery_milliVolts",
+        "P": "signal_strength",
+        }
+    tide_dictionary['RADIANS_PER_SECOND'] = str(math.pi*2/91080)
+    tide_dictionary['TIME_FORMAT'] = "%Y-%m-%d %H:%M:%S"
 
 class TideState:
     """Store state variables"""
