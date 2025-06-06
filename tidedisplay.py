@@ -348,7 +348,7 @@ class TideDisplay:
         min_y = int(round(min_tide-0.5,0))
         max_y = int(round(max_tide+0.5,0))
         y_divs = int((max_y-min_y))
-        self.y_grid_size = (self.canvas_height-self.y_start)/(y_divs+1)
+        self.y_grid_size = (self.canvas_height-self.y_start)/(y_divs)
         self.plot_window.delete("all")
         #
         # Draw grid lines
@@ -384,7 +384,7 @@ class TideDisplay:
             if pidx == 0:
                 start_plot_x = (self.x_plot_start+entry[1]*
                   (self.canvas_width-30)/86400/2)
-                start_plot_y = entry[2]*self.y_grid_size+(self.y_grid_size*3)
+                start_plot_y = (entry[2]-min_y)*self.y_grid_size+self.y_start
                 preliminary_tide_state = entry[3]
                 start_plot_time = entry[0]
                 continue
@@ -398,7 +398,7 @@ class TideDisplay:
             linedate = datetime.strftime(this_time, "%d %b")  
             end_plot_x = (self.x_plot_start+entry[1]*
               (self.canvas_width-30)/86400/2)
-            end_plot_y = entry[2]*self.y_grid_size+(self.y_grid_size*3)
+            end_plot_y = (entry[2]-min_y)*self.y_grid_size+self.y_start
             self.plot_window.create_line(
               start_plot_x, self.canvas_height-start_plot_y, end_plot_x, 
               self.canvas_height-end_plot_y, fill="snow4", width=3)  
@@ -447,7 +447,7 @@ class TideDisplay:
                     continue
                 end_plot_x = (
                   int((plot_time+off_time)*(self.canvas_width-30)/86400/2+30))
-                end_plot_y = entry[1]*self.y_grid_size+(self.y_grid_size*3)
+                end_plot_y = (entry[1]-min_y)*self.y_grid_size+self.y_start
                 if pidx == 0:
                     start_plot_x = end_plot_x
                     start_plot_y = end_plot_y
