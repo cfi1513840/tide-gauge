@@ -142,6 +142,7 @@ class Constants:
         "M": "correlation_count",
         "V": "battery_milliVolts",
         "P": "signal_strength",
+        "s": "solar_milliVolts"
         }
     RADIANS_PER_SECOND = math.pi*2/91080
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -156,6 +157,7 @@ class Constants:
         "M": "correlation_count",
         "V": "battery_milliVolts",
         "P": "signal_strength",
+        "s": "solar_milliVolts"
         }
     tide_dictionary['RADIANS_PER_SECOND'] = str(math.pi*2/91080)
     tide_dictionary['TIME_FORMAT'] = "%Y-%m-%d %H:%M:%S"

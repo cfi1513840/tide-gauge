@@ -91,6 +91,12 @@ class DbManage:
                 location = 'River 1' if station == 1 else 'River 2'
                 distance = int(data_dict['R'])
                 distance_feet = round(distance*0.03937007874,2)
+                solar = data_dict.get('s')
+                if solar != None:
+                    solarv = round(float(solar)/1000,3)
+                else:
+                    solar = 0
+                    solarv = 0
                 database_values = (
                   database_time,
                   station,
@@ -100,17 +106,19 @@ class DbManage:
                   int(data_dict.get('C')),
                   distance_feet,
                   distance,
-                  int(data_dict.get('M'))          
+                  int(data_dict.get('M')),
+                  solarv                  
                   )
-            except:
+            except Exception as errmsg:
+                logging.warning('db insertion failed: '+str(errmsg))
                 return
             self.sql_cursor.execute(
-              f"INSERT INTO sensors VALUES (?,?,?,?,?,?,?,?,?,?)",
+              f"INSERT INTO sensors VALUES (?,?,?,?,?,?,?,?,?,?,?)",
               database_values)
             self.sql_connection.commit()
             message_time = datetime.utcnow()
             point_tide_station = Point("tide_station") \
-              .tag("location", "Beaufort River SC") \
+              .tag("location", "Damariscotta ME") \
               .tag(self.cons.INFLUXDB_COLUMN_NAMES["S"],
                 int(data_dict["S"])) \
               .tag("sensor_type", "ultrasonic MB7389") \
@@ -124,6 +132,8 @@ class DbManage:
                 int(data_dict["M"])) \
               .field(self.cons.INFLUXDB_COLUMN_NAMES["P"],
                 int(data_dict["P"])) \
+              .field(self.cons.INFLUXDB_COLUMN_NAMES["s"],
+                int(solar)) \
               .time(message_time, WritePrecision.MS)
             write_api = self.influxdb_client.write_api(
               write_options=SYNCHRONOUS)
@@ -185,7 +195,7 @@ class DbManage:
         self.influx_query = ('from(bucket:"TideData") '+
           '|> range(start: -24h) '+
           '|> filter(fn:(r) => r._measurement == "tide_station") '+
-          '|> filter(fn: (r) => r.location == "Beaufort River SC") '+
+          '|> filter(fn: (r) => r.location == "Damariscotta ME") '+
           f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") '+
           '|> filter(fn: (r) => r._field == "sensor_measurement_mm")')
         tide_list = []
