@@ -97,7 +97,6 @@ class Constants:
         com = line1.find('#')
         if com != -1:
             line1 = line1[:com]
-            print (line1)
         line2 = line1.split('=')
         key = line2[0].replace(' ','')
         value = line2[1]

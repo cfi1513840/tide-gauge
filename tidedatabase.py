@@ -89,11 +89,10 @@ class DbManage:
             location = self.cons.STATION_LOCATION
             try:
                 station = int(data_dict.get('S'))
-                #location = 'River 1' if station == 1 else 'River 2'
                 distance = int(data_dict['R'])
                 distance_feet = round(distance*0.03937007874,2)
-                solar = data_dict.get('s')
-                if solar != None:
+                if 's' in data_dict:
+                    solar = data_dict.get('s')
                     solarv = round(float(solar)/1000,3)
                 else:
                     solar = 0

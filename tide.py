@@ -82,6 +82,7 @@ class Tide:
         self.save_the_day = datetime.strftime(self.current_time, "%d")
         self.iparams_dict = db.fetch_iparams()
         self.visit = False
+        self.sensor_readings = []
         #
         # Extract the value of the test argument, if specified. This will be
         # used to determine the test cases to be run on various modules.
@@ -144,6 +145,8 @@ class Tide:
                 tide_readings = sensor.read_sensor()
             if tide_readings:
                 db.insert_tide(tide_readings)
+                if int(tide_readings.get('S')) == self.stationid:
+                    self.sensor_readings = tide_readings
             tide_list = db.fetch_tide_24h(
               self.stationid, self.station1cal, self.station2cal)
             self.process = tideprocess.ProcTide(tide_list)
@@ -188,6 +191,8 @@ class Tide:
         if 'sim' not in sys.argv:    
             tide_readings = sensor.read_sensor()
         if tide_readings:
+            if int(tide_readings.get('S')) == self.stationid:
+                self.sensor_readings = tide_readings
             db.insert_tide(tide_readings)
             volts = 0
             rssi = 0
@@ -292,7 +297,7 @@ class Tide:
             if current_minute == '00':
                 wxhtml.wxproc(self.iparams_dict)
             html.create(self.weather, self.ndbc_data, predict_list,
-              self.tide_list, self.iparams_dict)
+              self.tide_list, self.iparams_dict, self.sensor_readings)
             alt_station = 2 if self.stationid == 1 else 1
             if ((self.stationid == 1 and self.current_time >
               self.last_station1_time + timedelta(minutes=5)) or

@@ -35,7 +35,7 @@ class CreateHTML:
         if load_dotenv(envfile):
             self.NDBC_URL = os.getenv('NDBC_URL')
 
-    def create(self, weather, ndbcdata, predicts, tidelist, iparams):
+    def create(self, weather, ndbcdata, predicts, tidelist, iparams, sensor):
         self.wxexit = ''
         currentdata = []
         reform = []
@@ -59,6 +59,13 @@ class CreateHTML:
         sunset = iparams['sunset']
         dispdate = iparams['dispdate']
         banflag = iparams['banflag']
+        batv = 0
+        solarv = 0
+        rssi = 0
+        if sensor:
+            if 'V' in sensor: batv = sensor['V']
+            if 's' in sensor: solarv = sensor['s']
+            if 'P' in sensor: rssi = sensor['P']
         #
         # Extract NDBC dictionary data
         #
@@ -352,11 +359,13 @@ class CreateHTML:
         outfile.write ('<body style="background-color:black;">\n')
         outfile.write ('<div>\n')
         outfile.write (f'<table width="{canw_str}" border="2" cellpadding="2" cellspacing="2" style="border-color: #000000; border-style: solid; background-color: #ccffff;">\n')
-        outfile.write ('<tr valign="middle">\n')
-        outfile.write ('<td colspan="9" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
-        outfile.write (f'{self.cons.STATION_LOCATION} Tide & Weather - {dispdate}.&nbsp&nbsp&nbsp&nbsp&nbspSunrise: {sunrise} - Sunset: {sunset}</span></p>\n')
+        outfile.write ('<tr valign="middle">\n') 
+        outfile.write ('<td colspan="4" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
+        outfile.write (f'BatV: {round(float(batv)/1000, 3)}&nbsp&nbsp&nbspSolarV: {round(float(solarv)/1000, 3)}&nbsp&nbsp&nbsprssi: {rssi}</span></p>\n')
+        outfile.write ('<td colspan="5" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
+        outfile.write (f'{self.cons.STATION_LOCATION} Tide & Weather - {dispdate}.&nbsp&nbspSunrise: {sunrise} - Sunset: {sunset}</span></p>\n')
         outfile.write ('</td>\n')
-        outfile.write ('<td colspan="3" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
+        outfile.write ('<td colspan="2" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         outfile.write (f'<form action="/alertlogin.html"><button type="submit">Alerts</button></form></span></p>\n')
         outfile.write ('</td>\n')
         outfile.write ('</tr>\n')
