@@ -86,9 +86,10 @@ class DbManage:
         try:
             now = datetime.now()
             database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
+            location = self.cons.STATION_LOCATION
             try:
                 station = int(data_dict.get('S'))
-                location = 'River 1' if station == 1 else 'River 2'
+                #location = 'River 1' if station == 1 else 'River 2'
                 distance = int(data_dict['R'])
                 distance_feet = round(distance*0.03937007874,2)
                 solar = data_dict.get('s')
@@ -118,7 +119,7 @@ class DbManage:
             self.sql_connection.commit()
             message_time = datetime.utcnow()
             point_tide_station = Point("tide_station") \
-              .tag("location", "Damariscotta ME") \
+              .tag("location", f"{location}") \
               .tag(self.cons.INFLUXDB_COLUMN_NAMES["S"],
                 int(data_dict["S"])) \
               .tag("sensor_type", "ultrasonic MB7389") \
@@ -192,10 +193,11 @@ class DbManage:
 
     def fetch_tide_24h(self, stationid, station1cal ,station2cal):
         """Fetch the last 24 hours of tide measurements for plotting"""
+        location = self.cons.STATION_LOCATION
         self.influx_query = ('from(bucket:"TideData") '+
           '|> range(start: -24h) '+
           '|> filter(fn:(r) => r._measurement == "tide_station") '+
-          '|> filter(fn: (r) => r.location == "Damariscotta ME") '+
+          f'|> filter(fn: (r) => r.location == "{location}") '+
           f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") '+
           '|> filter(fn: (r) => r._field == "sensor_measurement_mm")')
         tide_list = []
