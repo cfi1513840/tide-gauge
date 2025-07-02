@@ -73,18 +73,18 @@ class CreateHTML:
             ndbc_wind_f = 0
             ndbc_gust_f = 0
             ndbc_wave_f = 0
-            timecheck = None
-            ndbc_time = None
-            ndbc_location = None
-            ndbc_wind = None
-            ndbc_wind_direction = None
-            ndbc_gust = None
-            ndbc_wave_height = None
-            ndbc_wave_period = None
-            ndbc_air_temp = None
-            ndbc_water_temp = None
-            ndbc_wave_direction = None
-            ndbc_baro = None
+            timecheck = 0
+            ndbc_time = 0
+            ndbc_location = 0
+            ndbc_wind = 0
+            ndbc_wind_direction = 0
+            ndbc_gust = 0
+            ndbc_wave_height = 0
+            ndbc_wave_period = 0
+            ndbc_air_temp = 0
+            ndbc_water_temp = 0
+            ndbc_wave_direction = 0
+            ndbc_baro = 0
             #print (ndbcdata)
             if 'DateTime' in ndbcdata:
                 ndbc_time = ndbcdata['DateTime']
@@ -117,12 +117,12 @@ class CreateHTML:
                     ndbc_currency = 0
                 try:
                     ndbc_time = datetime.strftime(timecheck,'%b %d, %Y %H:%M')
-                    if ndbc_wind != None:
+                    if ndbc_wind != 0:
                         ndbc_wind_f = float(ndbc_wind)
                         ndbc_wind = ndbc_wind_direction+' '+ndbc_wind
-                    if ndbc_gust != None:
+                    if ndbc_gust != 0:
                         ndbc_gust_f = float(ndbc_gust)
-                    if ndbc_wave_height != None:
+                    if ndbc_wave_height != 0:
                         ndbc_wave_f = float(ndbc_wave_height)
                 except:
                     logging.info('Error processing NDBC wind parameters')
@@ -133,15 +133,15 @@ class CreateHTML:
         #
         if weather:
             #print (weather)
-            temperature = None
-            humidity = None
-            baro = None
-            wind_speed = None
-            wind_gust = None
-            baro_trend = None
-            dewpoint = None
-            rain_rate = None
-            rain_today = None
+            temperature = 0
+            humidity = 0
+            baro = 0
+            wind_speed = 0
+            wind_gust = 0
+            baro_trend = 0
+            dewpoint = 0
+            rain_rate = 0
+            rain_today = 0
             wind_direction_symbol = ''
             if 'temperature' in weather:
                 temperature = str(int(weather['temperature']))+'&deg; F'
@@ -163,20 +163,20 @@ class CreateHTML:
                 rain_today = weather['rain_today']
             if 'wind_direction_symbol' in weather:
                 wind_direction_symbol = weather['wind_direction_symbol']+' '
-            if wind_gust == None and wind_speed != None:
+            if wind_gust == 0 and wind_speed != 0:
                 wind_gust = wind_speed
             with open('/var/www/html/tidehtml.log', 'a') as logfile:
                 logfile.write('wind_speed type: '+str(type(wind_speed)))
-            if baro_trend != None and baro_trend < -0.01:
+            if baro_trend != 0 and baro_trend < -0.01:
                 baro = '&darr; '+str(baro)+' &darr;'
-            elif baro_trend != None and baro_trend > 0.01:
+            elif baro_trend != 0 and baro_trend > 0.01:
                 baro = '&uarr; '+str(baro)+' &uarr;'   
             #if wind_gust < wind_speed+4 and wind_gust > wind_speed-4:
             #    wind_gust = '--'
             #else:
-            if wind_gust != None:
+            if wind_gust != 0:
                 wind_gust = str(wind_gust)+" mph"
-            if wind_speed != None:
+            if wind_speed != 0:
                 wind_speed = wind_direction_symbol+str(wind_speed)+" mph"
             
         # Check for minimum and maximum tide levels and get
