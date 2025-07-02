@@ -48,12 +48,13 @@ sunny = tidehelper.SunTime()
 cons = tidehelper.Constants()
 state = tidehelper.TideState()
 notify = tidehelper.Notify(cons)
-getwx = tideget.GetWeather(cons, notify)
+val = tidehelper.ValType()
+getwx = tideget.GetWeather(cons, val, notify)
 db = tidedatabase.DbManage(cons)
-getndbc = tideget.GetNDBC(cons, notify)
-getnoaa = tideget.GetNOAA(cons)
+getndbc = tideget.GetNDBC(cons, val, notify)
+getnoaa = tideget.GetNOAA(cons, val)
 if 'sim' not in sys.argv:    
-    sensor = tideget.ReadSensor(cons)
+    sensor = tideget.ReadSensor(cons, val)
 predict = tidepredict.TidePredict(cons, db)
 alerts = tidealerts.TideAlerts(cons, db, notify)
 html = tidehtml.CreateHTML(cons)
@@ -197,10 +198,10 @@ class Tide:
             volts = 0
             rssi = 0
             try:
-                tide_mm = int(tide_readings['R'])
-                station = int(tide_readings['S'])
-                volts = float(tide_readings['V'])/1000
-                rssi = int(tide_readings['P'])
+                tide_mm = tide_readings['R']
+                station = tide_readings['S']
+                volts = tide_readings['V']/1000
+                rssi = tide_readings['P']
                 if station == 1:
                     self.last_station1_time = self.current_time
                     if self.stationid == 1:

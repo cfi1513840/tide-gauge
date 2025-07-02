@@ -7,8 +7,9 @@ import feedparser
 import logging
 
 class GetWeather:
-    def __init__(self, cons, notify):
+    def __init__(self, cons, val, notify):
         self.cons = cons
+        self.val = val
         self.notify = notify
         self.wx_und_report_flag = 0
         self.wx_opn_report_flag = 0
@@ -74,15 +75,15 @@ class GetWeather:
             loadedic = json.loads(dumpedic)
             observations = loadedic['observations']
             weather = {
-              'temperature': float(observations[0]['imperial']['temp']),
-              'humidity': int(observations[0]['humidity']),
-              'baro': round(float(observations[0]['imperial']['pressure']),2),
-              'dewpoint': int(observations[0]['imperial']['dewpt']),
-              'wind_speed': int(observations[0]['imperial']['windSpeed']),
-              'wind_direction_degrees': int(observations[0]['winddir']),
-              'rain_rate': float(observations[0]['imperial']['precipRate']),
-              'rain_today': float(observations[0]['imperial']['precipTotal']),
-              'wind_gust': int(observations[0]['imperial']['windGust'])
+              'temperature': self.val.var_type(observations[0]['imperial']['temp'], float),
+              'humidity': self.val.var_type(observations[0]['humidity'], int),
+              'baro': round(self.val.var_type(observations[0]['imperial']['pressure'], float),2),
+              'dewpoint': self.val.var_type(observations[0]['imperial']['dewpt'], int),
+              'wind_speed': self.val.var_type(observations[0]['imperial']['windSpeed'], int),
+              'wind_direction_degrees': self.val.var_type(observations[0]['winddir'], int),
+              'rain_rate': self.val.var_type(observations[0]['imperial']['precipRate'], float),
+              'rain_today': self.val.var_type(observations[0]['imperial']['precipTotal'], float),
+              'wind_gust': self.val.var_type(observations[0]['imperial']['windGust'], int)
               }
             weather['wind_direction_symbol'] = self.deg_to_direction(
                 weather['wind_direction_degrees'])
@@ -242,8 +243,9 @@ class GetWeather:
 
 class GetNDBC:
     """ Read marine observation data from the NDBC API"""     
-    def __init__(self, cons, notify):
+    def __init__(self, cons, val, notify):
         self.cons = cons
+        self.val = val
         self.notify = notify
         
     def read_station(self):
@@ -329,8 +331,9 @@ class GetNDBC:
 
 class GetNOAA:
     """Retrieve tide predictions from the NOAA website"""
-    def __init__(self, cons):
+    def __init__(self, cons, val):
         self.cons = cons
+        self.val = val
 
     def noaa_tide(self):
         noaa_data = []
@@ -366,16 +369,17 @@ class GetNOAA:
                       this_time,"%Y-%m-%d %H:%M:%S")
                 except:
                     continue
-                noaa_data.append([this_time,float(line[1]),line[2]])
+                noaa_data.append([this_time,self.val.var_type(line[1], float),line[2]])
             return noaa_data
         except Exception as errmsg:
             logging.warning(' Error obtaining NOAA tide - '+str(errmsg))
             return []
 class ReadSensor:
     """Read sensor reading from serial port"""
-    def __init__(self, cons):
+    def __init__(self, cons, val):
         import serial
         self.cons = cons
+        self.val = val
         self.usb_serial_input = serial.Serial(
           '/dev/ttyUSB0',9600, 8, 'N', 1, timeout = 1000)
         self.usb_serial_input.reset_input_buffer()
@@ -394,7 +398,11 @@ class ReadSensor:
                     return data_dict
                 for field in packet:
                     if field[0].isalpha():
-                        data_dict[field[0]] = field[1:]
+                        this_var = self.val.var_type(field[1:], int)
+                        if this_var == 0:
+                            data_dict = {}
+                            break
+                        data_dict[field[0]] = this_var
                     else:
                         continue
                 return data_dict

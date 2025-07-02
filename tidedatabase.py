@@ -88,12 +88,12 @@ class DbManage:
             database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
             location = self.cons.STATION_LOCATION
             try:
-                station = int(data_dict.get('S'))
-                distance = int(data_dict['R'])
+                station = data_dict.get('S')
+                distance = data_dict['R']
                 distance_feet = round(distance*0.03937007874,2)
                 if 's' in data_dict:
                     solar = data_dict.get('s')
-                    solarv = round(float(solar)/1000,3)
+                    solarv = round(solar/1000,3)
                 else:
                     solar = 0
                     solarv = 0
@@ -101,12 +101,12 @@ class DbManage:
                   database_time,
                   station,
                   location,                    
-                  int(data_dict.get('P')), 
-                  round(float(data_dict.get('V'))/1000,3),'', 
-                  int(data_dict.get('C')),
+                  data_dict.get('P'), 
+                  round(data_dict.get('V')/1000,3),'', 
+                  data_dict.get('C'),
                   distance_feet,
                   distance,
-                  int(data_dict.get('M')),
+                  data_dict.get('M'),
                   solarv                  
                   )
             except Exception as errmsg:
@@ -120,20 +120,20 @@ class DbManage:
             point_tide_station = Point("tide_station") \
               .tag("location", f"{location}") \
               .tag(self.cons.INFLUXDB_COLUMN_NAMES["S"],
-                int(data_dict["S"])) \
+                data_dict["S"]) \
               .tag("sensor_type", "ultrasonic MB7389") \
               .field(self.cons.INFLUXDB_COLUMN_NAMES["V"],
-                int(data_dict["V"])) \
+                data_dict["V"]) \
               .field(self.cons.INFLUXDB_COLUMN_NAMES["C"],
-                int(data_dict["C"])) \
+                data_dict["C"]) \
               .field(self.cons.INFLUXDB_COLUMN_NAMES["R"],
-                int(data_dict["R"])) \
+                data_dict["R"]) \
               .field(self.cons.INFLUXDB_COLUMN_NAMES["M"],
-                int(data_dict["M"])) \
+                data_dict["M"]) \
               .field(self.cons.INFLUXDB_COLUMN_NAMES["P"],
-                int(data_dict["P"])) \
+                data_dict["P"]) \
               .field(self.cons.INFLUXDB_COLUMN_NAMES["s"],
-                int(solar)) \
+                solar) \
               .time(message_time, WritePrecision.MS)
             write_api = self.influxdb_client.write_api(
               write_options=SYNCHRONOUS)

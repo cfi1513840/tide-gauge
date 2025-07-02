@@ -7,7 +7,8 @@ Version: 1.0
 Date: 2025-03-29
 Description:
 Provides the following utility functions: sending email and sms messages,
-acquiring sunrise and sunset times and declaring system constants.
+acquiring sunrise and sunset times and declaring system constants,
+and checking variable field types.
 """
 import os
 import math
@@ -224,3 +225,19 @@ class Notify:
             session.quit()
         except Exception as errmsg:
             logging.warning(errmsg)
+
+class ValType:
+    """Validate variable type"""
+    # return zero if variable does not match type
+    def var_type(self, var, typevar):
+        if typevar == float:
+            try:
+                newvar = float(var)
+            except:
+                newvar = 0.0
+        elif typevar == int:
+            try:
+                newvar = int(var)
+            except:
+                newvar = 0
+        return newvar
