@@ -391,7 +391,7 @@ class CreateHTML:
         outfile.write ('</td>\n')
         outfile.write ('</tr>\n')
         outfile.write ('<tr valign="middle">\n')
-        if False:
+        if not weather:
             outfile.write ('<td colspan = "8" style="background-color: snow;"> <p>Local Weather Temporarily Unavailable</p>\n')
         else:
             outfile.write ('<td style="background-color: snow;"><p>\n')

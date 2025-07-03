@@ -79,6 +79,7 @@ class Tide:
         self.tide2 = 0
         self.tide_ft = 99
         self.weather = {}
+        self.weather_fail = 0
         self.ndbc_data = {}
         self.save_the_day = datetime.strftime(self.current_time, "%d")
         self.iparams_dict = db.fetch_iparams()
@@ -129,7 +130,10 @@ class Tide:
             if not self.weather:
                 self.weather = getwx.open_weather_map()
             if self.weather:
+                self.weather_fail = 0
                 db.insert_weather(self.weather)
+            else:
+                self.weather_fail = 1
             wxhtml.wxproc(self.iparams_dict)
             #print ('get ndbcdata')
             self.ndbc_data = getndbc.read_station()
@@ -224,8 +228,8 @@ class Tide:
             except:
                 pass
 
-        if (self.main_loop_count == 2 and
-          self.current_time >= self.last_weather_time + timedelta(minutes=3)):
+        if (self.main_loop_count == 2 and (self.weather_fail or 
+          self.current_time >= self.last_weather_time + timedelta(minutes=3))):
             #
             # Local weather is updated every three minutes
             #
@@ -235,8 +239,11 @@ class Tide:
             if not self.weather:
                 self.weather = getwx.open_weather_map()
             if self.weather:
+                self.weather_fail = 0
                 db.insert_weather(self.weather)
                 self.display.update(self.weather, self.ndbc_data)
+            else:
+                self.weather_fail = 1
 
         if self.main_loop_count == 3:
             valkeys = db.fetch_userpass()
