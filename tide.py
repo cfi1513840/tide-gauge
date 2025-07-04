@@ -87,6 +87,7 @@ class Tide:
         self.iparams_dict = db.fetch_iparams()
         self.visit = False
         self.sensor_readings = []
+        self.station_oos = False # Station out of service
         #
         # Extract the value of the test argument, if specified. This will be
         # used to determine the test cases to be run on various modules.
@@ -231,6 +232,7 @@ class Tide:
                         self.display.station_signal_strength_tk_var.set(
                           str(rssi))
                         self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
+                        self.station_oos = False
                 elif station == 2:
                     self.last_station2_time = self.current_time
                     if self.stationid == 2:
@@ -239,6 +241,7 @@ class Tide:
                         self.display.station_signal_strength_tk_var.set(
                           str(rssi))
                         self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
+                        self.station_oos = False
                 if self.tide_ft != 99:
                     self.tide_list = self.process.update_tide_list(
                       self.tide_list, self.tide_ft)
@@ -324,10 +327,11 @@ class Tide:
             html.create(self.weather, self.ndbc_data, predict_list,
               self.tide_list, self.iparams_dict, self.sensor_readings)
             alt_station = 2 if self.stationid == 1 else 1
-            if ((self.stationid == 1 and self.current_time >
+            if (not self.station_oos and ((self.stationid == 1 and self.current_time >
               self.last_station1_time + timedelta(minutes=5)) or
               (self.stationid == 2 and self.current_time >
-              self.last_station2_time + timedelta(minutes=5))):
+              self.last_station2_time + timedelta(minutes=5)))):
+                self.station_oos = True
                 msgsuff = ''
                 if ((alt_station == 1 and self.s1enable) or
                   (alt_station == 2 and self.s2enable)):
