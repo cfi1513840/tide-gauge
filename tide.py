@@ -78,6 +78,8 @@ class Tide:
         self.tide1 = 0
         self.tide2 = 0
         self.tide_ft = 99
+        self.tide_average = [0 for x in range(0,20)]
+        self.tide_init = False
         self.weather = {}
         self.weather_fail = 0
         self.ndbc_data = {}
@@ -151,6 +153,10 @@ class Tide:
             if tide_readings:
                 db.insert_tide(tide_readings)
                 if int(tide_readings.get('S')) == self.stationid:
+                    tide_level = tide_readings.get('R')
+                    self.tide_init = True
+                    for idx in range(0,20):
+                        self.tide_average = self.tide_average[1:]+[tide_level]
                     self.sensor_readings = tide_readings
             tide_list = db.fetch_tide_24h(
               self.stationid, self.station1cal, self.station2cal)
@@ -198,7 +204,18 @@ class Tide:
         if tide_readings:
             if int(tide_readings.get('S')) == self.stationid:
                 self.sensor_readings = tide_readings
-            db.insert_tide(tide_readings)
+                tide_level = tide_readings.get('R')
+                if not self.tide_init:
+                    for idx in range(0,20):
+                        self.tide_average = self.tide_average[1:]+[tide_level]
+                    self.tide_init = True                        
+                self.tide_average = self.tide_average[1:]+[tide_level]             
+                check_tide = sum(self.tide_average)/len(self.tide_average)
+                if tide_level > check_tide+300 or tide_level < check_tide-300:
+                    logging.warning (self.message_time+' invalid tide level: '+
+                      str(tide_level)+' versus 20 minute average: '+str(check_tide))
+                else:               
+                    db.insert_tide(tide_readings)
             volts = 0
             rssi = 0
             try:

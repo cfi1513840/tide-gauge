@@ -92,15 +92,19 @@ class TideAlerts:
                           save_entry['water_temp_status']
                         alert_list[index]['event_repeat'] = \
                           save_entry['event_repeat']
-        self.tide_count += 1
-        self.tide_average = self.tide_average[1:]+[tide_level]
+        #self.tide_count += 1
+        #self.tide_average = self.tide_average[1:]+[tide_level]
         if self.tide_count < 20:
+            self.tide_count += 1
+            self.tide_average = self.tide_average[1:]+[tide_level]
             return                
         check_tide = sum(self.tide_average)/20
         if tide_level > check_tide+1 or tide_level < check_tide-1:
             logging.warning (message_time+' invalid tide level: '+
               str(tide_level)+' versus 20 minute average: '+str(check_tide))
             return
+        #self.tide_count += 1
+        self.tide_average = self.tide_average[1:]+[tide_level]
         self.average = sum(self.tide_average[10:])/10
         self.last_average = sum(self.tide_average[:10])/10
         if self.average > self.last_average + 0.05:
