@@ -57,7 +57,6 @@ if 'sim' not in sys.argv:
     sensor = tideget.ReadSensor(cons, val)
 predict = tidepredict.TidePredict(cons, db)
 alerts = tidealerts.TideAlerts(cons, db, notify)
-html = tidehtml.CreateHTML(cons)
 wxhtml = tidewxhtml.CreateWxHTML(cons)
 
 class Tide:
@@ -110,10 +109,12 @@ class Tide:
             self.s1enable = self.iparams_dict.get('s1enable')
             self.s2enable = self.iparams_dict.get('s2enable')
             self.debug = self.iparams_dict.get('debug')
+            self.tide_only = self.iparams_dict.get('tide_only')
             display_date_and_time = sunny.get_suntimes(cons, db)
             self.sunrise = display_date_and_time[3]
             self.sunset = display_date_and_time[4]
-            self.display = tidedisplay.TideDisplay(self.stationid, cons)
+            self.html = tidehtml.CreateHTML(cons, self.tide_only)
+            self.display = tidedisplay.TideDisplay(self.stationid, cons, self.tide_only)
             self.display.master.title(
               f"{cons.STATION_LOCATION} Tide Monitor Panel "+
               display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
@@ -129,17 +130,17 @@ class Tide:
               "Content-Type:text/html"]
             email_headers =  "\r\n".join(email_headers)
             notify.send_email(email_recipient, email_headers, text, self.debug,)
-            self.weather = getwx.weather_underground()
+            self.weather = getwx.weather_underground(self.tide_only)
             if not self.weather:
-                self.weather = getwx.open_weather_map()
+                self.weather = getwx.open_weather_map(self.tide_only)
             if self.weather:
                 self.weather_fail = 0
                 db.insert_weather(self.weather)
             else:
                 self.weather_fail = 1
-            wxhtml.wxproc(self.iparams_dict)
-            #print ('get ndbcdata')
-            self.ndbc_data = getndbc.read_station()
+            if self.weather:
+                wxhtml.wxproc(self.iparams_dict)
+            self.ndbc_data = getndbc.read_station(self.tide_only)
             if self.ndbc_data:
                 db.insert_ndbc_data(self.ndbc_data)
             self.display.update(self.weather, self.ndbc_data)
@@ -254,10 +255,9 @@ class Tide:
             # Local weather is updated every three minutes
             #
             self.last_weather_time = self.current_time
-            #print ('Updating Weather')
-            self.weather = getwx.weather_underground()
+            self.weather = getwx.weather_underground(self.tide_only)
             if not self.weather:
-                self.weather = getwx.open_weather_map()
+                self.weather = getwx.open_weather_map(self.tide_only)
             if self.weather:
                 self.weather_fail = 0
                 db.insert_weather(self.weather)
@@ -280,7 +280,7 @@ class Tide:
             # The marine observation is updated every 10 minutes
             #
             self.last_ndbc_time = self.current_time
-            self.ndbc_data = getndbc.read_station()
+            self.ndbc_data = getndbc.read_station(self.tide_only)
             if self.ndbc_data:
                 db.insert_ndbc_data(self.ndbc_data)
 
@@ -316,15 +316,14 @@ class Tide:
             self.s1enable = self.iparams_dict.get('s1enable')
             self.s2enable = self.iparams_dict.get('s2enable')
             self.debug = self.iparams_dict.get('debug')
-            #print (self.ndbc_data)
-            #print (self.weather)
+            self.tide_only = self.iparams_dict.get('tide_only')
             self.display.active_station_tk_var.set(str(self.stationid))
             predict_list = predict.tide_predict()
             self.display.update(self.weather, self.ndbc_data)
             self.display.tide(predict_list, self.tide_list)
             if current_minute == '00':
                 wxhtml.wxproc(self.iparams_dict)
-            html.create(self.weather, self.ndbc_data, predict_list,
+            self.html.create(self.weather, self.ndbc_data, predict_list,
               self.tide_list, self.iparams_dict, self.sensor_readings)
             alt_station = 2 if self.stationid == 1 else 1
             if (not self.station_oos and ((self.stationid == 1 and self.current_time >

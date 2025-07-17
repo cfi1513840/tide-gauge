@@ -19,8 +19,9 @@ import logging
 
 class TideDisplay:
 
-    def __init__(self, station, cons):
+    def __init__(self, station, cons, tide_only):
         self.cons = cons
+        self.tide_only = tide_only
         self.active_station = station
         self.canvas_width = 1200
         self.canvas_height = 680
@@ -34,26 +35,27 @@ class TideDisplay:
         self.master = tk.Tk()
         self.master.configure(background='LightBlue1')
         self.master.geometry('+10+50')
-        self.wind_speed_tk_var = StringVar()
-        self.temperature_tk_var = StringVar()
-        self.wind_gust_tk_var = StringVar()
-        self.humidity_tk_var = StringVar()
-        self.dew_point_tk_var = StringVar()
-        self.heat_index_tk_var = StringVar()
-        self.baro_tk_var = StringVar()
-        self.rain_rate_tk_var = StringVar()
-        self.rain_today_tk_var = StringVar()
-        self.title_text = StringVar()
-        self.ndbc_time_tk_var = StringVar()
-        self.ndbc_wind_tk_var = StringVar()
-        self.ndbc_gust_tk_var = StringVar()
-        self.ndbc_wave_height_tk_var = StringVar()
-        self.ndbc_wave_period_tk_var = StringVar()
-        self.ndbc_air_temperature_tk_var = StringVar()
-        self.ndbc_water_temperature_tk_var = StringVar()
-        self.ndbc_wave_direction_tk_var = StringVar()
-        self.ndbc_baro_tk_var = StringVar()
-        self.ndbc_title_tk_var = StringVar()
+        if not self.tide_only:
+            self.wind_speed_tk_var = StringVar()
+            self.temperature_tk_var = StringVar()
+            self.wind_gust_tk_var = StringVar()
+            self.humidity_tk_var = StringVar()
+            self.dew_point_tk_var = StringVar()
+            self.heat_index_tk_var = StringVar()
+            self.baro_tk_var = StringVar()
+            self.rain_rate_tk_var = StringVar()
+            self.rain_today_tk_var = StringVar()
+            self.title_text = StringVar()
+            self.ndbc_time_tk_var = StringVar()
+            self.ndbc_wind_tk_var = StringVar()
+            self.ndbc_gust_tk_var = StringVar()
+            self.ndbc_wave_height_tk_var = StringVar()
+            self.ndbc_wave_period_tk_var = StringVar()
+            self.ndbc_air_temperature_tk_var = StringVar()
+            self.ndbc_water_temperature_tk_var = StringVar()
+            self.ndbc_wave_direction_tk_var = StringVar()
+            self.ndbc_baro_tk_var = StringVar()
+            self.ndbc_title_tk_var = StringVar()
         self.tk_display_width_tk_var = StringVar()
         self.display_predicted_tide_tk_var = StringVar()
         self.station_battery_voltage_tk_var = StringVar()
@@ -62,10 +64,6 @@ class TideDisplay:
         self.active_station_tk_var.set(str(self.active_station))
         self.tk_display_width_tk_var.set('1')
         self.display_predicted_tide_tk_var.set('1')
-        self.ndbc_title_tk_var.set(
-          f'NDBC Marine Observation - {self.cons.NDBC_LOCATION} '+
-          f' - Location: {str(self.cons.NDBC_LATITUDE)} '+
-          f'{str(self.cons.NDBC_LONGITUDE)}')
         #
         # Create tkinter display format
         #
@@ -74,152 +72,158 @@ class TideDisplay:
                 'black', highlightthickness=1, width = 500, pady=1)
         proc_frame.pack(side='top', fill='both', anchor='center')
 
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Local Weather',
-                wraplength = 75, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 22).grid(row = 0,
-                column = 0, rowspan=2, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Air Temp',
-                wraplength = 75, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 7).grid(row = 0,
-                column = 1, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Humidity',
-                wraplength = 75, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 7).grid(row = 0,
-                column = 2, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Dew Pt',
-                wraplength = 85, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 7).grid(row = 0,
-                column = 3, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Winds',
-                wraplength = 90, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 11).grid(row = 0,
-                column = 4, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Gusts',
-                wraplength = 75, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 7).grid(row = 0,
-                column = 5,sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Barometer',
-                wraplength = 85, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 8).grid(row = 0,
-                column = 6, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Rain Rate',
-                wraplength = 75, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 11).grid(row = 0,
-                column = 7, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Rain Today',
-                wraplength = 100, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 12).grid(row = 0,
-                column = 8, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.temperature_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 7).grid(row = 1,
-                column = 1, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.humidity_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 7).grid(row = 1,
-                column = 2, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.dew_point_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 7).grid(row = 1,
-                column = 3, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.wind_speed_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 11).grid(row = 1,
-                column = 4, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.wind_gust_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 7).grid(row = 1,
-                column = 5, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.baro_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 8).grid(row = 1,
-                column = 6, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.rain_rate_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 9).grid(row = 1,
-                column = 7, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.rain_today_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 12).grid(row = 1,
-                column = 8, sticky = tk.NSEW)
-        tk.Label(proc_frame, fg='White', bg = 'DarkBlue',
-                textvariable = self.ndbc_title_tk_var,
-                font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE).grid(row = 2, column = 0,
-                columnspan = 9, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1',
-                text = 'Observation Time', wraplength = 150,
-                font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 22).grid(row = 3,
-                column = 0, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Air Temp',
-                wraplength = 75, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 14).grid(row = 3,
-                column = 1, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Wave Hgt',
-                wraplength = 75, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 13).grid(row = 3,
-                column = 2, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Wave Per',
-                wraplength = 85, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 14).grid(row = 3,
-                column = 3, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Winds',
-                wraplength = 80, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 16).grid(row = 3,
-                column = 4, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Gusts',
-                wraplength = 85, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 14).grid(row = 3,
-                column = 5, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Barometer',
-                wraplength = 100, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 14).grid(row = 3,
-                column = 6, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Water Temp',
-                wraplength = 100, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 12).grid(row = 3,
-                column = 7, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'LightBlue1', text = 'Visibility',
-                wraplength = 125, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 12).grid(row = 3,
-                column = 8, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.ndbc_time_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 22).grid(row = 4,
-                column = 0, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.ndbc_air_temperature_tk_var, font = ("Arial", 12,
-                'bold'), relief = tk.RIDGE, width = 14).grid(row = 4,
-                column = 1, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.ndbc_wave_height_tk_var, font = ("Arial", 12,
-                'bold'), relief = tk.RIDGE, width = 13).grid(row = 4,
-                column = 2, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.ndbc_wave_period_tk_var, font = ("Arial", 12,
-                'bold'), relief = tk.RIDGE, width = 14).grid(row = 4,
-                column = 3, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.ndbc_wind_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 16).grid(row = 4,
-                column = 4, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.ndbc_gust_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 14).grid(row = 4,
-                column = 5, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.ndbc_baro_tk_var, font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 14).grid(row = 4,
-                column = 6, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', textvariable =
-                self.ndbc_water_temperature_tk_var,
-                font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                width = 12).grid(row = 4,
-                column = 7, sticky = tk.NSEW)
-        tk.Label(proc_frame, bg = 'snow', text = 'N/A',
-                font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                width = 12).grid(row = 4, column = 8, sticky = tk.NSEW)
+        if not self.tide_only:
+            self.ndbc_title_tk_var.set(
+              f'{self.cons.NDBC_TITLE}')
+              #f' - Location: {str(self.cons.NDBC_LATITUDE)} '+
+              #f'{str(self.cons.NDBC_LONGITUDE)}')
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Local Weather',
+                    wraplength = 75, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 22).grid(row = 0,
+                    column = 0, rowspan=2, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Air Temp',
+                    wraplength = 75, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 7).grid(row = 0,
+                    column = 1, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Humidity',
+                    wraplength = 75, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 7).grid(row = 0,
+                    column = 2, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Dew Pt',
+                    wraplength = 85, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 7).grid(row = 0,
+                    column = 3, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Winds',
+                    wraplength = 90, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 11).grid(row = 0,
+                    column = 4, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Gusts',
+                    wraplength = 75, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 7).grid(row = 0,
+                    column = 5,sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Barometer',
+                    wraplength = 85, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 8).grid(row = 0,
+                    column = 6, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Rain Rate',
+                    wraplength = 75, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 11).grid(row = 0,
+                    column = 7, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Rain Today',
+                    wraplength = 100, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 12).grid(row = 0,
+                    column = 8, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.temperature_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 7).grid(row = 1,
+                    column = 1, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.humidity_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 7).grid(row = 1,
+                    column = 2, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.dew_point_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 7).grid(row = 1,
+                    column = 3, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.wind_speed_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 11).grid(row = 1,
+                    column = 4, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.wind_gust_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 7).grid(row = 1,
+                    column = 5, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.baro_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 8).grid(row = 1,
+                    column = 6, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.rain_rate_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 9).grid(row = 1,
+                    column = 7, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.rain_today_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 12).grid(row = 1,
+                    column = 8, sticky = tk.NSEW)
+            tk.Label(proc_frame, fg='White', bg = 'DarkBlue',
+                    textvariable = self.ndbc_title_tk_var,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 2, column = 0,
+                    columnspan = 9, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1',
+                    text = 'Observation Time', wraplength = 150,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 22).grid(row = 3,
+                    column = 0, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Air Temp',
+                    wraplength = 75, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 14).grid(row = 3,
+                    column = 1, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Wave Hgt',
+                    wraplength = 75, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 13).grid(row = 3,
+                    column = 2, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Wave Per',
+                    wraplength = 85, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 14).grid(row = 3,
+                    column = 3, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Winds',
+                    wraplength = 80, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 16).grid(row = 3,
+                    column = 4, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Gusts',
+                    wraplength = 85, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 14).grid(row = 3,
+                    column = 5, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Barometer',
+                    wraplength = 100, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 14).grid(row = 3,
+                    column = 6, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Water Temp',
+                    wraplength = 100, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 12).grid(row = 3,
+                    column = 7, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Visibility',
+                    wraplength = 125, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 12).grid(row = 3,
+                    column = 8, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.ndbc_time_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 22).grid(row = 4,
+                    column = 0, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.ndbc_air_temperature_tk_var, font = ("Arial", 12,
+                    'bold'), relief = tk.RIDGE, width = 14).grid(row = 4,
+                    column = 1, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.ndbc_wave_height_tk_var, font = ("Arial", 12,
+                    'bold'), relief = tk.RIDGE, width = 13).grid(row = 4,
+                    column = 2, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.ndbc_wave_period_tk_var, font = ("Arial", 12,
+                    'bold'), relief = tk.RIDGE, width = 14).grid(row = 4,
+                    column = 3, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.ndbc_wind_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 16).grid(row = 4,
+                    column = 4, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.ndbc_gust_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 14).grid(row = 4,
+                    column = 5, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.ndbc_baro_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE, width = 14).grid(row = 4,
+                    column = 6, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.ndbc_water_temperature_tk_var,
+                    font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
+                    width = 12).grid(row = 4,
+                    column = 7, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', text = 'N/A',
+                    font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
+                    width = 12).grid(row = 4, column = 8, sticky = tk.NSEW)
+                    
         sel_frame = tk.Frame(self.master, bg = 'snow', borderwidth = 2,
                 highlightbackground='black', highlightthickness=1,
                 width = 500, pady=1)

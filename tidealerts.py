@@ -98,13 +98,13 @@ class TideAlerts:
             self.tide_count += 1
             self.tide_average = self.tide_average[1:]+[tide_level]
             return                
+        self.tide_average = self.tide_average[1:]+[tide_level]
         check_tide = sum(self.tide_average)/20
         if tide_level > check_tide+1 or tide_level < check_tide-1:
             logging.warning (message_time+' invalid tide level: '+
               str(tide_level)+' versus 20 minute average: '+str(check_tide))
             return
         #self.tide_count += 1
-        self.tide_average = self.tide_average[1:]+[tide_level]
         self.average = sum(self.tide_average[10:])/10
         self.last_average = sum(self.tide_average[:10])/10
         if self.average > self.last_average + 0.05:

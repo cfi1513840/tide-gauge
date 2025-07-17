@@ -22,8 +22,9 @@ import logging
 from dotenv import load_dotenv, find_dotenv
 
 class CreateHTML:
-    def __init__(self, cons):
+    def __init__(self, cons, tide_only):
         self.cons = cons
+        self.tide_only = tide_only
         self.html_directory = self.cons.HTML_DIRECTORY
         self.plotspan = 24
         self.offtime = 0
@@ -34,6 +35,7 @@ class CreateHTML:
         envfile = find_dotenv('/var/www/html/tide.env')
         if load_dotenv(envfile):
             self.NDBC_URL = os.getenv('NDBC_URL')
+            self.WX_UND_URL = os.getenv('WX_UND_URL')
 
     def create(self, weather, ndbcdata, predicts, tidelist, iparams, sensor):
         self.wxexit = ''
@@ -62,6 +64,7 @@ class CreateHTML:
         batv = 0
         solarv = 0
         rssi = 0
+        ndbc_currency = 0
         if sensor:
             if 'V' in sensor: batv = sensor['V']
             if 's' in sensor: solarv = sensor['s']
@@ -69,23 +72,23 @@ class CreateHTML:
         #
         # Extract NDBC dictionary data
         #
-        if ndbcdata:
-            ndbc_wind_f = 0
-            ndbc_gust_f = 0
-            ndbc_wave_f = 0
-            timecheck = 0
-            ndbc_time = 0
-            ndbc_location = 0
-            ndbc_wind = 0
-            ndbc_wind_direction = 0
-            ndbc_gust = 0
-            ndbc_wave_height = 0
-            ndbc_wave_period = 0
-            ndbc_air_temp = 0
-            ndbc_water_temp = 0
-            ndbc_wave_direction = 0
-            ndbc_baro = 0
-            #print (ndbcdata)
+        ndbc_wind_f = 0
+        ndbc_gust_f = 0
+        ndbc_wave_f = 0
+        timecheck = 0
+        ndbc_time = 0
+        ndbc_location = 0
+        ndbc_wind = 0
+        ndbc_wind_direction = 0
+        ndbc_gust = 0
+        ndbc_wave_height = 0
+        ndbc_wave_period = 0
+        ndbc_air_temp = 0
+        ndbc_water_temp = 0
+        ndbc_wave_direction = 0
+        ndbc_baro = 0
+        #print (ndbcdata)
+        if ndbcdata and not self.tide_only:
             if 'DateTime' in ndbcdata:
                 ndbc_time = ndbcdata['DateTime']
                 timecheck = datetime.strptime(ndbc_time,'%Y-%m-%d %H:%M:%S')
@@ -110,8 +113,8 @@ class CreateHTML:
             if 'Atmospheric Pressure' in ndbcdata:
                 ndbc_baro = ndbcdata['Atmospheric Pressure']
             ndbc_currency = 2
-            if current_time < timecheck+timedelta(hours=4):
-                if current_time >= timecheck+timedelta(hours=2):
+            if current_time < timecheck+timedelta(minutes=300):
+                if current_time >= timecheck+timedelta(minutes=150):
                     ndbc_currency = 1
                 else:
                     ndbc_currency = 0
@@ -131,7 +134,7 @@ class CreateHTML:
         #
         # Extract weather dictionary data
         #
-        if weather:
+        if weather and not self.tide_only:
             #print (weather)
             temperature = 0
             humidity = 0
@@ -142,7 +145,10 @@ class CreateHTML:
             dewpoint = 0
             rain_rate = 0
             rain_today = 0
+            obs_time  = ''
             wind_direction_symbol = ''
+            if 'obs_time' in weather:
+                obs_time = weather['obs_time']
             if 'temperature' in weather:
                 temperature = str(int(weather['temperature']))+'&deg; F'
             if 'humidity' in weather:
@@ -360,166 +366,171 @@ class CreateHTML:
         outfile.write ('<div>\n')
         outfile.write (f'<table width="{canw_str}" border="2" cellpadding="2" cellspacing="2" style="border-color: #000000; border-style: solid; background-color: #ccffff;">\n')
         outfile.write ('<tr valign="middle">\n') 
-        outfile.write ('<td colspan="4" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
-        outfile.write (f'BatV: {round(float(batv)/1000, 3)}&nbsp&nbsp&nbspSolarV: {round(float(solarv)/1000, 3)}&nbsp&nbsp&nbsprssi: {rssi}</span></p>\n')
+        #outfile.write ('<td colspan="4" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
+        #outfile.write (f'BatV: {round(float(batv)/1000, 3)}&nbsp&nbsp&nbspSolarV: {round(float(solarv)/1000, 3)}&nbsp&nbsp&nbsprssi: {rssi}</span></p>\n')
+        #outfile.write ('</td>\n')
         outfile.write ('<td colspan="5" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         outfile.write (f'{self.cons.STATION_LOCATION} Tide & Weather - {dispdate}.&nbsp&nbspSunrise: {sunrise} - Sunset: {sunset}</span></p>\n')
+        outfile.write ('</td>\n')
+        outfile.write ('<td colspan="4" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
+        outfile.write (f'BatV: {round(float(batv)/1000, 3)}&nbsp&nbsp&nbspSolarV: {round(float(solarv)/1000, 3)}&nbsp&nbsp&nbsprssi: {rssi}</span></p>\n')
         outfile.write ('</td>\n')
         outfile.write ('<td colspan="2" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         outfile.write (f'<form action="/alertlogin.html"><button type="submit">Alerts</button></form></span></p>\n')
         outfile.write ('</td>\n')
         outfile.write ('</tr>\n')
-        outfile.write ('<tr valign="middle">\n')
-        outfile.write ('<td colspan="2" rowspan="2" style="font-size: 16pt; text-align: center; font-weight: bold;">\n')
-        outfile.write (f'Local Weather\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Air Temp</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>humidity</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Dew Point</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Winds</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Gusts</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Barometer</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Rain Rate</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Rain Today</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('</tr>\n')
-        outfile.write ('<tr valign="middle">\n')
-        if not weather:
-            outfile.write ('<td colspan = "8" style="background-color: snow;"> <p>Local Weather Temporarily Unavailable</p>\n')
-        else:
-            outfile.write ('<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{temperature}</p>\n')
+        if not self.tide_only:
+            outfile.write ('<tr valign="middle">\n') 
+            outfile.write (f'<td colspan="2"><p><a href="{self.WX_UND_URL}">\n')
+            outfile.write (f'Local Weather</a></p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p>Air Temp</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p>humidity</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p>Dew Point</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p>Winds</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p>Gusts</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p>Barometer</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p>Rain Rate</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p>Rain Today</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('</tr>\n')
+            outfile.write ('<tr valign="middle">\n')
+            if not weather:
+                outfile.write ('<td colspan = "8" style="background-color: snow;"> <p>Local Weather Temporarily Unavailable</p>\n')
+            else:
+                outfile.write ('<td colspan="2" style="background-color: snow;"><p>\n')
+                outfile.write (f'{obs_time}</p>\n')
+                outfile.write (f'</td>\n')
+                outfile.write ('<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{temperature}</p>\n')
+                outfile.write (f'</td>\n')
+                outfile.write (f'<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{humidity}</p>\n')
+                outfile.write (f'</td>\n')
+                outfile.write (f'<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{dewpoint}</p>\n')
+                outfile.write (f'</td>\n')
+                outfile.write (f'<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{wind_speed}</p>\n')
+                outfile.write (f'</td>\n')
+                outfile.write (f'<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{wind_gust}</p>\n')
+                outfile.write (f'</td>\n')
+                outfile.write (f'<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{baro}</p>\n')
+                outfile.write (f'</td>\n')
+                outfile.write (f'<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{rain_rate}</p>\n')
+                outfile.write ('</td>\n')
+                outfile.write (f'<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{rain_today}</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('</tr>\n')
+            outfile.write ('<tr valign="middle">\n')
+            #outfile.write ('<td colspan="10" style="background-color: #1A53FF;">\n')
+            outfile.write ('<td colspan="10" style="background-color: #6BB4E2;">\n')
+            if True:
+                outfile.write (
+                  f'<p><a href="{self.NDBC_URL}" '+
+                  f'style="color: black">{self.cons.NDBC_TITLE}</a></p>\n')
+                  #f'style="color: white">NDBC Marine Observation - '+
+                  #f'{self.cons.NDBC_LOCATION} - '+
+                  #f'Location: {str(self.cons.NDBC_LATITUDE)} '+
+                  #f'{str(self.cons.NDBC_LONGITUDE)}</a></span></p>\n')
+            elif ndbc_currency == 1:
+                outfile.write (
+                  f'<a href="{self.NDBC_URL}" '+
+                  f'style="color: white">NDBC Marine Observation - {self.cons.NDBC_LOCATION} - '+
+                  f'Location: {str(self.cons.NDBC_LATITUDE)} '+
+                  f'{str(self.cons.NDBC_LONGITUDE)}<font color="#FF9999"> '+
+                  f'(This report is more than 2 hours old)</font></a></span></p>\n')
+            elif ndbc_currency == 2:
+                outfile.write (
+                  f'<a href="{self.NDBC_URL}" '+
+                  f'style="color: white">NDBC Marine Observation - {self.cons.NDBC_LOCATION} - '+
+                  f'Location: {str(self.cons.NDBC_LATITUDE)} '+
+                  f'{str(self.cons.NDBC_LONGITUDE)}<font color="red"> '+
+                  f'Temporarily Out of Service</a></span></p>\n')
+            outfile.write (f'</td>\n')
+            outfile.write ('</tr>\n')
+            outfile.write ('<tr valign="middle" style="background-color: #6BB4E2;">\n')
+            outfile.write ('<td colspan = "2"><p style="color: black">Offshore Conditions</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p style="color: black">Air Temp<span></p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p style="color: black">Wave Hgt</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p style="color: black">Wave Per</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p style="color: black">Winds</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p style="color: black">Gusts</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p style="color: black">Barometer</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p style="color: black">Water Temp</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('<td><p style="color: black">Wave Dir</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('</tr>\n')
+            outfile.write ('</span>\n')
+            outfile.write ('<tr valign="middle">\n')
+            outfile.write ('<td colspan = "2" style="background-color: snow;"><p>\n')
+            outfile.write (f'{ndbc_time}</p>\n')
             outfile.write (f'</td>\n')
             outfile.write (f'<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{humidity}</p>\n')
+            outfile.write (f'{ndbc_air_temp}</p>\n')
+            outfile.write ('</td>\n')
+            if not isinstance(ndbc_wave_f, float) or ndbc_wave_f <= 2.5:
+                outfile.write (f'<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{ndbc_wave_height}</p>\n')
+            elif ndbc_wave_f > 2.5 and ndbc_wave_f <= 5:
+                outfile.write (f'<td style="background-color: #FFA533;"><p>\n')
+                outfile.write (f'{ndbc_wave_height}</p>\n')
+            else:  
+                outfile.write (f'<td style="background-color: #FF5480;"><p>\n')
+                outfile.write (f'{ndbc_wave_height}</p>\n')
             outfile.write (f'</td>\n')
             outfile.write (f'<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{dewpoint}</p>\n')
+            outfile.write (f'{ndbc_wave_period}</p>\n')
+            outfile.write (f'</td>\n')
+            if not isinstance(ndbc_wind_f, float) or ndbc_wind_f <= 12.0:
+                outfile.write (f'<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{ndbc_wind}</p>\n')
+            elif ndbc_wind_f > 12.0 and ndbc_wind_f < 20.0:
+                outfile.write (f'<td style="background-color: #FFA533;"><p>\n')
+                outfile.write (f'{ndbc_wind}</p>\n')
+            else:
+                outfile.write (f'<td style="background-color: #FF5480;"><p>\n')
+                outfile.write (f'{ndbc_wind}</p>\n')
+            outfile.write (f'</td>\n')
+            if not isinstance(ndbc_gust_f, float) or ndbc_gust_f <= 12.0:
+                outfile.write (f'<td style="background-color: snow;"><p>\n')
+                outfile.write (f'{ndbc_gust}</p>\n')
+            elif ndbc_gust_f > 12.0 and ndbc_gust_f < 20.0:
+                outfile.write (f'<td style="background-color: #FFA533;"><p>\n')
+                outfile.write (f'{ndbc_gust}</p>\n')
+            else:
+                outfile.write (f'<td style="background-color: #FF5480;"><p>\n')
+                outfile.write (f'{ndbc_gust}</p>\n')
             outfile.write (f'</td>\n')
             outfile.write (f'<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{wind_speed}</p>\n')
+            outfile.write (f'{ndbc_baro}</p>\n')
             outfile.write (f'</td>\n')
             outfile.write (f'<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{wind_gust}</p>\n')
-            outfile.write (f'</td>\n')
-            outfile.write (f'<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{baro}</p>\n')
-            outfile.write (f'</td>\n')
-            outfile.write (f'<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{rain_rate}</p>\n')
+            outfile.write (f'{ndbc_water_temp}</p>\n')
             outfile.write ('</td>\n')
             outfile.write (f'<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{rain_today}</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('</tr>\n')
-        outfile.write ('<tr valign="middle">\n')
-        outfile.write (
-          '<td colspan="10" style="background-color: #1A53FF;">'+
-          '<p><span style=" font-size: 12pt; '+
-          'font-family: ''Arial'', ''Helvetica'', '+
-          'sans-serif; font-style: normal; font-weight: bold; '+
-          'color: #FFFFFF; background-color: transparent; '+
-          'text-decoration: none;">\n')
-        if ndbc_currency == 0:
-            outfile.write (
-              f'<a href="{self.NDBC_URL}" '+
-              f'style="color: white">NDBC Marine Observation - '+
-              f'{self.cons.NDBC_LOCATION} - '+
-              f'Location: {str(self.cons.NDBC_LATITUDE)} '+
-              f'{str(self.cons.NDBC_LONGITUDE)}</a></span></p>\n')
-        elif ndbc_currency == 1:
-            outfile.write (
-              f'<a href="{self.NDBC_URL}" '+
-              f'style="color: white">NDBC Marine Observation - {self.cons.NDBC_LOCATION} - '+
-              f'Location: {str(self.cons.NDBC_LATITUDE)} '+
-              f'{str(self.cons.NDBC_LONGITUDE)}<font color="#FF9999"> '+
-              f'(This report is more than 2 hours old)</font></a></span></p>\n')
-        elif ndbc_currency == 2:
-            outfile.write (
-              f'<a href="{self.NDBC_URL}" '+
-              f'style="color: white">NDBC Marine Observation - {self.cons.NDBC_LOCATION} - '+
-              f'Location: {str(self.cons.NDBC_LATITUDE)} '+
-              f'{str(self.cons.NDBC_LONGITUDE)}<font color="red"> '+
-              f'Temporarily Out of Service</a></span></p>\n')
-        outfile.write (f'</td>\n')
-        outfile.write ('</tr>\n')
-        outfile.write ('<tr valign="middle">\n')
-        outfile.write ('<td colspan = "2"><p>Observation Time</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Air Temp</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Wave Hgt</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Wave Per</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Winds</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Gusts</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Barometer</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Water Temp</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td><p>Wave Dir</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('</tr>\n')
-        outfile.write ('<tr valign="middle">\n')
-        outfile.write ('<td colspan = "2" style="background-color: snow;"><p>\n')
-        outfile.write (f'{ndbc_time}</p>\n')
-        outfile.write (f'</td>\n')
-        outfile.write (f'<td style="background-color: snow;"><p>\n')
-        outfile.write (f'{ndbc_air_temp}</p>\n')
-        outfile.write ('</td>\n')
-        if not isinstance(ndbc_wave_f, float) or ndbc_wave_f <= 2.5:
-            outfile.write (f'<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{ndbc_wave_height}</p>\n')
-        elif ndbc_wave_f > 2.5 and ndbc_wave_f <= 5:
-            outfile.write (f'<td style="background-color: #FFA533;"><p>\n')
-            outfile.write (f'{ndbc_wave_height}</p>\n')
-        else:  
-            outfile.write (f'<td style="background-color: #FF5480;"><p>\n')
-            outfile.write (f'{ndbc_wave_height}</p>\n')
-        outfile.write (f'</td>\n')
-        outfile.write (f'<td style="background-color: snow;"><p>\n')
-        outfile.write (f'{ndbc_wave_period}</p>\n')
-        outfile.write (f'</td>\n')
-        if not isinstance(ndbc_wind_f, float) or ndbc_wind_f <= 12.0:
-            outfile.write (f'<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{ndbc_wind}</p>\n')
-        elif ndbc_wind_f > 12.0 and ndbc_wind_f < 20.0:
-            outfile.write (f'<td style="background-color: #FFA533;"><p>\n')
-            outfile.write (f'{ndbc_wind}</p>\n')
-        else:
-            outfile.write (f'<td style="background-color: #FF5480;"><p>\n')
-            outfile.write (f'{ndbc_wind}</p>\n')
-        outfile.write (f'</td>\n')
-        if not isinstance(ndbc_gust_f, float) or ndbc_gust_f <= 12.0:
-            outfile.write (f'<td style="background-color: snow;"><p>\n')
-            outfile.write (f'{ndbc_gust}</p>\n')
-        elif ndbc_gust_f > 12.0 and ndbc_gust_f < 20.0:
-            outfile.write (f'<td style="background-color: #FFA533;"><p>\n')
-            outfile.write (f'{ndbc_gust}</p>\n')
-        else:
-            outfile.write (f'<td style="background-color: #FF5480;"><p>\n')
-            outfile.write (f'{ndbc_gust}</p>\n')
-        outfile.write (f'</td>\n')
-        outfile.write (f'<td style="background-color: snow;"><p>\n')
-        outfile.write (f'{ndbc_baro}</p>\n')
-        outfile.write (f'</td>\n')
-        outfile.write (f'<td style="background-color: snow;"><p>\n')
-        outfile.write (f'{ndbc_water_temp}</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write (f'<td style="background-color: snow;"><p>\n')
-        outfile.write (f'{ndbc_wave_direction}</p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('</tr>\n')    
+            outfile.write (f'{ndbc_wave_direction}</p>\n')
+            outfile.write ('</td>\n')
+            outfile.write ('</tr>\n')    
         outfile.write ('</table>\n')
         outfile.write (f'<canvas id="bbitide" width={canvas_width} height={canvas_height}\n')
         outfile.write ('style="border:2px solid white; background-color: #E0F8F1">\n')
@@ -805,5 +816,8 @@ class CreateHTML:
         outfile.close()
         self.wxexit = filetag
         excode = subprocess.run(['mv', f'{filetag}', 'tide.tmp'])
-        os.system(f'cat tide.tmp wx.html > {self.html_directory}tide.html')   
+        if not self.tide_only:
+            os.system(f'cat tide.tmp wx.html > {self.html_directory}tide.html')
+        else:
+             os.system(f'cat tide.tmp tide_only.html > {self.html_directory}tide.html')           
         return self.wxexit

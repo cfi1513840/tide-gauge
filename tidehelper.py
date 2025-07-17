@@ -120,6 +120,7 @@ class Constants:
         NDBC_LOCATION = os.getenv('NDBC_LOCATION')
         NDBC_LATITUDE = os.getenv('NDBC_LATITUDE')
         NDBC_LONGITUDE = os.getenv('NDBC_LONGITUDE')
+        NDBC_TITLE = os.getenv('NDBC_TITLE')
         HTML_DIRECTORY = os.getenv('HTML_DIRECTORY')
         CGI_DIRECTORY = os.getenv('CGI_DIRECTORY')
         TIDE_URL = os.getenv('TIDE_URL')

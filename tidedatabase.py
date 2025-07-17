@@ -165,7 +165,8 @@ class DbManage:
           'station2cal',
           's1enable',
           's2enable',
-          'debug'
+          'debug',
+          'tide_only'
         )
         banner_list = (
           'alertmsg',

@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 import json
 import requests
+import socket
+import urllib3.util.connection
 import logging
 import math
 import feedparser
@@ -15,17 +17,21 @@ class GetWeather:
         self.wx_opn_report_flag = 0
         self.wx_error_count = 0
         self.last_baro = 0
+        #urllib3.util.connection.allowed_gai_family = socket.AF_INET
         
-    def weather_underground(self):
+    def weather_underground(self, tide_only):
+        #print ('getting wx underground')
+        if tide_only: return {}
         """Method to get Weather Underground observations for the local area"""
         current_time = datetime.now()
-        message_time = current_time.strftime(
+        self.message_time = current_time.strftime(
           self.cons.TIME_FORMAT)
         try:
             wxundurl = ('https://api.weather.com/v2/pws/observations/'+
                     f'current?stationId={self.cons.WX_UND_STATION_ID}&'+
                     'format=json&units=e&'+
                     f'apiKey={self.cons.WEATHER_UNDERGROUND_API}')
+            #print('requesting data from wx und url')
             response = requests.get(wxundurl)
         except Exception as errmsg:
             if not self.wx_und_report_flag and self.wx_error_count > 2:
@@ -67,6 +73,7 @@ class GetWeather:
         #
         try:
             result=response.json()
+            #print (str(result))
             """ for testing, read data from file
               with open('wxresponse.json', 'r') as file:
                 result = json.load(file)
@@ -74,6 +81,13 @@ class GetWeather:
             dumpedic = json.dumps(result)
             loadedic = json.loads(dumpedic)
             observations = loadedic['observations']
+            obs_time  = ''
+            try:
+                this_time = datetime.strptime(observations[0]['obsTimeLocal'], "%Y-%m-%d %H:%M:%S")
+                obs_time = datetime.strftime(this_time, '%b %d, %Y %H:%M')
+            except:
+                print (observations[0]['obsTimeLocal'])
+                #pass
             weather = {
               'temperature': self.val.var_type(observations[0]['imperial']['temp'], float),
               'humidity': self.val.var_type(observations[0]['humidity'], int),
@@ -83,11 +97,13 @@ class GetWeather:
               'wind_direction_degrees': self.val.var_type(observations[0]['winddir'], int),
               'rain_rate': self.val.var_type(observations[0]['imperial']['precipRate'], float),
               'rain_today': self.val.var_type(observations[0]['imperial']['precipTotal'], float),
-              'wind_gust': self.val.var_type(observations[0]['imperial']['windGust'], int)
+              'wind_gust': self.val.var_type(observations[0]['imperial']['windGust'], int),
+              'obs_time': obs_time
               }
             weather['wind_direction_symbol'] = self.deg_to_direction(
                 weather['wind_direction_degrees'])
             baro = weather['baro']
+
             if self.last_baro == 0:
                 self.last_baro = baro
                 weather['baro_trend'] = 0
@@ -98,13 +114,16 @@ class GetWeather:
         except Exception as errmsg:
             logging.warning(errmsg)
 
-    def open_weather_map(self):
+    def open_weather_map(self, tide_only):
+        #print ('getting open_weather_map')
+        if tide_only: return {}
         """Method to get OpenWeatherMap observations for the local area"""
         try:
             wxurl = ('https://api.openweathermap.org/data/2.5/weather?'+
               f'lat={self.cons.LATITUDE}&lon={self.cons.LONGITUDE}&'+
               f'units=imperial&appid={self.cons.OPEN_WEATHERMAP_API}')
             response = requests.get(wxurl)
+            #print (str(response))
         except Exception as errmsg:
             if not self.wx_opn_report_flag and self.wx_error_count > 2:
                 self.wx_opn_report_flag = True
@@ -152,13 +171,16 @@ class GetWeather:
           'rain_rate': '',
           'rain_today': '',
           'wind_gust': '',
-          'wind_direction_symbol': ''
+          'wind_direction_symbol': '',
+          'obs_time': ''
           }        
         try:
             result=response.json()
+            #print (str(result))
             dumpedic = json.dumps(result)
             loadedic = json.loads(dumpedic)
             main = loadedic['main']
+            dtime = loadedic['dt']
             if 'wind' in loadedic:
                 wind = loadedic['wind']
                 if 'speed' in wind:
@@ -178,6 +200,7 @@ class GetWeather:
         except ValueError as errmsg:
             logging.warning('Error processing OpenWeatherMap response')
             return {}
+        weather['obs_time'] = datetime.strftime(datetime.fromtimestamp(dtime),'%b %d, %Y %H:%M')
         temperature = main['temp']
         tempcel = (temperature-32)/1.8
         pressure = main['pressure']
@@ -208,7 +231,7 @@ class GetWeather:
                     "Content-Type:text/html"]
             email_headers = "\r\n".join(email_headers)
             text_message = ("From "+self.cons.HOSTNAME+": "+
-            message_time+
+            self.message_time+
             f" - 5 consecutive failures requesting {source} data")
             logging.debug (email_headers+' '+text_message)
             self.notify.send_email(email_recipient, email_headers,
@@ -227,7 +250,7 @@ class GetWeather:
             email_headers = "\r\n".join(email_headers)
             text_message = (
               "From "+self.cons.HOSTNAME+": "+
-              message_time+
+              self.message_time+
               f" - {source} query successful "+
               f"following {str(count)} consecutive failures")
             self.notify.send_email(
@@ -247,8 +270,11 @@ class GetNDBC:
         self.cons = cons
         self.val = val
         self.notify = notify
-        
-    def read_station(self):
+        #urllib3.util.connection.allowed_gai_family = socket.AF_INET
+       
+    def read_station(self, tide_only):
+        #print ('getting NDBC')
+        if tide_only: return {}
         stations = self.cons.NDBC_STATIONS
         ndbc_keys = [
           'DateTime',
@@ -334,8 +360,11 @@ class GetNOAA:
     def __init__(self, cons, val):
         self.cons = cons
         self.val = val
+        #urllib3.util.connection.allowed_gai_family = socket.AF_INET
 
     def noaa_tide(self):
+        #print ('getting noaa')
+        #urllib3.util.connection.allowed_gai_family = socket.AF_INET
         noaa_data = []
         try:
             current_time = datetime.now()
@@ -385,11 +414,13 @@ class ReadSensor:
         self.usb_serial_input.reset_input_buffer()
         
     def read_sensor(self):
+        #print ('reading sensor')
         try:
             data_dict = {}
             if self.usb_serial_input.in_waiting > 0:
                 now = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
                 packet = self.usb_serial_input.readline()
+                #print (packet)
                 try:
                     packet = packet.decode().split(',')
                 except:
