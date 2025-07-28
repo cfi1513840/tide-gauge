@@ -38,6 +38,8 @@ class TideAlerts:
         self.sql_cursor.execute(
           f"select * from predicts where dtime >= '{str(current_time)}' limit 2")
         nextides = self.sql_cursor.fetchall()
+        nextlowtime = datetime.now()
+        nexthightime = datetime.now()
         for nextide in nextides:
             if nextide[2] == 'L':
                 nextlowtide_f = nextide[1]
