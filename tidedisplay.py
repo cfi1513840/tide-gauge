@@ -220,7 +220,7 @@ class TideDisplay:
                     font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
                     width = 12).grid(row = 4,
                     column = 7, sticky = tk.NSEW)
-            tk.Label(proc_frame, bg = 'snow', text = 'N/A',
+            tk.Label(proc_frame, bg = 'snow', text = '',
                     font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
                     width = 12).grid(row = 4, column = 8, sticky = tk.NSEW)
                     
@@ -316,6 +316,8 @@ class TideDisplay:
                 self.baro_tk_var.set(str(baro))
             self.last_baro = float(baro)
         if ndbc_data:
+            air_temp_display = ''
+            water_temp_display = ''
             self.ndbc_time_tk_var.set(ndbc_data['DateTime'])
             self.ndbc_wind_tk_var.set(ndbc_data['Wind Speed'])
             self.ndbc_gust_tk_var.set(ndbc_data['Wind Gust'])
@@ -323,9 +325,9 @@ class TideDisplay:
             self.ndbc_wave_period_tk_var.set(ndbc_data['Wave Period'])
             air_temp_display = ndbc_data['Air Temperature']
             water_temp_display = ndbc_data['Water Temperature']
-            if air_temp_display != 'N/A':
+            if air_temp_display != '':
                 air_temp_display = air_temp_display+'\u00b0 F' 
-            if water_temp_display != 'N/A':
+            if water_temp_display != '':
                 water_temp_display = water_temp_display+'\u00b0 F' 
             self.ndbc_air_temperature_tk_var.set(air_temp_display)
             self.ndbc_water_temperature_tk_var.set(water_temp_display)

@@ -290,18 +290,18 @@ class GetNDBC:
           'Wave Direction',
           'Atmospheric Pressure']
         ndbc_dict = {
-          'DateTime': 'N/A',
-          'Location': 'N/A',
-          'Air Temperature': 'N/A',
-          'Wind Direction': 'N/A',
-          'Wind Speed': 'N/A',
-          'Wind Gust': 'N/A',
-          'Wave Height': 'N/A',
-          'Wave Period': 'N/A',
-          'Air Temperature': 'N/A',
-          'Water Temperature': 'N/A',
-          'Wave Direction': 'N/A',
-          'Atmospheric Pressure': 'N/A'}
+          'DateTime': '',
+          'Location': '',
+          'Air Temperature': '',
+          'Wind Direction': '',
+          'Wind Speed': '',
+          'Wind Gust': '',
+          'Wave Height': '',
+          'Wave Period': '',
+          'Air Temperature': '',
+          'Water Temperature': '',
+          'Wave Direction': '',
+          'Atmospheric Pressure': ''}
         try:
             count = 0
             for station in stations:
