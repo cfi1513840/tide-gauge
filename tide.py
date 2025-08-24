@@ -48,15 +48,15 @@ sunny = tidehelper.SunTime()
 cons = tidehelper.Constants()
 state = tidehelper.TideState()
 notify = tidehelper.Notify(cons)
-getwx = tideget.GetWeather(cons, notify)
+val = tidehelper.ValType()
+getwx = tideget.GetWeather(cons, val, notify)
 db = tidedatabase.DbManage(cons)
-getndbc = tideget.GetNDBC(cons, notify)
-getnoaa = tideget.GetNOAA(cons)
+getndbc = tideget.GetNDBC(cons, val, notify)
+getnoaa = tideget.GetNOAA(cons, val)
 if 'sim' not in sys.argv:    
-    sensor = tideget.ReadSensor(cons)
+    sensor = tideget.ReadSensor(cons, val)
 predict = tidepredict.TidePredict(cons, db)
 alerts = tidealerts.TideAlerts(cons, db, notify)
-html = tidehtml.CreateHTML(cons)
 wxhtml = tidewxhtml.CreateWxHTML(cons)
 
 class Tide:
@@ -77,12 +77,16 @@ class Tide:
         self.tide1 = 0
         self.tide2 = 0
         self.tide_ft = 99
+        self.tide_average = [0 for x in range(0,20)]
+        self.tide_init = False
         self.weather = {}
+        self.weather_fail = 0
         self.ndbc_data = {}
         self.save_the_day = datetime.strftime(self.current_time, "%d")
         self.iparams_dict = db.fetch_iparams()
         self.visit = False
         self.sensor_readings = []
+        self.station_oos = False # Station out of service
         #
         # Extract the value of the test argument, if specified. This will be
         # used to determine the test cases to be run on various modules.
@@ -105,33 +109,41 @@ class Tide:
             self.s1enable = self.iparams_dict.get('s1enable')
             self.s2enable = self.iparams_dict.get('s2enable')
             self.debug = self.iparams_dict.get('debug')
+            self.tide_only = self.iparams_dict.get('tide_only')
             display_date_and_time = sunny.get_suntimes(cons, db)
             self.sunrise = display_date_and_time[3]
             self.sunset = display_date_and_time[4]
-            self.display = tidedisplay.TideDisplay(self.stationid, cons)
+            self.html = tidehtml.CreateHTML(cons, self.tide_only)
+            self.display = tidedisplay.TideDisplay(self.stationid, cons, self.tide_only)
             self.display.master.title(
               f"{cons.STATION_LOCATION} Tide Monitor Panel "+
               display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
               " Sunset: "+display_date_and_time[2])
             self.main()
             twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
-            email_recipient = cons.ADMIN_EMAIL[0]
             text = f'{cons.HOSTNAME} Tide Station startup at {self.message_time}'
             notify.send_SMS(twilio_phone_recipient, text, self.debug)
-            email_headers = ["From: " + cons.EMAIL_USERNAME,
-              F"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
-              +email_recipient,"MIME-Versiion:1.0",
-              "Content-Type:text/html"]
-            email_headers =  "\r\n".join(email_headers)
-            notify.send_email(email_recipient, email_headers, text, self.debug,)
-            self.weather = getwx.weather_underground()
+            for email_recip in cons.ADMIN_EMAIL:
+                if email_recip == None:
+                    continue
+                email_recipient = email_recip
+                email_headers = ["From: " + cons.EMAIL_USERNAME,
+                  F"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
+                  +email_recipient,"MIME-Versiion:1.0",
+                  "Content-Type:text/html"]
+                email_headers =  "\r\n".join(email_headers)
+                notify.send_email(email_recipient, email_headers, text, self.debug,)
+            self.weather = getwx.weather_underground(self.tide_only)
             if not self.weather:
-                self.weather = getwx.open_weather_map()
+                self.weather = getwx.open_weather_map(self.tide_only)
             if self.weather:
+                self.weather_fail = 0
                 db.insert_weather(self.weather)
-            wxhtml.wxproc(self.iparams_dict)
-            #print ('get ndbcdata')
-            self.ndbc_data = getndbc.read_station()
+            else:
+                self.weather_fail = 1
+            if self.weather:
+                wxhtml.wxproc(self.iparams_dict)
+            self.ndbc_data = getndbc.read_station(self.tide_only)
             if self.ndbc_data:
                 db.insert_ndbc_data(self.ndbc_data)
             self.display.update(self.weather, self.ndbc_data)
@@ -146,6 +158,10 @@ class Tide:
             if tide_readings:
                 db.insert_tide(tide_readings)
                 if int(tide_readings.get('S')) == self.stationid:
+                    tide_level = tide_readings.get('R')
+                    self.tide_init = True
+                    for idx in range(0,20):
+                        self.tide_average = self.tide_average[1:]+[tide_level]
                     self.sensor_readings = tide_readings
             tide_list = db.fetch_tide_24h(
               self.stationid, self.station1cal, self.station2cal)
@@ -193,14 +209,25 @@ class Tide:
         if tide_readings:
             if int(tide_readings.get('S')) == self.stationid:
                 self.sensor_readings = tide_readings
-            db.insert_tide(tide_readings)
+                tide_level = tide_readings.get('R')
+                if not self.tide_init:
+                    for idx in range(0,20):
+                        self.tide_average = self.tide_average[1:]+[tide_level]
+                    self.tide_init = True                        
+                self.tide_average = self.tide_average[1:]+[tide_level]             
+                check_tide = sum(self.tide_average)/len(self.tide_average)
+                if tide_level > check_tide+300 or tide_level < check_tide-300:
+                    logging.warning (self.message_time+' invalid tide: '+
+                      str(tide_level)+' versus 20 minute average: '+str(check_tide))
+                else:               
+                    db.insert_tide(tide_readings)
             volts = 0
             rssi = 0
             try:
-                tide_mm = int(tide_readings['R'])
-                station = int(tide_readings['S'])
-                volts = float(tide_readings['V'])/1000
-                rssi = int(tide_readings['P'])
+                tide_mm = tide_readings['R']
+                station = tide_readings['S']
+                volts = tide_readings['V']/1000
+                rssi = tide_readings['P']
                 if station == 1:
                     self.last_station1_time = self.current_time
                     if self.stationid == 1:
@@ -209,6 +236,7 @@ class Tide:
                         self.display.station_signal_strength_tk_var.set(
                           str(rssi))
                         self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
+                        self.station_oos = False
                 elif station == 2:
                     self.last_station2_time = self.current_time
                     if self.stationid == 2:
@@ -217,25 +245,28 @@ class Tide:
                         self.display.station_signal_strength_tk_var.set(
                           str(rssi))
                         self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
+                        self.station_oos = False
                 if self.tide_ft != 99:
                     self.tide_list = self.process.update_tide_list(
                       self.tide_list, self.tide_ft)
             except:
                 pass
 
-        if (self.main_loop_count == 2 and
-          self.current_time >= self.last_weather_time + timedelta(minutes=3)):
+        if (self.main_loop_count == 2 and (self.weather_fail or 
+          self.current_time >= self.last_weather_time + timedelta(minutes=3))):
             #
             # Local weather is updated every three minutes
             #
             self.last_weather_time = self.current_time
-            #print ('Updating Weather')
-            self.weather = getwx.weather_underground()
+            self.weather = getwx.weather_underground(self.tide_only)
             if not self.weather:
-                self.weather = getwx.open_weather_map()
+                self.weather = getwx.open_weather_map(self.tide_only)
             if self.weather:
+                self.weather_fail = 0
                 db.insert_weather(self.weather)
                 self.display.update(self.weather, self.ndbc_data)
+            else:
+                self.weather_fail = 1
 
         if self.main_loop_count == 3:
             valkeys = db.fetch_userpass()
@@ -252,7 +283,7 @@ class Tide:
             # The marine observation is updated every 10 minutes
             #
             self.last_ndbc_time = self.current_time
-            self.ndbc_data = getndbc.read_station()
+            self.ndbc_data = getndbc.read_station(self.tide_only)
             if self.ndbc_data:
                 db.insert_ndbc_data(self.ndbc_data)
 
@@ -288,21 +319,21 @@ class Tide:
             self.s1enable = self.iparams_dict.get('s1enable')
             self.s2enable = self.iparams_dict.get('s2enable')
             self.debug = self.iparams_dict.get('debug')
-            #print (self.ndbc_data)
-            #print (self.weather)
+            self.tide_only = self.iparams_dict.get('tide_only')
             self.display.active_station_tk_var.set(str(self.stationid))
             predict_list = predict.tide_predict()
             self.display.update(self.weather, self.ndbc_data)
             self.display.tide(predict_list, self.tide_list)
             if current_minute == '00':
                 wxhtml.wxproc(self.iparams_dict)
-            html.create(self.weather, self.ndbc_data, predict_list,
+            self.html.create(self.weather, self.ndbc_data, predict_list,
               self.tide_list, self.iparams_dict, self.sensor_readings)
             alt_station = 2 if self.stationid == 1 else 1
-            if ((self.stationid == 1 and self.current_time >
+            if (not self.station_oos and ((self.stationid == 1 and self.current_time >
               self.last_station1_time + timedelta(minutes=5)) or
               (self.stationid == 2 and self.current_time >
-              self.last_station2_time + timedelta(minutes=5))):
+              self.last_station2_time + timedelta(minutes=5)))):
+                self.station_oos = True
                 msgsuff = ''
                 if ((alt_station == 1 and self.s1enable) or
                   (alt_station == 2 and self.s2enable)):
@@ -310,17 +341,20 @@ class Tide:
                     db.update_stationid(alt_station)
                     msgsuff = f', switching to Station {str(alt_station)}'
                 twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
-                email_recipient = cons.ADMIN_EMAIL[0]
                 text = (self.message_time+f' Station {self.stationid} has not reported in '+
                   f'over 5 minutes{msgsuff}')
                 notify.send_SMS(twilio_phone_recipient, text, self.debug)
-                email_headers = ["From: " + cons.EMAIL_USERNAME,
-                  f"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
-                  +email_recipient,"MIME-Versiion:1.0",
-                  "Content-Type:text/html"]
-                email_headers =  "\r\n".join(email_headers)
-                notify.send_email(email_recipient, email_headers, text,
-                  self.debug)                    
+                for email_recip in cons.ADMIN_EMAIL:
+                    if email_recip == None:
+                        continue
+                    email_recipient = email_recip
+                    email_headers = ["From: " + cons.EMAIL_USERNAME,
+                      f"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
+                      +email_recipient,"MIME-Versiion:1.0",
+                      "Content-Type:text/html"]
+                    email_headers =  "\r\n".join(email_headers)
+                    notify.send_email(email_recipient, email_headers, text,
+                      self.debug)                    
                 self.last_station1_time = self.current_time
                 self.last_station2_time = self.current_time
             if self.tide_ft != 99:
@@ -332,7 +366,7 @@ class Tide:
 
         self.visit = True
         grephome = ["grep -o 'CoastalMaine.png' /var/log/apache2/access.log.1  | wc -l"]
-        greptide = ["grep -o 'POST /tide.html' /var/log/apache2/access.log.1  | wc -l"]
+        greptide = ["grep -o 'GET /tide.html' /var/log/apache2/access.log.1  | wc -l"]
         grepuser = ["grep -o 'GET /alertlogin.html' /var/log/apache2/access.log.1  | wc -l"]
         grepumod = ["grep -o 'POST /cgi-bin/alertform.cgi' /var/log/apache2/access.log.1  | wc -l"]
         homecount = subprocess.check_output(grephome,shell=True)
@@ -348,7 +382,7 @@ class Tide:
         visfields = vislines[0].split()
         visdate = visfields[3][1:12]
         for email_recip in cons.ADMIN_EMAIL:
-            if email_recip == 'None':
+            if email_recip == None:
                 continue
             headers = ["From: " + cons.EMAIL_USERNAME,
               "Subject: BBI Tide Station Visits", "To: "+
@@ -360,16 +394,8 @@ class Tide:
               "<br />Current Tide Page - "+str(tidecount)+
               "<br />User Alert Login Form - "+str(usercount)+
               "<br />User Alert Update - "+str(umodcount))
-            text_message = ("From "+cons.HOSTNAME+": "+self.message_time+
-              " - Page Hits on "+visdate+
-              "\nHome Page - "+str(homecount)+
-              "\nTide Page - "+str(tidecount)+
-              "\nAlert Login Page - "+str(usercount)+
-              "\nAlert Form - "+str(umodcount))
-
-            twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
-            email_recipient = cons.ADMIN_EMAIL[0]
-            notify.send_SMS(twilio_phone_recipient, text_message, self.debug)
+            email_recipient = email_recip
+            #email_recipient = cons.ADMIN_EMAIL[0]
             email_headers = ["From: " + cons.EMAIL_USERNAME,
               f"Subject: {cons.STATION_LOCATION} Tide Station Visits", "To: "
               +email_recipient,"MIME-Versiion:1.0",
@@ -377,6 +403,18 @@ class Tide:
             email_headers =  "\r\n".join(email_headers)
             notify.send_email(email_recipient, email_headers,
               email_message, self.debug,)
+
+        text_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+          " - Page Hits on "+visdate+
+          "\nHome Page - "+str(homecount)+
+          "\nTide Page - "+str(tidecount)+
+          "\nAlert Login Page - "+str(usercount)+
+          "\nAlert Form - "+str(umodcount))
+        twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
+        notify.send_SMS(twilio_phone_recipient, text_message, self.debug)
+
+
+
 #
 # Start the ball rolling
 #
