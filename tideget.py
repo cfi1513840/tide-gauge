@@ -321,6 +321,7 @@ class GetNDBC:
                 #
                 # extract and save time
                 #        
+                print (obsfull)
                 dtindx = obsfull.find('summary\': \'<strong>')
                 if dtindx != -1:
                     dtindx = dtindx+19
@@ -333,7 +334,6 @@ class GetNDBC:
                       obsfull[sindx:eindx].strip(),'%B %d, %Y %I:%M %p')
                     dtime = datetime.strftime(xtime,'%Y-%m-%d %H:%M:00')
                     work_dict['DateTime'] = dtime
-                #print (obsfull)
                 for key in ndbc_keys:
                     #
                     # Extract and save observation values using key list
