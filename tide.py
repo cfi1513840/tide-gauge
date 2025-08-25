@@ -120,9 +120,11 @@ class Tide:
               display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
               " Sunset: "+display_date_and_time[2])
             self.main()
-            twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
             text = f'{cons.HOSTNAME} Tide Station startup at {self.message_time}'
-            notify.send_SMS(twilio_phone_recipient, text, self.debug)
+            for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
+                if twilio_phone_recipient == None:
+                    continue
+                notify.send_SMS(twilio_phone_recipient, text, self.debug)
             for email_recip in cons.ADMIN_EMAIL:
                 if email_recip == None:
                     continue
@@ -340,10 +342,12 @@ class Tide:
                     self.stationid = alt_station
                     db.update_stationid(alt_station)
                     msgsuff = f', switching to Station {str(alt_station)}'
-                twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
                 text = (self.message_time+f' Station {self.stationid} has not reported in '+
                   f'over 5 minutes{msgsuff}')
-                notify.send_SMS(twilio_phone_recipient, text, self.debug)
+                for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
+                    if twilio_phone_recipient == None:
+                        continue
+                    notify.send_SMS(twilio_phone_recipient, text, self.debug)
                 for email_recip in cons.ADMIN_EMAIL:
                     if email_recip == None:
                         continue
@@ -410,8 +414,10 @@ class Tide:
           "\nTide Page - "+str(tidecount)+
           "\nAlert Login Page - "+str(usercount)+
           "\nAlert Form - "+str(umodcount))
-        twilio_phone_recipient = cons.TWILIO_PHONE_RECIPIENT
-        notify.send_SMS(twilio_phone_recipient, text_message, self.debug)
+        for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
+            if twilio_phone_recipient == None:
+                continue
+            notify.send_SMS(twilio_phone_recipient, text_message, self.debug)
 
 
 
