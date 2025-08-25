@@ -302,7 +302,8 @@ class GetNDBC:
           'Water Temperature': '',
           'Wave Direction': '',
           'Atmospheric Pressure': ''}
-        try:
+        #try:
+        if True:
             count = 0
             for station in stations:
                 """ for testing, read data from file
@@ -321,7 +322,7 @@ class GetNDBC:
                 #
                 # extract and save time
                 #        
-                print (obsfull)
+                #print (obsfull)
                 dtindx = obsfull.find('summary\': \'<strong>')
                 if dtindx != -1:
                     dtindx = dtindx+19
@@ -351,7 +352,8 @@ class GetNDBC:
                         work_dict[key] = value
                 ndbc_dict = ndbc_dict | work_dict
             return ndbc_dict
-        except:
+        #except:
+        else:
             logging.warning('Error obtaining NDBC data')
             return {}
 
