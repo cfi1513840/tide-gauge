@@ -342,7 +342,7 @@ class Tide:
                     self.stationid = alt_station
                     db.update_stationid(alt_station)
                     msgsuff = f', switching to Station {str(alt_station)}'
-                text = (self.message_time+f' Station {self.stationid} has not reported in '+
+                text = (self.message_time+f'{cons.HOSTNAME} Station {self.stationid} has not reported in '+
                   f'over 5 minutes{msgsuff}')
                 for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
                     if twilio_phone_recipient == None:
