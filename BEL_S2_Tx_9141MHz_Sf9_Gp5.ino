@@ -8,7 +8,7 @@
 #include "LoRaWan_APP.h"
 #include "Arduino.h"
 
-#define TRIGGER_PIN GPIO4
+#define TRIGGER_PIN GPIO5
 #define STATION_ID_NUMBER 1
 
 //#define RF_FREQUENCY 915000000  // Hz
