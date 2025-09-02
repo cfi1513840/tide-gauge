@@ -16,7 +16,7 @@
 // Check your own rules and regulations to see what is legal where you are.
 //#define FREQUENCY           866.3       // for Europe
 //#define FREQUENCY           915.0       // for US
-#define FREQUENCY           915.0       // for US
+#define FREQUENCY           914.1       // for US
 
 // LoRa bandwidth. Keep the decimal point to designate float.
 // Allowed values are 7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125.0, 250.0 and 500.0 kHz.
