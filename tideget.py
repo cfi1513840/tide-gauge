@@ -359,10 +359,6 @@ class GetWeather:
             with open(logfile_path, 'a') as logfile:
                logfile.write (pline+'\n')
          return -1
-
-
-
-
 """
 #########################################################################
     def deg_to_direction(self,deg):
