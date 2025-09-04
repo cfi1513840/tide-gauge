@@ -324,10 +324,13 @@ class GetNDBC:
                 #print (obsfull)
                 date_found = False
                 dteindx = obsfull.find('EDT')
+                print ('dteindx: '+str(dteindx))
                 if dteindx == -1:
                     dteindx = obsfull.find('EST')
+                    print ('dteindx: '+str(dteindx))
                 if dteindx != -1:
-                    dtsindx = obsfull.rfind('>', dteindx)+1
+                    dtsindx = obsfull.find('>', dteindx-35)+1
+                    print ('dtsindx: '+str(dtsindx))
                     if dtsindx != -1:
                         print ('dtsindx: '+str(dtsindx)+' dteindx: '+str(dteindx))
                         print (obsfull[dtsindx:dteindx])
