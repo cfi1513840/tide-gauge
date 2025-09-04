@@ -329,6 +329,8 @@ class GetNDBC:
                 if dteindx != -1:
                     dtsindx = obsfull.rfind('>', dteindx)+1
                     if dtsindx != -1:
+                        print ('dtsindx: '+str(dtsindx)+' dteindx: '+str(dteindx))
+                        print (obsfull[dtsindx:dteindx])
                         date_found = True
                 if dtsindx != -1:
                     xtime = datetime.strptime(
@@ -353,8 +355,6 @@ class GetNDBC:
                 ndbc_dict = ndbc_dict | work_dict
             return ndbc_dict
         except:
-            print ('dtsindx: '+str(dtsindx)+' dteindx: '+str(dteindx))
-            print (str(obsfull))
             logging.warning('Error obtaining NDBC data')
             return {}
 
