@@ -341,13 +341,13 @@ class GetNDBC:
                     #
                     kidx = obsfull.find(key)
                     if kidx != -1:
-                        sidx = obsfull.find('>', kidx)
-                        sidx += 1
-                        eidx = obsfull.find('<', sidx)
-                        value = " ".join(obsfull[sidx:eidx].split())
+                        dtsindx = obsfull.find('>', kidx)
+                        dtsindx += 1
+                        dteindx = obsfull.find('<', dtsindx)
+                        value = " ".join(obsfull[dtsindx:dteindx].split())
                         if key != 'Location':
-                            eidx = value.find(' ')
-                            value = value[:eidx]
+                            dteindx = value.find(' ')
+                            value = value[:dteindx]
                         value = value.replace('&#176;F', '')
                         work_dict[key] = value
                 ndbc_dict = ndbc_dict | work_dict
