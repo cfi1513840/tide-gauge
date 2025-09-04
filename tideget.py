@@ -322,16 +322,17 @@ class GetNDBC:
                 # extract and save time
                 #        
                 #print (obsfull)
-                dtindx = obsfull.find('summary\': \'<strong>')
-                if dtindx != -1:
-                    dtindx = dtindx+19
-                eindx = obsfull.find('EDT', dtindx)
-                if eindx == -1:
-                    eindx = obsfull.find('EST')
-                if eindx != -1:
-                    sindx = obsfull.find('>', eindx-25)+1
+                date_found = False
+                dteindx = obsfull.find('EDT')
+                if dteindx == -1:
+                    dteindx = obsfull.find('EST')
+                if dteindx != -1:
+                    dtsindx = obsfull.rfind('>', dteindx)+1
+                    if dtsindx != -1:
+                        date_found = True
+                if dtsindx != -1:
                     xtime = datetime.strptime(
-                      obsfull[sindx:eindx].strip(),'%B %d, %Y %I:%M %p')
+                      obsfull[dtsindx:dteindx].strip(),'%B %d, %Y %I:%M %p')
                     dtime = datetime.strftime(xtime,'%Y-%m-%d %H:%M:00')
                     work_dict['DateTime'] = dtime
                 for key in ndbc_keys:
