@@ -330,7 +330,7 @@ class GetNDBC:
                     dtsindx = obsfull.find('>', dteindx-35)+1
                     if dtsindx != -1:
                         date_found = True
-                if if date_found:
+                if date_found:
                     xtime = datetime.strptime(
                       obsfull[dtsindx:dteindx].strip(),'%B %d, %Y %I:%M %p')
                     dtime = datetime.strftime(xtime,'%Y-%m-%d %H:%M:00')
