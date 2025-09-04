@@ -353,7 +353,7 @@ class GetNDBC:
                 ndbc_dict = ndbc_dict | work_dict
             return ndbc_dict
         except:
-            print ('sindx: '+str(sindx)+' eindx: '+str(eindx))
+            print ('dtsindx: '+str(dtsindx)+' dteindx: '+str(dteindx))
             print (str(obsfull))
             logging.warning('Error obtaining NDBC data')
             return {}
