@@ -213,7 +213,158 @@ class GetWeather:
         weather['dewpoint'] = int(dewpoint*1.8+32)
         weather['temperature'] = round(temperature)
         return weather
+######################################################################
+"""
+    def weather_link(self, tide_only):
+        #print ('getting weather link')
+        if tide_only: return {}
+        #Method to get WeatherLink observations for the local area
 
+        parameters = {
+          "api-key": self.cons.WEATHER_LINK_API,
+          "station-id": self.cons.WX_LINK_STATION_ID,
+          "t": int(time.time())
+        }
+        parameters = collections.OrderedDict(sorted(parameters.items()))
+        apiSecret = self.cons.WEATHER_LINK_API_SECRET
+        data = ""
+        for key in parameters:
+            data = data+key+str(parameters[key])
+         #print("data string to hash is: \"{}\"".format(data))
+        apiSignature = hmac.new(
+            apiSecret.encode('utf-8'),
+            data.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        #print("API Signature is: \"{}\"".format(apiSignature))
+        wxlinkurl = "https://api.weatherlink.com/v2/current/{}?api-key={}&api-signature={}&t={}".format(parameters["station-id"],parameters["api-key"], apiSignature, parameters["t"])
+        #print (wxlinkurl)
+        response = requests.get(wxlinkurl)
+        if str(response) != '<Response [200]>':
+            wxerror += 1
+            if not wxreport:
+                wxreport = True
+                pline = 'Error requesting Weather Link data\n'+str(response)
+                logging.warning(pline)
+                #left off here
+            return -1
+         else:
+            if wxreport:
+               wxreport = False
+               pline = msgtime+' beltide.py - Successful weather data request\n'+str(response)
+               if prout: print (pline)
+               if log:
+                  with open(logfile_path, 'a') as logfile:
+                     logfile.write (pline+'\n')         
+            result=response.json()
+            dumpedic = json.dumps(result)
+            loadedic = json.loads(dumpedic)
+            sense = loadedic['sensors']
+            if isinstance(sense[0]['data'][0]['temp'], int) or isinstance(sense[0]['data'][0]['temp'], float):
+               temperature = int(sense[0]['data'][0]['temp'])
+            else:
+               temperature = ''
+            if isinstance(sense[0]['data'][0]['hum'], int) or isinstance(sense[0]['data'][0]['hum'], float):
+               humidity = int(sense[0]['data'][0]['hum'])
+            else:
+               humidity = ''
+            if isinstance(sense[0]['data'][0]['thw_index'], int) or isinstance(sense[0]['data'][0]['thw_index'], float):
+               heatindex = int(sense[0]['data'][0]['thw_index'])
+            else:
+               heatindex = ''
+            if isinstance(sense[1]['data'][0]['bar_sea_level'], int) or isinstance(sense[1]['data'][0]['bar_sea_level'], float):
+               baro = round(float(sense[1]['data'][0]['bar_sea_level']), 2)
+            else:
+               baro = ''
+            if isinstance(sense[1]['data'][0]['bar_trend'], int) or isinstance(sense[1]['data'][0]['bar_trend'], float):
+               barotrend = round(float(sense[1]['data'][0]['bar_trend']), 3)
+            else:
+               barotrend = 0
+            if isinstance(sense[0]['data'][0]['dew_point'], int) or isinstance(sense[0]['data'][0]['dew_point'], float):
+               dewpoint = int(sense[0]['data'][0]['dew_point'])
+            else:
+               dewpoint = ''
+            if isinstance(sense[0]['data'][0]['wind_speed_hi_last_2_min'], int) or isinstance(sense[0]['data'][0]['wind_speed_hi_last_2_min'], float):
+               windspeed = float(sense[0]['data'][0]['wind_speed_hi_last_2_min'])
+            else:
+               windspeed = ''
+            if isinstance(sense[0]['data'][0]['wind_dir_last'], int) or isinstance(sense[0]['data'][0]['wind_dir_last'], float):
+               winddir = int(sense[0]['data'][0]['wind_dir_last'])
+            else:
+               winddir = ''
+            if isinstance(sense[0]['data'][0]['rain_rate_last_in'], int) or isinstance(sense[0]['data'][0]['rain_rate_last_in'], float):
+               rainrate = float(sense[0]['data'][0]['rain_rate_last_in'])
+            else:
+               rainrate = ''
+            if isinstance(sense[0]['data'][0]['rainfall_daily_in'], int) or isinstance(sense[0]['data'][0]['rainfall_daily_in'], float):
+               raindaily = float(sense[0]['data'][0]['rainfall_daily_in'])
+            else:
+               raindaily = ''
+            if isinstance(sense[0]['data'][0]['wind_speed_hi_last_10_min'], int) or isinstance(sense[0]['data'][0]['wind_speed_hi_last_10_min'], float):
+               windgust = float(sense[0]['data'][0]['wind_speed_hi_last_10_min'])
+            else:
+               windgust = ''
+            windsym = ''
+            if winddir != '':
+               if winddir >= 337 or winddir < 22:
+                  windsym = 'N '
+               elif winddir >= 22 and winddir < 67:
+                  windsym = 'NE '
+               elif winddir >= 67 and winddir < 112:
+                  windsym = 'E '
+               elif winddir >= 112 and winddir < 157:
+                  windsym = 'SE '
+               elif winddir >= 157 and winddir < 202:
+                  windsym = 'S '
+               elif winddir >= 202 and winddir < 247:
+                  windsym = 'SW '
+               elif winddir >= 247 and winddir < 292:
+                  windsym = 'W '
+               elif winddir >= 292 and winddir < 337:
+                  windsym = 'NW '
+            if wxerror > 5:
+               for EMAIL_RECIP in admin_email:
+                  headers = ["From: " + EMAIL_USERNAME, "Subject: Belfast weatherlink.com Restored", "To: "+EMAIL_RECIP,"MIME-Versiion:1.0","Content-Type:text/html"]
+                  headers = "\r\n".join(headers)
+                  email_message = "From "+myhost+": "+msgtime+" - weatherlink.com query successful following "+str(wxerror)+" consecutive failures"
+                  text_message = email_message               
+                  send_email()
+                  for TWILIO_PHONE_RECIPIENT in adminbrs:
+                     send_text()               
+               pline = msgtime+' beltide.py - weatherlink.com restored'
+               if prout: print (pline)
+               if log:
+                  with open(logfile_path, 'a') as logfile:
+                    logfile.write (pline+'\n')                 
+            wxerror = 0
+      except Exception as errmsg:
+         pline = msgtime+' beltide.py - Error requesting weatherlink.com data\n'+str(errmsg)
+         if prout: print (pline)
+         if log:
+            with open(logfile_path, 'a') as logfile:
+               logfile.write (pline+'\n')                  
+         wxerror += 1
+         if wxerror == 5:
+            for EMAIL_RECIP in admin_email:
+               headers = ["From: " + EMAIL_USERNAME, "Subject: Belfast Weatherlink Failure", "To: "+EMAIL_RECIP,"MIME-Versiion:1.0","Content-Type:text/html"]
+               headers = "\r\n".join(headers)
+               email_message = "From "+myhost+": "+msgtime+" - "+str(wxerror)+" consecutive failures requesting weatherlink.com data"
+               text_message = email_message               
+               send_email()
+               for TWILIO_PHONE_RECIPIENT in adminbrs:
+                  send_text()               
+         pline = msgtime+' beltide.py - Error getting weather from weatherlink.com'
+         if prout: print (pline)
+         if log:
+            with open(logfile_path, 'a') as logfile:
+               logfile.write (pline+'\n')
+         return -1
+
+
+
+
+"""
+#########################################################################
     def deg_to_direction(self,deg):
         """Convert degrees to compass direction"""
         if deg is None:
@@ -352,7 +503,7 @@ class GetNDBC:
                 ndbc_dict = ndbc_dict | work_dict
             return ndbc_dict
         except:
-            print (obsfull[sindx:eindx].strip())
+            print ('sindx: '+str(sindx)+' eindx: '+str(eindx))
             logging.warning('Error obtaining NDBC data')
             return {}
 
