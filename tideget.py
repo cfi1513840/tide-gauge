@@ -270,11 +270,21 @@ class GetNDBC:
         self.cons = cons
         self.val = val
         self.notify = notify
-        #urllib3.util.connection.allowed_gai_family = socket.AF_INET
+        self.save_time = 0
+        self.air_temperature = 0
+        self.wind_direction = 0
+        self.wind_speed = 0
+        self.wind_gust = 0
+        self.wave_height = 0
+        self.wave_period = 0
+        self.water_temperature = 0
+        self.wave_direction = 0
+        self.atmospheric_pressure = 0
        
     def read_station(self, tide_only):
         #print ('getting NDBC')
         if tide_only: return {}
+        curtime = datetime.now()
         stations = self.cons.NDBC_STATIONS
         ndbc_keys = [
           'DateTime',
@@ -335,6 +345,9 @@ class GetNDBC:
                       obsfull[dtsindx:dteindx].strip(),'%B %d, %Y %I:%M %p')
                     dtime = datetime.strftime(xtime,'%Y-%m-%d %H:%M:00')
                     work_dict['DateTime'] = dtime
+                else:
+                    logging.warning('Error NDBC missing timestamp')
+                    return {}
                 for key in ndbc_keys:
                     #
                     # Extract and save observation values using key list
@@ -351,6 +364,34 @@ class GetNDBC:
                         value = value.replace('&#176;F', '')
                         work_dict[key] = value
                 ndbc_dict = ndbc_dict | work_dict
+                #
+                # NDBC reports may only contain partial parameters at different
+                # times, with wave reports being sent less often. therefore,
+                # report parameters are saved and recombined for display.
+                #
+                if ndbc_dict['Wave Height'] != '':
+                    self.save_time = xtime
+                    self.wave_height = ndbc_dict['Wave Height']
+                    self.wave_period = ndbc_dict['Wave Period']
+                    self.wave_direction = ndbc_dict['Wave Direction']
+                    if self.air_temperature != 0:
+                        ndbc_dict['Air Temperature'] = self.air_temperature
+                        ndbc_dict['Wind Direction'] = self.wind_direction
+                        ndbc_dict['Wind Speed'] = self.wind_speed
+                        ndbc_dict['Wind Gust'] = self.wind_gust
+                        ndbc_dict['Water Temperature'] = self.water_temperature
+                        ndbc_dict['Atmospheric Pressure'] = self.atmospheric_pressure
+                else:
+                    self.air_temperature = ndbc_dict['Air Temperature']
+                    self.wind_direction = ndbc_dict['Wind Direction']
+                    self.wind_speed = ndbc_dict['Wind Speed']
+                    self.wind_gust = ndbc_dict['Wind Gust']
+                    self.water_temperature = ndbc_dict['Water Temperature']
+                    self.atmospheric_pressure = ndbc_dict['Atmospheric Pressure']
+                    if self.save_time != 0 and curtime < xtime + timedelta(hours=4):
+                        ndbc_dict['Wave Height'] = self.wave_height
+                        ndbc_dict['Wave Period'] = self.wave_period
+                        ndbc_dict['Wave Direction'] = self.wave_direrection
             return ndbc_dict
         except:
             logging.warning('Error obtaining NDBC data')
