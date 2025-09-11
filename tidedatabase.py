@@ -97,6 +97,10 @@ class DbManage:
                 else:
                     solar = 0
                     solarv = 0
+                if 't' in data_dict:
+                    therm = data_dict.get('t')
+                else:
+                    therm = 0
                 database_values = (
                   database_time,
                   station,
@@ -107,7 +111,8 @@ class DbManage:
                   distance_feet,
                   distance,
                   data_dict.get('M'),
-                  solarv                  
+                  solarv,
+                  therm                  
                   )
             except Exception as errmsg:
                 logging.warning('db insertion failed: '+str(errmsg))
@@ -134,6 +139,8 @@ class DbManage:
                 data_dict["P"]) \
               .field(self.cons.INFLUXDB_COLUMN_NAMES["s"],
                 solar) \
+              .field(self.cons.INFLUXDB_COLUMN_NAMES["t"],
+                therm) \
               .time(message_time, WritePrecision.MS)
             write_api = self.influxdb_client.write_api(
               write_options=SYNCHRONOUS)

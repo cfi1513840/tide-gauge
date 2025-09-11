@@ -139,9 +139,10 @@ void loop() {
       rxWait = false;
       rxCount = 0;
       txNumber = -1;
-      timetillwakeup = 33425;
+      timetillwakeup = 32925;
       TimerSetValue(&wakeUp, timetillwakeup);
       TimerStart(&wakeUp);
+      delay(500);;
       sleepMode = true;
     }
   //
@@ -329,5 +330,6 @@ void processAck() {
     txNumber = -1;
     TimerSetValue(&wakeUp, timetillwakeup);
     TimerStart(&wakeUp);
+    delay(500);
     sleepMode = true;
 }

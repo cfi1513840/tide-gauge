@@ -75,6 +75,8 @@ class Constants:
     INFLUXDB_CLIENT = InfluxDBClient(url='http://localhost:8086',
       token=INFLUXDB_TOKEN, org=INFLUXDB_ORG)
     INFLUXDB_QUERY_API = INFLUXDB_CLIENT.query_api()
+    OBSCAPE_USER = secure_dict['OBSCAPE_USER']
+    OBSCAPE_KEY = secure_dict['OBSCAPE_KEY']
     SMTP_SERVER = secure_dict['SMTP_SERVER']
     SMTP_PORT = secure_dict['SMTP_PORT']
     TWILIO_ACCOUNT_SID = secure_dict['TWILIO_ACCOUNT_SID']
@@ -85,6 +87,8 @@ class Constants:
     TWILIO_PHONE_RECIPIENT = secure_dict['TWILIO_PHONE_RECIPIENT']
     OPEN_WEATHERMAP_API = secure_dict['WXOPENAPI']
     WEATHER_UNDERGROUND_API = secure_dict['WXUNDAPI']
+    WEATHER_LINK_API = secure_dict['WXLINKAPI']
+    WEATHER_LINK_API_SECRET = secure_dict['WXLINKAPI_SECRET']
 
     with open('tide.env', 'r') as infile:
         lines = infile.readlines()
@@ -114,6 +118,7 @@ class Constants:
         NOAA_STATION = os.getenv('NOAA_STATION')
         NOAA_STATION_NAME = os.getenv('NOAA_STATION_NAME')
         WX_UND_STATION_ID = os.getenv('WX_UND_STATION_ID')
+        WX_LINK_STATION_ID = os.getenv('WX_LINK_STATION_ID')
         LOCAL_TZ = pytz.timezone(os.getenv('TIME_ZONE'))
         STATION_LOCATION = os.getenv('STATION_LOCATION')
         STATION_LATITUDE = os.getenv('STATION_LATITUDE')
