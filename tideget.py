@@ -393,8 +393,8 @@ class GetNDBC:
                         ndbc_dict['Wave Period'] = self.wave_period
                         ndbc_dict['Wave Direction'] = self.wave_direrection
             return ndbc_dict
-        except:
-            logging.warning('Error obtaining NDBC data')
+        except Exception as errmsg:
+            logging.warning('Error obtaining NDBC data '+str(errmsg)
             return {}
 
 class GetNOAA:
