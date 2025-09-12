@@ -245,12 +245,12 @@ class GetWeather:
 
         if str(response) != '<Response [200]>':
             if not self.wx_und_report_flag and self.wx_error_count > 2:
-                self.wx_und_report_flag = True
                 pline = ('Error response from '+
                   'Weather Link network request\n'+str(response))
                 logging.warning(pline)
             self.wx_error_count += 1
             if self.wx_error_count == 5:
+                self.wx_und_report_flag = True
                 self.report_error('WeatherLink')
             return {}
         else:
@@ -292,47 +292,7 @@ class GetWeather:
               }
             weather['wind_direction_symbol'] = self.deg_to_direction(
                 weather['wind_direction_degrees'])
-
-            if self.wx_error_count > 5:
-                for EMAIL_RECIP in admin_email:
-                    headers = ["From: " + EMAIL_USERNAME, "Subject: Belfast weatherlink.com Restored", "To:       EMAIL_RECIP,"MIME-Versiion:1.0","Content-Type:text/html"]
-                  headers = "\r\n".join(headers)
-                  email_message = "From "+myhost+": "+msgtime+" - weatherlink.com query successful following "+str(self.wx_error_count)+" consecutive failures"
-                  text_message = email_message               
-                  send_email()
-                  for TWILIO_PHONE_RECIPIENT in adminbrs:
-                     send_text()               
-               pline = msgtime+' beltide.py - weatherlink.com restored'
-               if prout: print (pline)
-               if log:
-                  with open(logfile_path, 'a') as logfile:
-                    logfile.write (pline+'\n')                 
-            self.wx_error_count = 0
-      except Exception as errmsg:
-         pline = msgtime+' beltide.py - Error requesting weatherlink.com data\n'+str(errmsg)
-         if prout: print (pline)
-         if log:
-            with open(logfile_path, 'a') as logfile:
-               logfile.write (pline+'\n')                  
-         self.wx_error_count += 1
-         if self.wx_error_count == 5:
-            for EMAIL_RECIP in admin_email:
-               headers = ["From: " + EMAIL_USERNAME, "Subject: Belfast Weatherlink Failure", "To: "+EMAIL_RECIP,"MIME-Versiion:1.0","Content-Type:text/html"]
-               headers = "\r\n".join(headers)
-               email_message = "From "+myhost+": "+msgtime+" - "+str(self.wx_error_count)+" consecutive failures requesting weatherlink.com data"
-               text_message = email_message               
-               send_email()
-               for TWILIO_PHONE_RECIPIENT in adminbrs:
-                  send_text()               
-         pline = msgtime+' beltide.py - Error getting weather from weatherlink.com'
-         if prout: print (pline)
-         if log:
-            with open(logfile_path, 'a') as logfile:
-               logfile.write (pline+'\n')
-         return -1
-    """
-    """
-#########################################################################
+            return weather
         
     def deg_to_direction(self,deg):
         """Convert degrees to compass direction"""
