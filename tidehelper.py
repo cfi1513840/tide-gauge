@@ -150,7 +150,8 @@ class Constants:
         "M": "correlation_count",
         "V": "battery_milliVolts",
         "P": "signal_strength",
-        "s": "solar_milliVolts"
+        "s": "solar_milliVolts",
+        "t": "temperature"
         }
     RADIANS_PER_SECOND = math.pi*2/91080
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
