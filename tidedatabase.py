@@ -118,7 +118,7 @@ class DbManage:
                 logging.warning('db insertion failed: '+str(errmsg))
                 return
             self.sql_cursor.execute(
-              f"INSERT INTO sensors VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+              f"INSERT INTO sensors VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
               database_values)
             self.sql_connection.commit()
             message_time = datetime.utcnow()
