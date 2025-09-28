@@ -15,6 +15,7 @@ class GetWeather:
         self.notify = notify
         self.wx_und_report_flag = 0
         self.wx_opn_report_flag = 0
+        self.wx_link_report_flag = 0
         self.wx_error_count = 0
         self.last_baro = 0
         #urllib3.util.connection.allowed_gai_family = socket.AF_INET
@@ -213,6 +214,85 @@ class GetWeather:
         weather['dewpoint'] = int(dewpoint*1.8+32)
         weather['temperature'] = round(temperature)
         return weather
+######################################################################
+    def weather_link(self, tide_only):
+        #print ('getting weather link')
+        if tide_only: return {}
+        """Method to get WeatherLink observations for the local area"""
+        #
+        # Extract weather parameters from WeatherLink json response
+        #
+        parameters = {
+          "api-key": self.cons.WEATHER_LINK_API,
+          "station-id": self.cons.WX_LINK_STATION_ID,
+          "t": int(time.time())
+        }
+        parameters = collections.OrderedDict(sorted(parameters.items()))
+        apiSecret = self.cons.WEATHER_LINK_API_SECRET
+        data = ""
+        for key in parameters:
+            data = data+key+str(parameters[key])
+         #print("data string to hash is: \"{}\"".format(data))
+        apiSignature = hmac.new(
+            apiSecret.encode('utf-8'),
+            data.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        #print("API Signature is: \"{}\"".format(apiSignature))
+        wxlinkurl = "https://api.weatherlink.com/v2/current/{}?api-key={}&api-signature={}&t={}".format(parameters["station-id"],parameters["api-key"], apiSignature, parameters["t"])
+        #print (wxlinkurl)
+        response = requests.get(wxlinkurl)
+
+        if str(response) != '<Response [200]>':
+            if not self.wx_und_report_flag and self.wx_error_count > 2:
+                pline = ('Error response from '+
+                  'Weather Link network request\n'+str(response))
+                logging.warning(pline)
+            self.wx_error_count += 1
+            if self.wx_error_count == 5:
+                self.wx_und_report_flag = True
+                self.report_error('WeatherLink')
+            return {}
+        else:
+            #
+            # Log and print success message if error previously reported
+            #
+            if self.wx_link_report_flag:
+                self.wx_link_report_flag = False
+                pline = (
+                  'Successful Weather Link data request\n'+str(response))
+                logging.info(pline)
+            #
+            # Also provide email and text message success notification if required
+            #
+            if self.wx_error_count > 5:
+                self.report_success(self.wx_error_count, 'Weather Underground')
+            self.wx_error_count = 0
+            result=response.json()
+            dumpedic = json.dumps(result)
+            loadedic = json.loads(dumpedic)
+            sense = loadedic['sensors']
+            mytime = loadedic['generated_at']
+            obs_time = datetime.fromtimestamp(mytime)            
+            obs_time = datetime.strftime(obs_time, '%b %d, %Y %H:%M')
+
+            weather = {
+              'temperature': self.val.var_type(sense[0]['data'][0]['temp'], float),
+              'humidity': self.val.var_type(sense[0]['data'][0]['hum'], int),
+              'heatindex': self.val.var_type(sense[0]['data'][0]['thw_index'], float),
+              'baro': round(self.val.var_type(sense[1]['data'][0]['bar_sea_level'], float),2),
+              'baro_trend': round(self.val.var_type(sense[1]['data'][0]['bar_trend'], float),3),
+              'dewpoint': self.val.var_type(sense[0]['data'][0]['dew_point'], int),
+              'wind_speed': self.val.var_type(sense[0]['data'][0]['wind_speed_hi_last_2_min'], int),
+              'wind_direction_degrees': self.val.var_type(sense[0]['data'][0]['wind_dir_last'], int),
+              'rain_rate': self.val.var_type(sense[0]['data'][0]['rain_rate_last_in'], float),
+              'rain_today': self.val.var_type(sense[0]['data'][0]['rainfall_daily_in'], float),
+              'wind_gust': self.val.var_type(sense[0]['data'][0]['wind_speed_hi_last_10_min'], int),
+              'obs_time': obs_time
+              }
+            weather['wind_direction_symbol'] = self.deg_to_direction(
+                weather['wind_direction_degrees'])
+            return weather
         
     def deg_to_direction(self,deg):
         """Convert degrees to compass direction"""
@@ -226,7 +306,7 @@ class GetWeather:
         """Generate email and text notification for weather read errors"""
         for email_recipient in self.cons.ADMIN_EMAIL:
             email_headers = ["From: " + self.cons.EMAIL_USERNAME,
-                    f"Subject: BBI {source} Failure",
+                    f"Subject: {self.cons.HOSTNAME} {source} Failure",
                     "To: "+email_recipient,"MIME-Versiion:1.0",
                     "Content-Type:text/html"]
             email_headers = "\r\n".join(email_headers)
@@ -244,7 +324,7 @@ class GetWeather:
         for email_recipient in self.cons.ADMIN_EMAIL:
             email_headers = [
               "From: " + self.cons.EMAIL_USERNAME,
-              f"Subject: BBI {source} Restored",
+              f"Subject: {self.cons.HOSTNAME} {source} Restored",
               "To: "+email_recipient,"MIME-Versiion:1.0",
               "Content-Type:text/html"]
             email_headers = "\r\n".join(email_headers)
@@ -394,7 +474,7 @@ class GetNDBC:
                         ndbc_dict['Wave Direction'] = self.wave_direrection
             return ndbc_dict
         except Exception as errmsg:
-            logging.warning('Error obtaining NDBC data '+str(errmsg)
+            logging.warning('Error obtaining NDBC data '+ str(errmsg))
             return {}
 
 class GetNOAA:
