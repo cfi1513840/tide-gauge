@@ -471,7 +471,7 @@ class GetNDBC:
                     if self.save_time != 0 and curtime < xtime + timedelta(hours=4):
                         ndbc_dict['Wave Height'] = self.wave_height
                         ndbc_dict['Wave Period'] = self.wave_period
-                        ndbc_dict['Wave Direction'] = self.wave_direrection
+                        ndbc_dict['Wave Direction'] = self.wave_direction
             return ndbc_dict
         except Exception as errmsg:
             logging.warning('Error obtaining NDBC data '+ str(errmsg))
