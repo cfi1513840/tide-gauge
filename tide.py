@@ -73,7 +73,7 @@ class Tide:
         self.last_station1_time = self.current_time
         self.last_station2_time = self.current_time
         self.main_loop_count = 0
-        self.debug = 0
+        state.debug = 0
         self.tide1 = 0
         self.tide2 = 0
         self.tide_ft = 99
@@ -108,7 +108,7 @@ class Tide:
             self.station2cal = self.iparams_dict.get('station2cal')
             self.s1enable = self.iparams_dict.get('s1enable')
             self.s2enable = self.iparams_dict.get('s2enable')
-            self.debug = self.iparams_dict.get('debug')
+            state.debug = self.iparams_dict.get('debug')
             self.tide_only = self.iparams_dict.get('tide_only')
             display_date_and_time = sunny.get_suntimes(cons, db)
             self.sunrise = display_date_and_time[3]
@@ -124,7 +124,7 @@ class Tide:
             for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
                 if twilio_phone_recipient == None:
                     continue
-                notify.send_SMS(twilio_phone_recipient, text, self.debug)
+                notify.send_SMS(twilio_phone_recipient, text, state.debug)
             for email_recip in cons.ADMIN_EMAIL:
                 if email_recip == None:
                     continue
@@ -134,7 +134,7 @@ class Tide:
                   +email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]
                 email_headers =  "\r\n".join(email_headers)
-                notify.send_email(email_recipient, email_headers, text, self.debug,)
+                notify.send_email(email_recipient, email_headers, text, state.debug,)
             self.weather = getwx.weather_underground(self.tide_only)
             if not self.weather:
                 self.weather = getwx.open_weather_map(self.tide_only)
@@ -320,7 +320,7 @@ class Tide:
             self.station2cal = self.iparams_dict.get('station2cal')
             self.s1enable = self.iparams_dict.get('s1enable')
             self.s2enable = self.iparams_dict.get('s2enable')
-            self.debug = self.iparams_dict.get('debug')
+            state.debug = self.iparams_dict.get('debug')
             self.tide_only = self.iparams_dict.get('tide_only')
             self.display.active_station_tk_var.set(str(self.stationid))
             predict_list = predict.tide_predict()
@@ -347,7 +347,7 @@ class Tide:
                 for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
                     if twilio_phone_recipient == None:
                         continue
-                    notify.send_SMS(twilio_phone_recipient, text, self.debug)
+                    notify.send_SMS(twilio_phone_recipient, text, state.debug)
                 for email_recip in cons.ADMIN_EMAIL:
                     if email_recip == None:
                         continue
@@ -358,12 +358,12 @@ class Tide:
                       "Content-Type:text/html"]
                     email_headers =  "\r\n".join(email_headers)
                     notify.send_email(email_recipient, email_headers, text,
-                      self.debug)                    
+                      state.debug)                    
                 self.last_station1_time = self.current_time
                 self.last_station2_time = self.current_time
             if self.tide_ft != 99:
                 alerts.check_alerts(self.tide_ft, self.weather,
-                  self.ndbc_data, self.sunrise, self.sunset, self.debug)
+                  self.ndbc_data, self.sunrise, self.sunset, state.debug)
             #print (tide_list)
 
     def send_visit_report(self):
@@ -406,7 +406,7 @@ class Tide:
               "Content-Type:text/html"]
             email_headers =  "\r\n".join(email_headers)
             notify.send_email(email_recipient, email_headers,
-              email_message, self.debug,)
+              email_message, state.debug,)
 
         text_message = ("From "+cons.HOSTNAME+": "+self.message_time+
           " - Page Hits on "+visdate+
@@ -417,7 +417,7 @@ class Tide:
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:
                 continue
-            notify.send_SMS(twilio_phone_recipient, text_message, self.debug)
+            notify.send_SMS(twilio_phone_recipient, text_message, state.debug)
 
 
 
