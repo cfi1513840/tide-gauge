@@ -1,4 +1,4 @@
-// Changes for V3
+// Changes for V2
 //   KH: response option from RPi to change timing/spacing of sampling, allowing multiple sensors without tx collisions
 //   KH: Change RF Frequency to also separate multiple sensors
 //   DLS: added DEFINEs for TRIGGER_PIN and STATION_ID_NUMBER
@@ -9,7 +9,7 @@
 #include "Arduino.h"
 
 #define TRIGGER_PIN GPIO5
-#define STATION_ID_NUMBER 1
+#define STATION_ID_NUMBER 2
 
 //#define RF_FREQUENCY 915000000  // Hz
 #define RF_FREQUENCY 914100000  // Hz
@@ -49,7 +49,7 @@ static TimerEvent_t wakeUp;
 
 int16_t txNumber;
 bool sleepMode = false;
-bool rxWait = false;
+bool rxAck = false;
 bool txSend = false;
 bool txComplete = false;
 bool ackMode = false;
@@ -87,7 +87,7 @@ void onWakeUp() {
 void setup() {
   Serial.begin(9600);
   Serial1.begin(9600);
-  Serial.print("Initializing\r\n");
+  //Serial.print("Initializing\r\n");
   pinMode(Vext, OUTPUT);
   pinMode(TRIGGER_PIN, OUTPUT);
   pinMode(ADC2, INPUT);
@@ -102,7 +102,7 @@ void setup() {
   batv = 0;
   readSize = 0;
   sleepMode = false;
-  rxWait = false;
+  rxAck = false;
   rxCount =0;
   txSend = false;
   txComplete = false;
@@ -125,19 +125,21 @@ void setup() {
 void loop() {
   if (sleepMode) {
     lowPowerHandler();
-  }
   //
   // Wait up to 5 seconds following packet transmission for ack from receiver
   // If ack not received enter sleep mode
   //
-  if (rxWait) {
-    rxCount++;
-    if (rxCount < 5) {
-      Radio.Rx(0);
-      delay(1000);
-    } else {
-      rxWait = false;
-      rxCount = 0;
+  } else if (rxAck) {
+    rxAck = false;
+    //Serial.printf("request rx: %d\n", millis());
+    rxCount = 0;
+    Radio.Rx(0);
+    while (rxCount < 10 && ackMode == false) {
+      rxCount++;
+      delay(500);
+    }
+    if (ackMode == false) {
+      //Serial.printf("ack timeout, entering sleep mode %d\n", millis());
       txNumber = -1;
       timetillwakeup = 32925;
       TimerSetValue(&wakeUp, timetillwakeup);
@@ -170,6 +172,7 @@ void loop() {
     //Serial.printf("Serial1 read: %s\r\n", serialBuffer);
     //readSize = 256; // Test only, comment out for operations
     //Serial.printf("read buffer size: %d\r\n", readSize);
+    digitalWrite(Vext, HIGH); // Turn off sensor
     idx1 = 0;
     idx2 = 0;
     idxm = 0;
@@ -269,7 +272,7 @@ void loop() {
     }
     sensum = 0;
     senbr = 0;
-  } else {
+  } else if (txNumber < 20) {
     //
     // Trigger the sensor reading
     //
@@ -283,17 +286,17 @@ void loop() {
   }
 }
 void OnTxDone(void) {
-  Radio.Sleep();
-  rxWait = true;
+  //Radio.Sleep();
+  rxAck = true;
 }
 
 void OnTxTimeout(void) {
   Radio.Sleep();
-  Serial.print("TX Timeout......");
+  //Serial.print("TX Timeout......");
 }
 
 void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr ) {
-    rxWait = false;
+    rxAck = false;
     Rssi=rssi;
     rxSize=size;
     memcpy(rxpacket, payload, size );
@@ -305,8 +308,6 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr ) {
 void processAck() {
     ackMode = false;
     //Serial.printf("Received: %s,P%d,\r\n",rxpacket,Rssi);
-    digitalWrite(Vext, HIGH); // Turn off sensor
-    delay(300); 
     ridx = 0;
     while (ridx < rxSize) {
       if (rxpacket[ridx] == DChar) {
@@ -328,6 +329,7 @@ void processAck() {
       timetillwakeup = newdelay*1000;
     }
     txNumber = -1;
+    //Serial.print("Entering sleep mode\n");
     TimerSetValue(&wakeUp, timetillwakeup);
     TimerStart(&wakeUp);
     delay(500);
