@@ -80,8 +80,9 @@ class Tide:
         self.tide_average = [0 for x in range(0,20)]
         self.tide_init = False
         self.weather = {}
-        self.weather_fail = 0
         self.ndbc_data = {}
+        self.weather_retry = False
+        self.ndbc_retry = False
         self.save_the_day = datetime.strftime(self.current_time, "%d")
         self.iparams_dict = db.fetch_iparams()
         self.visit = False
@@ -139,11 +140,7 @@ class Tide:
             if not self.weather:
                 self.weather = getwx.open_weather_map(self.tide_only)
             if self.weather:
-                self.weather_fail = 0
                 db.insert_weather(self.weather)
-            else:
-                self.weather_fail = 1
-            if self.weather:
                 wxhtml.wxproc(self.iparams_dict)
             self.ndbc_data = getndbc.read_station(self.tide_only)
             if self.ndbc_data:
@@ -254,7 +251,7 @@ class Tide:
             except:
                 pass
 
-        if (self.main_loop_count == 2 and (self.weather_fail or 
+        if (self.main_loop_count == 2 and (self.weather_retry or 
           self.current_time >= self.last_weather_time + timedelta(minutes=3))):
             #
             # Local weather is updated every three minutes
@@ -264,11 +261,11 @@ class Tide:
             if not self.weather:
                 self.weather = getwx.open_weather_map(self.tide_only)
             if self.weather:
-                self.weather_fail = 0
+                self.weather_retry = False
                 db.insert_weather(self.weather)
                 self.display.update(self.weather, self.ndbc_data)
             else:
-                self.weather_fail = 1
+                self.weather_retry = True
 
         if self.main_loop_count == 3:
             valkeys = db.fetch_userpass()
@@ -279,8 +276,8 @@ class Tide:
                     if self.current_time >= valtime+timedelta(minutes=10):
                         db.update_userpass(valkey[1], valkey[2], valkey[3])
 
-        if (self.main_loop_count == 4 and
-          self.current_time >= self.last_ndbc_time + timedelta(minutes=10)):
+        if (self.main_loop_count == 4 and (self.ndbc_retry or
+          self.current_time >= self.last_ndbc_time + timedelta(minutes=10))):
             #
             # The marine observation is updated every 10 minutes
             #
@@ -288,6 +285,9 @@ class Tide:
             self.ndbc_data = getndbc.read_station(self.tide_only)
             if self.ndbc_data:
                 db.insert_ndbc_data(self.ndbc_data)
+                self.ndbc_retry = False
+            else:
+                self.ndbc_retry = True
 
         if (self.main_loop_count == 5 and self.current_time.hour == 7 and
           self.current_time.minute == 0 and not self.visit):
