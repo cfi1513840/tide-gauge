@@ -315,10 +315,10 @@ class GetWeather:
             f" - 5 consecutive failures requesting {source} data")
             logging.debug (email_headers+' '+text_message)
             self.notify.send_email(email_recipient, email_headers,
-              text_message, self.cons.debug)
+              text_message, 1)
         for twilio_phone_recipient in self.cons.ADMIN_TEL_NBRS:
             self.notify.send_SMS(twilio_phone_recipient,
-              text_message, self.cons.debug)
+              text_message, 1)
             
     def report_success(self, count, source):
         for email_recipient in self.cons.ADMIN_EMAIL:
@@ -337,10 +337,10 @@ class GetWeather:
               email_recipient,
               email_headers,
               text_message,
-              self.cons.debug)
+              1)
         for twilio_phone_recipient in self.cons.ADMIN_TEL_NBRS:
             self.notify.send_SMS(twilio_phone_recipient,
-              text_message, self.cons.debug)
+              text_message, 1)
         pline = f'{source} restored'
         logging.info(pline)
 
