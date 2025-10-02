@@ -57,10 +57,10 @@ class DbManage:
           ndbc_data.get('Location'), 
           ndbc_data.get('Wind Direction'), 
           ndbc_data.get('Wind Speed'), 
-          ndbc_data.get('wind Gust'), 
+          ndbc_data.get('Wind Gust'), 
           ndbc_data.get('Wave Height'),
           ndbc_data.get('Wave Period'), 
-          ndbc_data.get('Temperature'), 
+          ndbc_data.get('Air Temperature'), 
           ndbc_data.get('Water Temperature'), 
           ndbc_data.get('Wave Direction'),
           ndbc_data.get('Atmospheric Pressure'))

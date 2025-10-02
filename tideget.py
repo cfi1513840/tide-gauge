@@ -444,6 +444,7 @@ class GetNDBC:
                         value = value.replace('&#176;F', '')
                         work_dict[key] = value
                 ndbc_dict = ndbc_dict | work_dict
+                """
                 #
                 # NDBC reports may only contain partial parameters at different
                 # times, with wave reports being sent less often. therefore,
@@ -472,6 +473,7 @@ class GetNDBC:
                         ndbc_dict['Wave Height'] = self.wave_height
                         ndbc_dict['Wave Period'] = self.wave_period
                         ndbc_dict['Wave Direction'] = self.wave_direction
+                """
             return ndbc_dict
         except Exception as errmsg:
             logging.warning('Error obtaining NDBC data '+ str(errmsg))
