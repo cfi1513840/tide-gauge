@@ -256,6 +256,7 @@ class Tide:
             #
             # Local weather is updated every three minutes
             #
+            self.ndbc_data = {}
             self.last_weather_time = self.current_time
             self.weather = getwx.weather_underground(self.tide_only)
             if not self.weather:
@@ -324,6 +325,7 @@ class Tide:
             self.tide_only = self.iparams_dict.get('tide_only')
             self.display.active_station_tk_var.set(str(self.stationid))
             predict_list = predict.tide_predict()
+            self.ndbc_data = db.fetch_ndbc()
             self.display.update(self.weather, self.ndbc_data)
             self.display.tide(predict_list, self.tide_list)
             if current_minute == '00':

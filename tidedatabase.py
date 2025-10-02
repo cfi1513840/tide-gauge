@@ -201,6 +201,34 @@ class DbManage:
             logging.warning('fetch_iparams: '+str(errmsg))
             return None
 
+    def fetch_ndbc(self):
+        ndbc_list = (
+          '',
+          'DateTime', 
+          'Location', 
+          'Wind Direction', 
+          'Wind Speed', 
+          'Wind Gust', 
+          'Wave Height',
+          'Wave Period', 
+          'Air Temperature', 
+          'Water Temperature', 
+          'Wave Direction',
+          'Atmospheric Pressure')
+        ndbc_dict = {}
+        try:        
+            self.sql_cursor.execute("select * from ndbcdata")
+            params = self.sql_cursor.fetchone()
+            for index, entry in enumerate(params):
+                if index == 0:
+                    continue
+                ndbc_dict[ndbc_list[index]] = entry
+            return ndbc_dict                
+
+        except Exception as errmsg:
+            logging.warning('fetch_ndbc: '+str(errmsg))
+            return None
+
     def fetch_tide_24h(self, stationid, station1cal ,station2cal):
         """Fetch the last 24 hours of tide measurements for plotting"""
         location = self.cons.STATION_LOCATION
