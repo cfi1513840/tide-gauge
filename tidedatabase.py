@@ -49,6 +49,8 @@ class DbManage:
         if sql_reply and sql_reply[0] == new_report_time:
             return            
         database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
+        database_columns = ['dtime','reporttime','location','windir','windspeed','windgust',
+          'waveheight','waveperiod','airtemp','watertemp','wavedirection','barometer']
         database_values = (
           database_time,
           ndbc_data.get('DateTime'), 
@@ -63,9 +65,10 @@ class DbManage:
           ndbc_data.get('Wave Direction'),
           ndbc_data.get('Atmospheric Pressure'))
 
-        self.sql_cursor.execute(
-          f"INSERT INTO ndbcdata VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-          database_values)
+        for indx, value in enumerate(database_values):
+            if value != '' and value != None:
+                self.sql_cursor.execute (
+                  f"update ndbcdata set {database_columns[indx]} = '{value}'")
         self.sql_connection.commit()          
         
     def insert_tide_predicts(self, noaa_data):
