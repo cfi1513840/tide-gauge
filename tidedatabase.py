@@ -42,8 +42,8 @@ class DbManage:
 
     def insert_ndbc_data(self, ndbc_data):
         now = datetime.now()
-        self.sql_cursor.execute("select reporttime from ndbcdata "+
-          "order by reporttime desc limit 1")
+        self.sql_cursor.execute("select reporttime from ndbcdata")
+          #"order by reporttime desc limit 1")
         sql_reply = self.sql_cursor.fetchone()
         new_report_time = ndbc_data.get('DateTime')
         if sql_reply and sql_reply[0] == new_report_time:
