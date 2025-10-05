@@ -40,14 +40,17 @@ class DbManage:
           database_values)
         self.sql_connection.commit()
 
-    def insert_ndbc_data(self, ndbc_data):
+    def insert_ndbc_data(self, ndbc_data, init_flag):
         now = datetime.now()
-        self.sql_cursor.execute("select reporttime from ndbcdata")
-          #"order by reporttime desc limit 1")
-        sql_reply = self.sql_cursor.fetchone()
-        new_report_time = ndbc_data.get('DateTime')
-        if sql_reply and sql_reply[0] == new_report_time:
-            return            
+        if init_flag:
+            self.sql_cursor.execute("delete from ndbcdata")
+            self.sql_connection.commit()
+        else:            
+            self.sql_cursor.execute("select reporttime from ndbcdata")
+            sql_reply = self.sql_cursor.fetchone()
+            new_report_time = ndbc_data.get('DateTime')
+            if sql_reply and sql_reply[0] == new_report_time:
+                return            
         database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
         database_columns = ['dtime','reporttime','location','windir','windspeed','windgust',
           'waveheight','waveperiod','airtemp','watertemp','wavedirection','barometer']
@@ -64,11 +67,15 @@ class DbManage:
           ndbc_data.get('Water Temperature'), 
           ndbc_data.get('Wave Direction'),
           ndbc_data.get('Atmospheric Pressure'))
-
-        for indx, value in enumerate(database_values):
-            if value != '' and value != None:
-                self.sql_cursor.execute (
-                  f"update ndbcdata set {database_columns[indx]} = '{value}'")
+        if init_flag:
+            self.sql_cursor.execute (
+              f"INSERT INTO ndbcdata VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+              database_values)
+        else:             
+            for indx, value in enumerate(database_values):
+                if value != '' and value != None:
+                    self.sql_cursor.execute (
+                      f"update ndbcdata set {database_columns[indx]} = '{value}'")
         self.sql_connection.commit()          
         
     def insert_tide_predicts(self, noaa_data):
