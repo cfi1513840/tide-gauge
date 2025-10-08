@@ -93,23 +93,23 @@ class CreateHTML:
         if ndbcdata and not self.tide_only:
             if 'DateTime' in ndbcdata:
                 ndbc_time = ndbcdata['DateTime']
-                timecheck = datetime.strptime(ndbc_time,'%Y-%m-%d %H:%M:%S')
+                timecheck = datetime.strptime(ndbc_time,'%b %d, %Y %H:%M')
             if 'Location' in ndbcdata:
                 ndbc_location = ndbcdata['Location']
             if 'Wind Speed' in ndbcdata:
-                ndbc_wind = ndbcdata['Wind Speed']
+                ndbc_wind = ndbcdata['Wind Speed']+ ' kts'
             if 'Wind Direction' in ndbcdata:
                 ndbc_wind_direction = ndbcdata['Wind Direction']
             if 'Wind Gust' in ndbcdata:
-                ndbc_gust = ndbcdata['Wind Gust']
+                ndbc_gust = ndbcdata['Wind Gust']+ 'kts'
             if 'Wave Height' in ndbcdata:
-                ndbc_wave_height = ndbcdata['Wave Height']
+                ndbc_wave_height = ndbcdata['Wave Height']+ ' ft'
             if 'Wave Period' in ndbcdata:
-                ndbc_wave_period = ndbcdata['Wave Period']
+                ndbc_wave_period = ndbcdata['Wave Period']+ ' secs'
             if 'Air Temperature' in ndbcdata:
-                ndbc_air_temp = ndbcdata['Air Temperature']
+                ndbc_air_temp = ndbcdata['Air Temperature']+ '&deg; F'
             if 'Water Temperature' in ndbcdata:
-                ndbc_water_temp = ndbcdata['Water Temperature']
+                ndbc_water_temp = ndbcdata['Water Temperature']+ '&deg; F'
             if 'Wave Direction' in ndbcdata:
                 ndbc_wave_direction = ndbcdata['Wave Direction']
             if 'Atmospheric Pressure' in ndbcdata:

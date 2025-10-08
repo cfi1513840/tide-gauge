@@ -9,6 +9,7 @@ import feedparser
 import logging
 import wget
 import os
+import pytz
 
 class GetWeather:
     def __init__(self, cons, val, notify):
@@ -350,18 +351,19 @@ class GetNDBC:
     """ Read marine observation data from the NDBC API"""     
     def __init__(self, cons, val, notify):
         self.cons = cons
-        self.val = val
-        self.notify = notify
-        self.save_time = 0
-        self.air_temperature = 0
-        self.wind_direction = 0
-        self.wind_speed = 0
-        self.wind_gust = 0
-        self.wave_height = 0
-        self.wave_period = 0
-        self.water_temperature = 0
-        self.wave_direction = 0
-        self.atmospheric_pressure = 0
+        self.local_tz = pytz.timezone('America/New_york')
+        #self.val = val
+        #self.notify = notify
+        #self.save_time = 0
+        #self.air_temperature = 0
+        #self.wind_direction = 0
+        #self.wind_speed = 0
+        #self.wind_gust = 0
+        #self.wave_height = 0
+        #self.wave_period = 0
+        #self.water_temperature = 0
+        #self.wave_direction = 0
+        #self.atmospheric_pressure = 0
        
     def deg_to_direction(self,deg):
         """Convert degrees to compass direction"""
@@ -405,11 +407,15 @@ class GetNDBC:
                         if fields[kindx] != 'MM':
                             report_dict[key] = fields[kindx]
         
-                datetime = report_dict.get('YY')+'-'+report_dict.get('MM')+'-'+\
+                report_time = report_dict.get('YY')+'-'+report_dict.get('MM')+'-'+\
                            report_dict.get('DD')+' '+report_dict.get('hh')+':'+\
                            report_dict.get('mm')+':00'
+                           
+                utc_dt = datetime.strptime(report_time,"%Y-%m-%d %H:%M:%S")
+                local_dt = utc_dt.replace(tzinfo=pytz.utc).astimezone(self.local_tz)
+                ndbc_time = datetime.strftime(local_dt,'%b %d, %Y %H:%M')
         
-                work_dict['DateTime'] = datetime
+                work_dict['DateTime'] = ndbc_time
                 work_dict['Location'] = location
                 if report_dict.get('ATMP') != '':
                     work_dict['Air Temperature'] = str(round(float(report_dict.get('ATMP'))*1.8+32,1))

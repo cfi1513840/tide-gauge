@@ -296,11 +296,11 @@ class TideDisplay:
     def update(self, weather, ndbc_data):
         """Update tkinter display"""
         if weather:
-            self.wind_speed_tk_var.set(str(weather['wind_speed']))
-            self.temperature_tk_var.set(str(weather['temperature']))       
-            self.wind_gust_tk_var.set(str(weather['wind_gust']))
-            self.humidity_tk_var.set(str(weather['humidity']))
-            self.dew_point_tk_var.set(str(weather['dewpoint']))
+            self.wind_speed_tk_var.set(str(weather['wind_speed'])+ 'mph')
+            self.temperature_tk_var.set(str(weather['temperature'])+'\u00b0 F')       
+            self.wind_gust_tk_var.set(str(weather['wind_gust'])+ ' mph')
+            self.humidity_tk_var.set(str(weather['humidity'])+ '%')
+            self.dew_point_tk_var.set(str(weather['dewpoint'])+'\u00b0 F')
             #self.baro_tk_var.set(str(weather['baro']))
             self.rain_rate_tk_var.set(str(weather['rain_rate']))
             self.rain_today_tk_var.set(str(weather['rain_today']))
