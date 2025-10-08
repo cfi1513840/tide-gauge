@@ -430,6 +430,10 @@ class GetNDBC:
                      ndbc_dict[key] = work_dict[key]
             if 'Wave Direction' not in ndbc_dict:
                 ndbc_dict['Wave Direction'] = ''                         
+            if 'Atmospheric Pressure' not in ndbc_dict:
+                ndbc_dict['Atmospheric Pressure'] = ''                         
+            if 'Visibility' not in ndbc_dict:
+                ndbc_dict['Visibility'] = ''                         
             return ndbc_dict 
         
         except Exception as errmsg:
