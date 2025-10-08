@@ -97,11 +97,11 @@ class CreateHTML:
             if 'Location' in ndbcdata:
                 ndbc_location = ndbcdata['Location']
             if 'Wind Speed' in ndbcdata:
-                ndbc_wind = ndbcdata['Wind Speed']+ ' kts'
+                ndbc_wind = ndbcdata['Wind Speed']
             if 'Wind Direction' in ndbcdata:
                 ndbc_wind_direction = ndbcdata['Wind Direction']
             if 'Wind Gust' in ndbcdata:
-                ndbc_gust = ndbcdata['Wind Gust']+ 'kts'
+                ndbc_gust = ndbcdata['Wind Gust']
             if 'Wave Height' in ndbcdata:
                 ndbc_wave_height = ndbcdata['Wave Height']+ ' ft'
             if 'Wave Period' in ndbcdata:
@@ -164,7 +164,7 @@ class CreateHTML:
             if 'baro_trend' in weather:
                 baro_trend = weather['baro_trend']
             if 'dewpoint' in weather:
-                dewpoint = weather['dewpoint']
+                dewpoint = weather['dewpoint']+'&deg; F'
             if 'rain_rate' in weather:
                 rain_rate = weather['rain_rate']
             if 'rain_today' in weather:
