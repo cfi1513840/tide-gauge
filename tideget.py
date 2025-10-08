@@ -406,7 +406,7 @@ class GetNDBC:
                 if report_dict.get('ATMP') != '':
                     work_dict['Air Temperature'] = round(float(report_dict.get('ATMP'))*1.8+32,1)
                 if report_dict.get('WDIR') != '':
-                    work_dict['Wind Direction'] = deg_to_direction(float(report_dict.get('WDIR')))
+                    work_dict['Wind Direction'] = self.deg_to_direction(float(report_dict.get('WDIR')))
                 if report_dict.get('WSPD') != '':
                     work_dict['Wind Speed'] = round(float(report_dict.get('WSPD'))/0.51444,1)
                 if report_dict.get('GST') != '':
