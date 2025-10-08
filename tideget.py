@@ -427,7 +427,9 @@ class GetNDBC:
                     work_dict['Water Temperature'] = str(round(float(report_dict.get('WTMP'))*1.8+32,1))
         
                 for key in work_dict.keys():
-                     ndbc_dict[key] = work_dict[key] 
+                     ndbc_dict[key] = work_dict[key]
+            if 'Wave Direction' not in ndbc_dict:
+                ndbc_dict['Wave Direction'] = ''                         
             return ndbc_dict 
         
         except Exception as errmsg:
