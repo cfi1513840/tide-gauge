@@ -365,7 +365,6 @@ class GetNDBC:
     def read_station(self, tide_only):
         #print ('getting NDBC')
         if tide_only: return {}
-        curtime = datetime.now()
         stations = self.cons.NDBC_STATIONS
 
         try:
