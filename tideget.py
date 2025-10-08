@@ -363,6 +363,14 @@ class GetNDBC:
         self.wave_direction = 0
         self.atmospheric_pressure = 0
        
+    def deg_to_direction(self,deg):
+        """Convert degrees to compass direction"""
+        if deg is None:
+            return ''
+        directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+        indx = int((deg+22.5) // 45) % 8
+        return directions[indx]
+
     def read_station(self, tide_only):
         #print ('getting NDBC')
         if tide_only: return {}
