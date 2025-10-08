@@ -164,7 +164,7 @@ class CreateHTML:
             if 'baro_trend' in weather:
                 baro_trend = weather['baro_trend']
             if 'dewpoint' in weather:
-                dewpoint = weather['dewpoint']+'&deg; F'
+                dewpoint = str(weather['dewpoint'])+'&deg; F'
             if 'rain_rate' in weather:
                 rain_rate = weather['rain_rate']
             if 'rain_today' in weather:
