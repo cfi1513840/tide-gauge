@@ -431,9 +431,14 @@ class GetNDBC:
                     work_dict['Wave Period'] = str(report_dict.get('DPD'))
                 if report_dict.get('WTMP') != '':
                     work_dict['Water Temperature'] = str(round(float(report_dict.get('WTMP'))*1.8+32,1))
-        
+                if report_dict.get('PRES' != '':
+                    work_dict['Atmospheric Pressure'] = str(round(float(report_dict.get('PRES'))*0.02953,2))
+                if report_dict.get('VIS' != '':
+                    work_dict['Visibility'] = str(round(float(report_dict.get('VIS')),1))
+
                 for key in work_dict.keys():
                      ndbc_dict[key] = work_dict[key]
+
             if 'Wave Direction' not in ndbc_dict:
                 ndbc_dict['Wave Direction'] = ''                         
             if 'Atmospheric Pressure' not in ndbc_dict:
