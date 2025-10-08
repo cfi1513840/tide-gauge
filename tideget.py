@@ -7,6 +7,7 @@ import logging
 import math
 import feedparser
 import logging
+import wget
 
 class GetWeather:
     def __init__(self, cons, val, notify):
@@ -366,8 +367,70 @@ class GetNDBC:
         if tide_only: return {}
         curtime = datetime.now()
         stations = self.cons.NDBC_STATIONS
+
+        try:
+            ndbc_dict = {}
+            for station in stations:
+                if location != '':
+                    location = location+','+station
+                else:
+                    location = station
+                location = location
+                url = f'https://www.ndbc.noaa.gov/data/realtime2/{station}.txt'
+                if os.path.exists(f'{station}.txt'):
+                    os.remove(f'{station}.txt')
+                wget.download(url)
+                with open(f'{station}.txt', 'r') as infile:
+                    filines = infile.readlines()
+                report_dict = dict(
+                  YY='',MM='',DD='',hh='',mm='',WDIR='',WSPD='',GST='',WVHT='',DPD='',
+                  APD='',MWD='',PRES='',ATMP='',WTMP='',DEWP='',VIS='',PTDY='',TIDE='')  
+        
+                work_dict = {} 
+        
+                for indx in range(0,49):
+                    lindx = 50-indx
+                    inline = filines[lindx]
+                    fields = inline.split()
+                    for kindx, key in enumerate(report_dict.keys()):
+                        if fields[kindx] != 'MM':
+                            report_dict[key] = fields[kindx]
+        
+                datetime = report_dict.get('YY')+'-'+report_dict.get('MM')+'-'+\
+                           report_dict.get('DD')+' '+report_dict.get('hh')+':'+\
+                           report_dict.get('mm')+':00'
+        
+                work_dict['DateTime'] = datetime
+                work_dict['Location'] = location
+                if report_dict.get('ATMP') != '':
+                    work_dict['Air Temperature'] = round(float(report_dict.get('ATMP'))*1.8+32,1)
+                if report_dict.get('WDIR') != '':
+                    work_dict['Wind Direction'] = deg_to_direction(float(report_dict.get('WDIR')))
+                if report_dict.get('WSPD') != '':
+                    work_dict['Wind Speed'] = round(float(report_dict.get('WSPD'))/0.51444,1)
+                if report_dict.get('GST') != '':
+                    work_dict['Wind Gust'] = round(float(report_dict.get('GST'))/0.51444,1)
+                if report_dict.get('WVHT') != '':
+                    work_dict['Wave Height'] = round(float(report_dict.get('WVHT'))*3.28084,1)
+                if report_dict.get('DPD') != '':
+                    work_dict['Wave Period'] = report_dict.get('DPD')
+                if report_dict.get('WTMP') != '':
+                    work_dict['Water Temperature'] = round(float(report_dict.get('WTMP'))*1.8+32,1)
+        
+                for key in work_dict.keys():
+                     ndbc_dict[key] = work_dict[key] 
+            return ndbc_dict 
+        
+        except Exception as errmsg:
+            print ('tideget: Error attemping to read NDBC data: '+str(errmsg))
+            return {}
+
+
+
+        
+        """
         ndbc_keys = [
-          'DateTime',
+          'DateTime',s
           'Location',
           'Air Temperature',
           'Wind Direction',
@@ -444,7 +507,7 @@ class GetNDBC:
                         value = value.replace('&#176;F', '')
                         work_dict[key] = value
                 ndbc_dict = ndbc_dict | work_dict
-                """
+
                 #
                 # NDBC reports may only contain partial parameters at different
                 # times, with wave reports being sent less often. therefore,

@@ -278,9 +278,9 @@ class Tide:
                         db.update_userpass(valkey[1], valkey[2], valkey[3])
 
         if (self.main_loop_count == 4 and (self.ndbc_retry or
-          self.current_time >= self.last_ndbc_time + timedelta(minutes=10))):
+          self.current_time >= self.last_ndbc_time + timedelta(minutes=30))):
             #
-            # The marine observation is updated every 10 minutes
+            # The marine observation is updated every 30 minutes
             #
             self.last_ndbc_time = self.current_time
             self.ndbc_data = getndbc.read_station(self.tide_only)
