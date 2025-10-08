@@ -366,6 +366,7 @@ class GetNDBC:
         #print ('getting NDBC')
         if tide_only: return {}
         stations = self.cons.NDBC_STATIONS
+        location = ''
 
         try:
             ndbc_dict = {}
@@ -374,7 +375,7 @@ class GetNDBC:
                     location = location+','+station
                 else:
                     location = station
-                location = location
+                    
                 url = f'https://www.ndbc.noaa.gov/data/realtime2/{station}.txt'
                 if os.path.exists(f'{station}.txt'):
                     os.remove(f'{station}.txt')
