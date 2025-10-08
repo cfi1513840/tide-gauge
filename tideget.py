@@ -8,6 +8,7 @@ import math
 import feedparser
 import logging
 import wget
+import os
 
 class GetWeather:
     def __init__(self, cons, val, notify):
