@@ -412,19 +412,19 @@ class GetNDBC:
                 work_dict['DateTime'] = datetime
                 work_dict['Location'] = location
                 if report_dict.get('ATMP') != '':
-                    work_dict['Air Temperature'] = round(float(report_dict.get('ATMP'))*1.8+32,1)
+                    work_dict['Air Temperature'] = str(round(float(report_dict.get('ATMP'))*1.8+32,1))
                 if report_dict.get('WDIR') != '':
                     work_dict['Wind Direction'] = self.deg_to_direction(float(report_dict.get('WDIR')))
                 if report_dict.get('WSPD') != '':
-                    work_dict['Wind Speed'] = round(float(report_dict.get('WSPD'))/0.51444,1)
+                    work_dict['Wind Speed'] = str(round(float(report_dict.get('WSPD'))/0.51444,1))
                 if report_dict.get('GST') != '':
-                    work_dict['Wind Gust'] = round(float(report_dict.get('GST'))/0.51444,1)
+                    work_dict['Wind Gust'] = str(round(float(report_dict.get('GST'))/0.51444,1))
                 if report_dict.get('WVHT') != '':
-                    work_dict['Wave Height'] = round(float(report_dict.get('WVHT'))*3.28084,1)
+                    work_dict['Wave Height'] = str(round(float(report_dict.get('WVHT'))*3.28084,1))
                 if report_dict.get('DPD') != '':
-                    work_dict['Wave Period'] = report_dict.get('DPD')
+                    work_dict['Wave Period'] = str(report_dict.get('DPD'))
                 if report_dict.get('WTMP') != '':
-                    work_dict['Water Temperature'] = round(float(report_dict.get('WTMP'))*1.8+32,1)
+                    work_dict['Water Temperature'] = str(round(float(report_dict.get('WTMP'))*1.8+32,1))
         
                 for key in work_dict.keys():
                      ndbc_dict[key] = work_dict[key] 
