@@ -326,7 +326,8 @@ class Tide:
             self.display.active_station_tk_var.set(str(self.stationid))
             predict_list = predict.tide_predict()
             self.ndbc_data = db.fetch_ndbc()
-            self.display.update(self.weather, self.ndbc_data)
+            if not self.tide_only:
+                self.display.update(self.weather, self.ndbc_data)
             self.display.tide(predict_list, self.tide_list)
             if current_minute == '00':
                 wxhtml.wxproc(self.iparams_dict)
