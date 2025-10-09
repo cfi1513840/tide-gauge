@@ -340,12 +340,13 @@ class Tide:
             self.s2enable = self.iparams_dict.get('s2enable')
             state.debug = self.iparams_dict.get('debug')
             self.tide_only = self.iparams_dict.get('tide_only')
-            self.display.active_station_tk_var.set(str(self.stationid))
+            if self.display:
+                self.display.active_station_tk_var.set(str(self.stationid))
+                self.display.tide(predict_list, self.tide_list)
             predict_list = predict.tide_predict()
-            self.ndbc_data = db.fetch_ndbc()
             if not self.tide_only:
+                self.ndbc_data = db.fetch_ndbc()
                 self.display.update(self.weather, self.ndbc_data)
-            self.display.tide(predict_list, self.tide_list)
             if current_minute == '00':
                 wxhtml.wxproc(self.iparams_dict)
             self.html.create(self.weather, self.ndbc_data, predict_list,
