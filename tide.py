@@ -170,6 +170,10 @@ class Tide:
             if predict_list and self.tide_list:
                 self.display.tide(predict_list, tide_list)
             self.display.master.mainloop()
+        else:
+            while True:
+                self.main()
+                sleep (60)
 
     def main(self):
         """The primary scheduling loop"""
