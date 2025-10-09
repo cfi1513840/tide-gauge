@@ -158,7 +158,8 @@ class Tide:
         self.ndbc_data = getndbc.read_station(self.tide_only)
         if self.ndbc_data:
             db.insert_ndbc_data(self.ndbc_data, True)
-        self.display.update(self.weather, self.ndbc_data)
+        if self.display:
+            self.display.update(self.weather, self.ndbc_data)
         if 'noaa' in sys.argv:
             noaa_tide = getnoaa.noaa_tide()
             if noaa_tide:
@@ -180,9 +181,10 @@ class Tide:
         self.process = tideprocess.ProcTide(tide_list)
         self.tide_list = self.process.get_tide_list()
 
-        if predict_list and self.tide_list:
+        if predict_list and self.tide_list and self.display:
             self.display.tide(predict_list, tide_list)
-        self.display.master.mainloop()
+        if self.display:
+            self.display.master.mainloop()
         self.main()
 
     def main(self):
