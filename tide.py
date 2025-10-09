@@ -186,7 +186,7 @@ class Tide:
         else:
             while True:
                 self.main()
-                time.sleep (60)
+                time.sleep (5)
 
     def main(self):
         """The primary scheduling loop"""
