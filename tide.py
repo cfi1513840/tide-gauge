@@ -246,19 +246,21 @@ class Tide:
                 if station == 1:
                     self.last_station1_time = self.current_time
                     if self.stationid == 1:
-                        self.display.station_battery_voltage_tk_var.set(
-                          str(volts))
-                        self.display.station_signal_strength_tk_var.set(
-                          str(rssi))
+                        if self.display:
+                            self.display.station_battery_voltage_tk_var.set(
+                              str(volts))
+                            self.display.station_signal_strength_tk_var.set(
+                              str(rssi))
                         self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
                         self.station_oos = False
                 elif station == 2:
                     self.last_station2_time = self.current_time
                     if self.stationid == 2:
-                        self.display.station_battery_voltage_tk_var.set(
-                          str(volts))
-                        self.display.station_signal_strength_tk_var.set(
-                          str(rssi))
+                        if self.display:
+                            self.display.station_battery_voltage_tk_var.set(
+                              str(volts))
+                            self.display.station_signal_strength_tk_var.set(
+                              str(rssi))
                         self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
                         self.station_oos = False
                 if self.tide_ft != 99:
@@ -280,7 +282,8 @@ class Tide:
             if self.weather:
                 self.weather_retry = False
                 db.insert_weather(self.weather)
-                self.display.update(self.weather, self.ndbc_data)
+                if self.display:
+                    self.display.update(self.weather, self.ndbc_data)
             else:
                 self.weather_retry = True
 
@@ -322,8 +325,9 @@ class Tide:
             display_date_and_time = sunny.get_suntimes(cons, db)
             self.sunrise = display_date_and_time[3]
             self.sunset = display_date_and_time[4]
-            self.display.master.title(f"{cons.STATION_LOCATION} Tide Monitor Panel "+
-              display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
+            if self.display:
+                self.display.master.title(f"{cons.STATION_LOCATION} Tide Monitor Panel "+
+                  display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
               " Sunset: "+display_date_and_time[2])
             noaa_tide = getnoaa.noaa_tide()
             if noaa_tide:
