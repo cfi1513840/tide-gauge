@@ -13,6 +13,7 @@ forecasts for local display and website presentation.
 import sys
 import subprocess
 from datetime import datetime, timedelta
+import time
 import logging
 import tidehelper
 import tideget
@@ -173,7 +174,7 @@ class Tide:
         else:
             while True:
                 self.main()
-                sleep (60)
+                time.sleep (60)
 
     def main(self):
         """The primary scheduling loop"""
