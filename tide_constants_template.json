@@ -1,5 +1,6 @@
 {
-   "instructions": "Replace all text between the quotes with your tide station parameters",
+   "instructions": "<Replace all text between the quotes/carets with your tide station parameters>",
+   "instructions2": "<Enter the keyword None for unused parameters>",
    "ADMINBRS1": "<your primary administrator phone number (numbers only)>",
    "ADMINBRS2": "<your alternate administrator phone number (numbers only)>",
    "ADMIN1": "<your primary administrator email address>",
@@ -9,6 +10,8 @@
    "INFLUXDB_TOKEN": "<influx write token obtained during InfluxDB installation>",
    "INFLUXDB_ORG": "<The name of the organization specified during the InfluxDB installation>",
    "INFLUXDB_BUCKET": "<The name of the InfluxDB bucket created to hold the tide stations measurements>",
+   "OBSCAPE_USER": "<The Obscape username>",
+   "OBSCAPE_KEY": "<The Obscape API key>",
    "SMTP_SERVER": "<The designation of the SMTP server used to issue tide alert messages>",
    "SMTP_PORT": "<The SMTP port number user to issue tide alert messages>",
    "TWILIO_ACCOUNT_SID": "<The TWILIO account SID for issuing tide alert text messages>",
@@ -16,5 +19,7 @@
    "TWILIO_PHONE_SENDER": "<The phone number that is authorized to send TWILIO SMS messages>",
    "TWILIO_PHONE_RECIPIENT": "<The default TWILIO SMS phone recipient (normally one of the administrators>",
    "WXOPENAPI": "<The openweathermap.com API token>",
-   "WXUNDAPI": "<The weatherunderground.com API token>"
+   "WXUNDAPI": "<The weatherunderground.com API token>",
+   "WXLINKAPI": "<The Weather Link API key>",
+   "WXLINKAPI_SECRET": "<The Weather Link API access 'secret'>"
 }
