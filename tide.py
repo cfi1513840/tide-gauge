@@ -133,60 +133,57 @@ class Tide:
               f"{cons.STATION_LOCATION} Tide Monitor Panel "+
               display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
               " Sunset: "+display_date_and_time[2])
-            self.main()
-            text = f'{cons.HOSTNAME} Tide Station startup at {self.message_time}'
-            for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
-                if twilio_phone_recipient == None:
-                    continue
-                notify.send_SMS(twilio_phone_recipient, text, state.debug)
-            for email_recip in cons.ADMIN_EMAIL:
-                if email_recip == None:
-                    continue
-                email_recipient = email_recip
-                email_headers = ["From: " + cons.EMAIL_USERNAME,
-                  F"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
-                  +email_recipient,"MIME-Versiion:1.0",
-                  "Content-Type:text/html"]
-                email_headers =  "\r\n".join(email_headers)
-                notify.send_email(email_recipient, email_headers, text, state.debug,)
-            self.weather = getwx.weather_underground(self.tide_only)
-            if not self.weather:
-                self.weather = getwx.open_weather_map(self.tide_only)
-            if self.weather:
-                db.insert_weather(self.weather)
-                wxhtml.wxproc(self.iparams_dict)
-            self.ndbc_data = getndbc.read_station(self.tide_only)
-            if self.ndbc_data:
-                db.insert_ndbc_data(self.ndbc_data, True)
-            self.display.update(self.weather, self.ndbc_data)
-            if 'noaa' in sys.argv:
-                noaa_tide = getnoaa.noaa_tide()
-                if noaa_tide:
-                    db.insert_tide_predicts(noaa_tide)
-            predict_list = predict.tide_predict()
-            tide_readings = []
-            if 'sim' not in sys.argv:    
-                tide_readings = sensor.read_sensor()
-            if tide_readings:
-                db.insert_tide(tide_readings)
-                if int(tide_readings.get('S')) == self.stationid:
-                    tide_level = tide_readings.get('R')
-                    self.tide_init = True
-                    for idx in range(0,20):
-                        self.tide_average = self.tide_average[1:]+[tide_level]
-                    self.sensor_readings = tide_readings
-            tide_list = db.fetch_tide_24h(
-              self.stationid, self.station1cal, self.station2cal)
-            self.process = tideprocess.ProcTide(tide_list)
-            self.tide_list = self.process.get_tide_list()
+            #self.main()
+        text = f'{cons.HOSTNAME} Tide Station startup at {self.message_time}'
+        for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
+            if twilio_phone_recipient == None:
+                continue
+            notify.send_SMS(twilio_phone_recipient, text, state.debug)
+        for email_recip in cons.ADMIN_EMAIL:
+            if email_recip == None:
+                continue
+            email_recipient = email_recip
+            email_headers = ["From: " + cons.EMAIL_USERNAME,
+              F"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
+              +email_recipient,"MIME-Versiion:1.0",
+              "Content-Type:text/html"]
+            email_headers =  "\r\n".join(email_headers)
+            notify.send_email(email_recipient, email_headers, text, state.debug,)
+        self.weather = getwx.weather_underground(self.tide_only)
+        if not self.weather:
+            self.weather = getwx.open_weather_map(self.tide_only)
+        if self.weather:
+            db.insert_weather(self.weather)
+            wxhtml.wxproc(self.iparams_dict)
+        self.ndbc_data = getndbc.read_station(self.tide_only)
+        if self.ndbc_data:
+            db.insert_ndbc_data(self.ndbc_data, True)
+        self.display.update(self.weather, self.ndbc_data)
+        if 'noaa' in sys.argv:
+            noaa_tide = getnoaa.noaa_tide()
+            if noaa_tide:
+                db.insert_tide_predicts(noaa_tide)
+        predict_list = predict.tide_predict()
+        tide_readings = []
+        if 'sim' not in sys.argv:    
+            tide_readings = sensor.read_sensor()
+        if tide_readings:
+            db.insert_tide(tide_readings)
+            if int(tide_readings.get('S')) == self.stationid:
+                tide_level = tide_readings.get('R')
+                self.tide_init = True
+                for idx in range(0,20):
+                    self.tide_average = self.tide_average[1:]+[tide_level]
+                self.sensor_readings = tide_readings
+        tide_list = db.fetch_tide_24h(
+          self.stationid, self.station1cal, self.station2cal)
+        self.process = tideprocess.ProcTide(tide_list)
+        self.tide_list = self.process.get_tide_list()
 
-            if predict_list and self.tide_list:
-                self.display.tide(predict_list, tide_list)
-            self.display.master.mainloop()
-        else:
-            while True:
-                self.main()
-                time.sleep (5)
+        if predict_list and self.tide_list:
+            self.display.tide(predict_list, tide_list)
+        self.display.master.mainloop()
+        self.main()
 
     def main(self):
         """The primary scheduling loop"""
@@ -208,7 +205,7 @@ class Tide:
                 correction = int((
                   tdelta.microseconds+tdelta.seconds*1000000)/5000)
                 self.display.master.after(5000-correction, self.main)
-                self.newtime = self.newtime + timedelta(seconds=5)
+                self.newtime = self.newtime + timedelta(seconds=5)                
 
         self.main_loop_count += 1
         #
@@ -387,6 +384,11 @@ class Tide:
                 alerts.check_alerts(self.tide_ft, self.weather,
                   self.ndbc_data, self.sunrise, self.sunset, state.debug)
             #print (tide_list)
+
+        if not self.display:
+            time.sleep (5)
+            self.main()
+
 
     def send_visit_report(self):
 
