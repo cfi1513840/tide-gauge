@@ -380,7 +380,20 @@ class GetNDBC:
         location = ''
 
         try:
-            ndbc_dict = {}
+            ndbc_dict = {
+              'DateTime': '',
+              'Wind Speed': '',
+              'Wind Gust': '',
+              'Wind Direction': '',
+              'Wave Height': '',
+              'Wave Period': '',
+              'Air Temperature': '',
+              'Water Temperature': '',
+              'Wave Direction': '',
+              'Visibility': '',
+              'Atmospheric Pressure': ''
+              }
+              
             for station in stations:
                 if location != '':
                     location = location+','+station
@@ -439,12 +452,6 @@ class GetNDBC:
                 for key in work_dict.keys():
                      ndbc_dict[key] = work_dict[key]
 
-            if 'Wave Direction' not in ndbc_dict:
-                ndbc_dict['Wave Direction'] = ''                         
-            if 'Atmospheric Pressure' not in ndbc_dict:
-                ndbc_dict['Atmospheric Pressure'] = ''                         
-            if 'Visibility' not in ndbc_dict:
-                ndbc_dict['Visibility'] = ''                         
             return ndbc_dict 
         
         except Exception as errmsg:
