@@ -133,7 +133,7 @@ class Tide:
               f"{cons.STATION_LOCATION} Tide Monitor Panel "+
               display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
               " Sunset: "+display_date_and_time[2])
-            #self.main()
+            self.main()
         text = f'{cons.HOSTNAME} Tide Station startup at {self.message_time}'
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:
@@ -343,10 +343,10 @@ class Tide:
             self.s2enable = self.iparams_dict.get('s2enable')
             state.debug = self.iparams_dict.get('debug')
             self.tide_only = self.iparams_dict.get('tide_only')
+            predict_list = predict.tide_predict()
             if self.display:
                 self.display.active_station_tk_var.set(str(self.stationid))
                 self.display.tide(predict_list, self.tide_list)
-            predict_list = predict.tide_predict()
             if not self.tide_only:
                 self.ndbc_data = db.fetch_ndbc()
                 if self.display:
