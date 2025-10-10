@@ -412,8 +412,8 @@ class GetNDBC:
         
                 work_dict = {} 
         
-                for indx in range(0,49):
-                    lindx = 50-indx
+                for indx in range(0,149):
+                    lindx = 150-indx
                     inline = filines[lindx]
                     fields = inline.split()
                     for kindx, key in enumerate(report_dict.keys()):
