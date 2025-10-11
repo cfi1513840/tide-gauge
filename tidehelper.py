@@ -244,10 +244,10 @@ class ValType:
             try:
                 newvar = float(var)
             except:
-                newvar = 0.0
+                newvar = -99
         elif typevar == int:
             try:
                 newvar = int(var)
             except:
-                newvar = 0
+                newvar = -99
         return newvar

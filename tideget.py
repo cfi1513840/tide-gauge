@@ -533,7 +533,7 @@ class ReadSensor:
                 for field in packet:
                     if field[0].isalpha():
                         this_var = self.val.var_type(field[1:], int)
-                        if this_var == 0:
+                        if this_var == -99:
                             data_dict = {}
                             break
                         data_dict[field[0]] = this_var
