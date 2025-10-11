@@ -222,6 +222,7 @@ class Tide:
         if 'sim' not in sys.argv:    
             tide_readings = sensor.read_sensor()
         if tide_readings:
+            db.insert_tide(tide_readings)
             if int(tide_readings.get('S')) == self.stationid:
                 self.sensor_readings = tide_readings
                 tide_level = tide_readings.get('R')
@@ -233,9 +234,7 @@ class Tide:
                 check_tide = sum(self.tide_average)/len(self.tide_average)
                 if tide_level > check_tide+300 or tide_level < check_tide-300:
                     logging.warning (self.message_time+' invalid tide: '+
-                      str(tide_level)+' versus 20 minute average: '+str(check_tide))
-                else:               
-                    db.insert_tide(tide_readings)
+                      str(tide_level)+' versus 20 minute average: '+str(check_tide))               
             volts = 0
             rssi = 0
             try:
