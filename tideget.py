@@ -531,7 +531,7 @@ class ReadSensor:
                 if packet[0][0] != 'S':
                     return data_dict
                 for field in packet:
-                    if field[0].isalpha():
+                    if field != '' and field[0].isalpha():
                         this_var = self.val.var_type(field[1:], int)
                         if this_var == -99:
                             data_dict = {}
