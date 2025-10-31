@@ -88,7 +88,7 @@ class Constants:
     OPEN_WEATHERMAP_API = secure_dict['WXOPENAPI']
     WEATHER_UNDERGROUND_API = secure_dict['WXUNDAPI']
     WEATHER_LINK_API = secure_dict['WXLINKAPI']
-    WEATHER_LINK_API_SECRET = secure_dict['WXLINKAPISECRET']
+    WEATHER_LINK_API_SECRET = secure_dict['WXLINKAPI_SECRET']
 
     with open('tide.env', 'r') as infile:
         lines = infile.readlines()
