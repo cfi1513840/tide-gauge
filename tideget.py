@@ -443,7 +443,7 @@ class GetNDBC:
                 if report_dict.get('DPD') != '':
                     work_dict['Wave Period'] = str(report_dict.get('DPD'))
                 if report_dict.get('MWD') != '':
-                    work_dict['Wave Direction'] = deg_to_direction(int(str(report_dict.get('MWD'))))
+                    work_dict['Wave Direction'] = self.deg_to_direction(int(str(report_dict.get('MWD'))))
                 if report_dict.get('WTMP') != '':
                     work_dict['Water Temperature'] = str(round(float(report_dict.get('WTMP'))*1.8+32,1))
                 if report_dict.get('PRES') != '':
