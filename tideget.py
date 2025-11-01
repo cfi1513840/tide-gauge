@@ -42,23 +42,23 @@ class GetWeather:
             #print('requesting data from wx und url')
             response = requests.get(wxundurl)
         except Exception as errmsg:
-            if not self.wx_und_report_flag and self.wx_error_count > 2:
+            if not self.wx_und_report_flag and self.wx_und__error_count > 2:
                 self.wx_und_report_flag = True
                 pline = ('Network read failure '+
                   'requesting Weather Underground data\n'+str(errmsg))
                 logging.warning(pline)
-            self.wx_error_count += 1
-            if self.wx_error_count == 5:
+            self.wx_und_error_count += 1
+            if self.wx_und_error_count == 5:
                 self.report_error('Weather Underground')
             return {}
         if str(response) != '<Response [200]>':
-            if not self.wx_und_report_flag and self.wx_error_count > 2:
+            if not self.wx_und_report_flag and self.wx_und_error_count > 2:
                 self.wx_und_report_flag = True
                 pline = ('Error response from '+
                   'Weather Underground network request\n'+str(response))
                 logging.warning(pline)
-            self.wx_error_count += 1
-            if self.wx_error_count == 5:
+            self.wx_und_error_count += 1
+            if self.wx_und_error_count == 5:
                 self.report_error('Weather Underground')
             return {}
         #
@@ -72,9 +72,9 @@ class GetWeather:
         #
         # Also provide email and text message success notification if required
         #
-        if self.wx_error_count > 5:
-            self.report_success(self.wx_error_count, 'Weather Underground')
-        self.wx_error_count = 0
+        if self.wx_und_error_count > 5:
+            self.report_success(self.wx_und_error_count, 'Weather Underground')
+        self.wx_und_error_count = 0
         #
         # Process json response from weather underground query.
         # Validate parameter formats and set corresponding local variables
@@ -133,23 +133,23 @@ class GetWeather:
             response = requests.get(wxurl)
             #print (str(response))
         except Exception as errmsg:
-            if not self.wx_opn_report_flag and self.wx_error_count > 2:
+            if not self.wx_opn_report_flag and self.wx_opn_error_count > 2:
                 self.wx_opn_report_flag = True
                 pline = ('Network read failure '+
                   'requesting OpenWeatherMap data\n'+str(errmsg))
                 logging.warning(pline)
-            self.wx_error_count += 1
-            if self.wx_error_count == 5:
+            self.wx_opn_error_count += 1
+            if self.wx_opn_error_count == 5:
                 self.report_error('OpenWeatherMap')
             return {}
         if str(response) != '<Response [200]>':
-            if not self.wx_und_report_flag and self.wx_error_count > 2:
+            if not self.wx_und_report_flag and self.wx_opn_error_count > 2:
                 self.wx_und_report_flag = True
                 pline = ('Error response from '+
                   'OpenWeatherMap network request\n'+str(response))
                 logging.warning(pline)
-            self.wx_error_count += 1
-            if self.wx_error_count == 5:
+            self.wx_opn_error_count += 1
+            if self.wx_opn_error_count == 5:
                 self.report_error('Weather Underground')
             return {}
         #
@@ -163,9 +163,9 @@ class GetWeather:
         #
         # Also provide email and text message success notification if required
         #
-        if self.wx_error_count > 5:
-            self.report_success(self.wx_error_count, 'OpenWeatherMap')
-        self.wx_error_count = 0
+        if self.wx_opn_error_count > 5:
+            self.report_success(self.wx_opn_error_count, 'OpenWeatherMap')
+        self.wx_opn_error_count = 0
         #
         # Extract weather parameters from OpenWeatherMap json response
         #
@@ -251,23 +251,23 @@ class GetWeather:
         try:
             response = requests.get(wxlinkurl)
         except Exception as errmsg:
-            if not self.wx_link_report_flag and self.wx_error_count > 2:
+            if not self.wx_link_report_flag and self.wx_link_error_count > 2:
                 pline = ('Network read failure '+
                   'requesting WeatherLink data\n'+str(errmsg))
                 logging.warning(pline)
-            self.wx_error_count += 1
-            if self.wx_error_count == 5:
+            self.wx_link_error_count += 1
+            if self.wx_link_error_count == 5:
                 self.wx_link_report_flag = True
                 self.report_error('WeatherLink')
             return {}
             
         if str(response) != '<Response [200]>':
-            if not self.wx_link_report_flag and self.wx_error_count > 2:
+            if not self.wx_link_report_flag and self.wx_link_error_count > 2:
                 pline = ('Error response from '+
                   'Weather Link network request\n'+str(response))
                 logging.warning(pline)
-            self.wx_error_count += 1
-            if self.wx_error_count == 5:
+            self.wx_link_error_count += 1
+            if self.wx_link_error_count == 5:
                 self.wx_link_report_flag = True
                 self.report_error('WeatherLink')
             return {}
@@ -283,9 +283,9 @@ class GetWeather:
             #
             # Also provide email and text message success notification if required
             #
-            if self.wx_error_count > 5:
-                self.report_success(self.wx_error_count, 'Weather Underground')
-            self.wx_error_count = 0
+            if self.wx_link_error_count > 5:
+                self.report_success(self.wx_link_error_count, 'Weather Underground')
+            self.wx_link_error_count = 0
             result=response.json()
             dumpedic = json.dumps(result)
             loadedic = json.loads(dumpedic)
@@ -404,7 +404,7 @@ class GetWeather:
                         self.NBDC_report_flag = True
                         self.report_error('NDBC')                        
                     return {}
-                if self.wx_error_count > 5:
+                if self.NDBC_error_count > 5:
                     self.report_success(self.NDBC_error_count, 'NDBC')
                     self.NDBC_report_flag = False
                 self.NDBC_error_count = 0
