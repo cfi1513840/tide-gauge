@@ -52,7 +52,6 @@ notify = tidehelper.Notify(cons)
 val = tidehelper.ValType()
 getwx = tideget.GetWeather(cons, val, notify)
 db = tidedatabase.DbManage(cons)
-getndbc = tideget.GetNDBC(cons, val, notify)
 getnoaa = tideget.GetNOAA(cons, val)
 if 'sim' not in sys.argv:    
     sensor = tideget.ReadSensor(cons, val)
@@ -155,7 +154,7 @@ class Tide:
         if self.weather:
             db.insert_weather(self.weather)
             wxhtml.wxproc(self.iparams_dict)
-        self.ndbc_data = getndbc.read_station(self.tide_only)
+        self.ndbc_data = getwx.read_NDBC_station(self.tide_only)
         if self.ndbc_data:
             db.insert_ndbc_data(self.ndbc_data, True)
         if self.display:
@@ -301,7 +300,7 @@ class Tide:
             # The marine observation is updated every 30 minutes
             #
             self.last_ndbc_time = self.current_time
-            self.ndbc_data = getndbc.read_station(self.tide_only)
+            self.ndbc_data = getwx.read_NDBC_station(self.tide_only)
             if self.ndbc_data:
                 db.insert_ndbc_data(self.ndbc_data, False)
                 self.ndbc_retry = False

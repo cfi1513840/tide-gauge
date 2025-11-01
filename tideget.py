@@ -19,9 +19,13 @@ class GetWeather:
         self.wx_und_report_flag = 0
         self.wx_opn_report_flag = 0
         self.wx_link_report_flag = 0
-        self.wx_error_count = 0
+        self.wx_und_error_count = 0
+        self.wx_opn_error_count = 0
+        self.wx_link_error_count = 0
         self.last_baro = 0
-        #urllib3.util.connection.allowed_gai_family = socket.AF_INET
+        self.local_tz = pytz.timezone('America/New_york')
+        self.NDBC_report_flag = 0
+        self.NDBC_error_count = 0
         
     def weather_underground(self, tide_only):
         #print ('getting wx underground')
@@ -202,7 +206,7 @@ class GetWeather:
                 if '3h' in rain:
                     weather['rain_today'] = rain['3h']
         except ValueError as errmsg:
-            logging.warning('Error processing OpenWeatherMap response')
+            logging.warning('Error processing OpenWeatherMap response '+str(errmsg))
             return {}
         weather['obs_time'] = datetime.strftime(datetime.fromtimestamp(dtime),'%b %d, %Y %H:%M')
         temperature = main['temp']
@@ -244,16 +248,27 @@ class GetWeather:
         #print("API Signature is: \"{}\"".format(apiSignature))
         wxlinkurl = "https://api.weatherlink.com/v2/current/{}?api-key={}&api-signature={}&t={}".format(parameters["station-id"],parameters["api-key"], apiSignature, parameters["t"])
         #print (wxlinkurl)
-        response = requests.get(wxlinkurl)
-
+        try:
+            response = requests.get(wxlinkurl)
+        except Exception as errmsg:
+            if not self.wx_link_report_flag and self.wx_error_count > 2:
+                pline = ('Network read failure '+
+                  'requesting WeatherLink data\n'+str(errmsg))
+                logging.warning(pline)
+            self.wx_error_count += 1
+            if self.wx_error_count == 5:
+                self.wx_link_report_flag = True
+                self.report_error('WeatherLink')
+            return {}
+            
         if str(response) != '<Response [200]>':
-            if not self.wx_und_report_flag and self.wx_error_count > 2:
+            if not self.wx_link_report_flag and self.wx_error_count > 2:
                 pline = ('Error response from '+
                   'Weather Link network request\n'+str(response))
                 logging.warning(pline)
             self.wx_error_count += 1
             if self.wx_error_count == 5:
-                self.wx_und_report_flag = True
+                self.wx_link_report_flag = True
                 self.report_error('WeatherLink')
             return {}
         else:
@@ -347,33 +362,7 @@ class GetWeather:
         pline = f'{source} restored'
         logging.info(pline)
 
-class GetNDBC:
-    """ Read marine observation data from the NDBC API"""     
-    def __init__(self, cons, val, notify):
-        self.cons = cons
-        self.local_tz = pytz.timezone('America/New_york')
-        #self.val = val
-        #self.notify = notify
-        #self.save_time = 0
-        #self.air_temperature = 0
-        #self.wind_direction = 0
-        #self.wind_speed = 0
-        #self.wind_gust = 0
-        #self.wave_height = 0
-        #self.wave_period = 0
-        #self.water_temperature = 0
-        #self.wave_direction = 0
-        #self.atmospheric_pressure = 0
-       
-    def deg_to_direction(self,deg):
-        """Convert degrees to compass direction"""
-        if deg is None:
-            return ''
-        directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-        indx = int((deg+22.5) // 45) % 8
-        return directions[indx]
-
-    def read_station(self, tide_only):
+    def read_NDBC_station(self, tide_only):
         #print ('getting NDBC')
         if tide_only: return {}
         stations = self.cons.NDBC_STATIONS
@@ -403,7 +392,23 @@ class GetNDBC:
                 url = f'https://www.ndbc.noaa.gov/data/realtime2/{station}.txt'
                 if os.path.exists(f'{station}.txt'):
                     os.remove(f'{station}.txt')
-                wget.download(url)
+                try:
+                    wget.download(url)
+                except Exception as errmsg:
+                    if not self.NDBC_report_flag and self.NDBC_error_count > 2:
+                        pline = ('Network read failure '+
+                            'requesting NDBC data\n'+str(errmsg))
+                        logging.warning(pline)
+                    self.NDBC_error_count += 1
+                    if self.NDBC_error_count == 5:
+                        self.NBDC_report_flag = True
+                        self.report_error('NDBC')                        
+                    return {}
+                if self.wx_error_count > 5:
+                    self.report_success(self.NDBC_error_count, 'NDBC')
+                    self.NDBC_report_flag = False
+                self.NDBC_error_count = 0
+
                 with open(f'{station}.txt', 'r') as infile:
                     filines = infile.readlines()
                 report_dict = dict(
