@@ -215,7 +215,7 @@ class Notify:
                     from_= self.cons.TWILIO_PHONE_SENDER,
                     body = text_message)
         except Exception as errmsg:
-            logging.warning(errmsg+' '+message)
+            logging.warning(str(errmsg)+' '+message)
 
     def send_email(self, email_recipient, email_headers, email_message, debug):
         """Method to send status or alert information via email message"""
@@ -234,7 +234,7 @@ class Notify:
                 email_headers+"\r\n\r\n"+email_message)
             session.quit()
         except Exception as errmsg:
-            logging.warning(errmsg)
+            logging.warning(str(errmsg))
 
 class ValType:
     """Validate variable type"""
