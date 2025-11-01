@@ -42,7 +42,7 @@ class GetWeather:
             #print('requesting data from wx und url')
             response = requests.get(wxundurl)
         except Exception as errmsg:
-            if not self.wx_und_report_flag and self.wx_und__error_count > 2:
+            if not self.wx_und_report_flag and self.wx_und_error_count > 2:
                 self.wx_und_report_flag = True
                 pline = ('Network read failure '+
                   'requesting Weather Underground data\n'+str(errmsg))
