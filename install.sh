@@ -33,6 +33,23 @@ sudo chown www-data /var/www/html
 sudo chgrp www-data /var/www/html
 sudo chmod 770 /var/www
 sudo chmod 770 /var/www/html
+echo "Prerequisites for tide station installation:"
+echo ""
+echo " 1.  A phone number and email address to be used for receiving administrative alerts."
+echo " 2.  A mail server account and address to be used for the issuance of tide station alerts."
+echo " 3.  InfluxDB installed and configured with Organization: TideGauge, Bucket: TideData."
+echo " 4.  A TWILIO SMS account for the issuance of tide station alert messages."
+echo " 5.  One of the following API keys: WeatherUndergroud, OpenWeatherMap, or WeatherLink."
+echo " 6.  A Cloudflare.com account with a domain to be used for the tide station web server."
+echo " 7.  Cloudflared client application installed using the cloudflare.com wizard."
+echo " 8.  Cloudflare.com account domain settings configured using the cloudflare.com wizard." 
+echo " 9.  Apache2 installed and configured with CGI scripts enabled."
+echo " 10. SQLite3 installed."
+echo " 11. All necessary python modules installed."
+echo "" 
+read -p "Have all prerequisite steps been completed? Y/N: " answ
+if [ $answ == "N" ] || [ $answ == "n" ]; then
+  exit
 echo "To prepare for installation, the environment variable file must be edited"
 echo "  to include all installation-specific parameters. note that this will"
 echo "  overwrite an existing tide.env file. This feature can also be"
