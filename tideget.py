@@ -9,6 +9,7 @@ import feedparser
 import logging
 import wget
 import os
+import subprocess
 import pytz
 
 class GetWeather:
@@ -392,8 +393,10 @@ class GetWeather:
                 url = f'https://www.ndbc.noaa.gov/data/realtime2/{station}.txt'
                 if os.path.exists(f'{station}.txt'):
                     os.remove(f'{station}.txt')
+                wget_command = ["wget", "--quiet", url]
                 try:
-                    wget.download(url)
+                    subprocess.run(wget_command, check=True)
+                    #wget.download(url)
                 except Exception as errmsg:
                     if not self.NDBC_report_flag and self.NDBC_error_count > 2:
                         pline = ('Network read failure '+
