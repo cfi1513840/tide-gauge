@@ -1,0 +1,23 @@
+{
+    "ADMINBRS1": "155555555555",
+    "ADMINBRS2": "None",
+    "ADMIN1": "myaccount@gmail.com",
+    "ADMIN2": "None",
+    "EMAIL_USERNAME": "alert@mymailserver.com",
+    "EMAIL_PASSWORD": "Password",
+    "INFLUXDB_TOKEN": "aLongStringOfCharactersAndNumbers0123456789",
+    "INFLUXDB_ORG": "TideGauge",
+    "INFLUXDB_BUCKET": "TideData",
+    "OBSCAPE_USER": "None",
+    "OBSCAPE_KEY": "None",
+    "SMTP_SERVER": "smtp.yourmailserver.com",
+    "SMTP_PORT": "587",
+    "TWILIO_ACCOUNT_SID": "ABCDE12345",
+    "TWILIO_AUTH_TOKEN": "ABCDE12345",
+    "TWILIO_PHONE_SENDER": "15555555555",
+    "TWILIO_PHONE_RECIPIENT": "15555555555",
+    "WXOPENAPI": "ABCDE12345",
+    "WXUNDAPI": "ABCDE12345",
+    "WXLINKAPI": "None",
+    "WXLINKAPI_SECRET": "None"
+}
