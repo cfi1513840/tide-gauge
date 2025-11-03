@@ -14,6 +14,25 @@ if test -e /var/www/html/tide_constants.json; then
 else
   jsonfound=0
 fi
+echo "Prerequisites for tide station installation:"
+echo
+echo " 1.  A phone number and email address to be used for receiving administrative alerts."
+echo " 2.  A mail server account and address to be used for the issuance of tide station alerts."
+echo " 3.  InfluxDB installed and configured with Organization: TideGauge, Bucket: TideData."
+echo " 4.  A TWILIO SMS account for the issuance of tide station alert messages."
+echo " 5.  One of the following API keys: WeatherUndergroud, OpenWeatherMap, or WeatherLink."
+echo " 6.  A Cloudflare.com account with a domain to be used for the tide station web server."
+echo " 7.  Cloudflared client application installed using the cloudflare.com wizard."
+echo " 8.  Cloudflare.com tunnel and domain settings configured using the cloudflare.com wizard." 
+echo " 9.  Apache2 installed and configured with CGI scripts enabled."
+echo " 10. SQLite3 installed."
+echo " 11. All necessary python modules installed."
+echo " 12. Site specific configuration defined (see tide_constants_example.json and"
+echo "     tide_template.env for examples and guidance on how to prepare these files."
+echo 
+read -p "Have all prerequisite steps been completed? Y/N: " answ
+if [ $answ != "Y" ] && [ $answ == "y" ]; then
+  exit
 apvar=$(dpkg -l | grep apache2)
 if [ -z "$apvar" ]; then
    echo "Apache2 and all other supporting modules must be"
@@ -33,23 +52,6 @@ sudo chown www-data /var/www/html
 sudo chgrp www-data /var/www/html
 sudo chmod 770 /var/www
 sudo chmod 770 /var/www/html
-echo "Prerequisites for tide station installation:"
-echo ""
-echo " 1.  A phone number and email address to be used for receiving administrative alerts."
-echo " 2.  A mail server account and address to be used for the issuance of tide station alerts."
-echo " 3.  InfluxDB installed and configured with Organization: TideGauge, Bucket: TideData."
-echo " 4.  A TWILIO SMS account for the issuance of tide station alert messages."
-echo " 5.  One of the following API keys: WeatherUndergroud, OpenWeatherMap, or WeatherLink."
-echo " 6.  A Cloudflare.com account with a domain to be used for the tide station web server."
-echo " 7.  Cloudflared client application installed using the cloudflare.com wizard."
-echo " 8.  Cloudflare.com account domain settings configured using the cloudflare.com wizard." 
-echo " 9.  Apache2 installed and configured with CGI scripts enabled."
-echo " 10. SQLite3 installed."
-echo " 11. All necessary python modules installed."
-echo "" 
-read -p "Have all prerequisite steps been completed? Y/N: " answ
-if [ $answ == "N" ] || [ $answ == "n" ]; then
-  exit
 echo "To prepare for installation, the environment variable file must be edited"
 echo "  to include all installation-specific parameters. note that this will"
 echo "  overwrite an existing tide.env file. This feature can also be"
@@ -120,7 +122,7 @@ echo "  run the install script again to complete the setup process."
 echo -e "\e[31m" 
 read -p "Would you like to exit now to edit the tide_constants.tmp file? Y/N: " answ
 if [ $answ == "Y" ] || [ $answ == "y" ]; then
-  cp -v tide_constants_template.json tide_constants.tmp
+  cp -v tide_constants_example.json tide_constants.tmp
   exit
 fi
 echo
@@ -143,7 +145,7 @@ if test -e tide_constants.tmp; then
     sudo mv -v tide_constants.tmp ${htmldir}tide_constants.json
   fi  
 else
-    cp -v tide_constants_template.json tide_constants.tmp
+    cp -v tide_constants_example.json tide_constants.tmp
     nano tide_constants.tmp
     /usr/bin/python encrypt_constants.py tide_constants.tmp
     echo -e "\e[0mEncrypting and writing new constants file"
@@ -161,3 +163,4 @@ sudo chmod 660 ${htmldir}*
 sudo chown www-data ${cgidir}*
 sudo chgrp www-data ${cgidir}*
 sudo chmod 770 ${cgidir}*
+exit
