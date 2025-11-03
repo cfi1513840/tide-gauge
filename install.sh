@@ -33,6 +33,7 @@ echo
 read -p "Have all prerequisite steps been completed? Y/N: " answ
 if [ $answ == "N" ] || [ $answ == "n" ]; then
   exit
+fi
 apvar=$(dpkg -l | grep apache2)
 if [ -z "$apvar" ]; then
    echo "Apache2 and all other supporting modules must be"
@@ -163,4 +164,3 @@ sudo chmod 660 ${htmldir}*
 sudo chown www-data ${cgidir}*
 sudo chgrp www-data ${cgidir}*
 sudo chmod 770 ${cgidir}*
-exit
