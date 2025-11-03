@@ -10,6 +10,7 @@
 
 #define TRIGGER_PIN GPIO4
 #define STATION_ID_NUMBER 1
+#define STATION_ID_ASCII 49
 
 //#define RF_FREQUENCY 915000000  // Hz
 #define RF_FREQUENCY 914100000  // Hz
@@ -62,6 +63,7 @@ uint8_t serialBuffer[256] = { "R4090\rR4103\rR0867\rR0868\rR0870\rR4097\rR4089\r
 //uint8_t serialBuffer[256] = {"R0870\rR0868\rR0867\rR0868\rR0870\rR0870\rR0870\rR4093\rR0870\rR0870\rR0871\rR0870\rR0870\rR0867\rR0870\rR0870\rR0871\rR0868\rR0870\rR0870\r   "}; // Initialized for testing
 uint8_t spaceChar = 32;
 uint8_t RChar = 82;
+uint8_t TChar = 84;
 uint8_t DChar = 68;
 int readSize;
 int senbr;
@@ -263,6 +265,8 @@ void loop() {
 
     //Serial.printf("Sending Packet %s\n", txpacket);
     Radio.Send((uint8_t *)txpacket, strlen(txpacket));
+    delay (500);
+    rxAck = true;
     //
     // Initialize counters for the next iteration, turn off sensor power and enter sleep mode
     //
@@ -283,11 +287,17 @@ void loop() {
     delay(50);
     txNumber++;
     delay(840);
+  } else if (txNumber > 20) {
+    Radio.Sleep();
+    ackMode = false;
+    txNumber = -1;
+    rxAck = false;
+    sleepMode = false;
   }
 }
 void OnTxDone(void) {
   //Radio.Sleep();
-  rxAck = true;
+  //rxAck = true;
 }
 
 void OnTxTimeout(void) {
@@ -308,25 +318,29 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr ) {
 void processAck() {
     ackMode = false;
     //Serial.printf("Received: %s,P%d,\r\n",rxpacket,Rssi);
-    ridx = 0;
-    while (ridx < rxSize) {
-      if (rxpacket[ridx] == DChar) {
-        ridx++;
-        newdelay = 0;
-        //
-        // Convert the ascii numeric digits to an integer value
-        //
-        while (ridx < rxSize && rxpacket[ridx] >= 48 && rxpacket[ridx] <= 57) {
-          newdelay = newdelay * 10;
-          newdelay = newdelay + (rxpacket[ridx] - 48);
+    if (rxpacket[0] == TChar && rxpacket[1] == STATION_ID_ASCII) {
+      ridx = 0;
+      while (ridx < rxSize) {
+        if (rxpacket[ridx] == DChar) {
+          ridx++;
+          newdelay = 0;
+          //
+          // Convert the ascii numeric digits to an integer value
+          //
+          while (ridx < rxSize && rxpacket[ridx] >= 48 && rxpacket[ridx] <= 57) {
+            newdelay = newdelay * 10;
+            newdelay = newdelay + (rxpacket[ridx] - 48);
+            ridx++;
+          }
+        } else {
           ridx++;
         }
-      } else {
-        ridx++;
       }
-    }
-    if (newdelay != 0) {
-      timetillwakeup = newdelay*1000;
+      if (newdelay != 0 && newdelay < 120) {
+        timetillwakeup = newdelay*1000;
+      } else {
+        timetillwakeup = 32925;
+      }
     }
     txNumber = -1;
     //Serial.print("Entering sleep mode\n");

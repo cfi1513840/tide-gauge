@@ -40,6 +40,7 @@ long counter = 0 ;
 uint64_t proc_time;
 uint64_t start_time;
 int16_t Rssi;
+int16_t test;
 char txout[16];
 
 void setup() {
@@ -87,12 +88,15 @@ void tx() {
     if (rxdata[0] == 'S') {
      if (rxdata[1] == '1') {
        station = 1;
-     } else {
+     } else if (rxdata[1] == '2') {
        station = 2;
+     } else if (rxdata[1] == '3') {
+       station = 3;
      }
     int delay = ((station*15)-proc_time)+60;
     sprintf(txout,"T%d,", station);
     sprintf(txout+strlen(txout),"D%d", delay);
+    Serial.printf("txout: ' %s\n",txout);
     radio.clearDio1Action();
     RADIOLIB(radio.transmit(txout));
   }
