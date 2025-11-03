@@ -31,7 +31,7 @@ echo " 12. Site specific configuration defined (see tide_constants_example.json 
 echo "     tide_template.env for examples and guidance on how to prepare these files."
 echo 
 read -p "Have all prerequisite steps been completed? Y/N: " answ
-if [ $answ != "Y" ] && [ $answ == "y" ]; then
+if [ $answ != "Y" ] && [ $answ != "y" ]; then
   exit
 apvar=$(dpkg -l | grep apache2)
 if [ -z "$apvar" ]; then
