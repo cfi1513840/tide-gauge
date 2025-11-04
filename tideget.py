@@ -73,7 +73,7 @@ class GetWeather:
         #
         # Also provide email and text message success notification if required
         #
-        if self.wx_und_error_count > 5:
+        if self.wx_und_error_count >= 5:
             self.report_success(self.wx_und_error_count, 'Weather Underground')
         self.wx_und_error_count = 0
         #
@@ -151,7 +151,7 @@ class GetWeather:
                 logging.warning(pline)
             self.wx_opn_error_count += 1
             if self.wx_opn_error_count == 5:
-                self.report_error('Weather Underground')
+                self.report_error('OpenWeatherMap')
             return {}
         #
         # Log and print success message if error previously reported
@@ -164,7 +164,7 @@ class GetWeather:
         #
         # Also provide email and text message success notification if required
         #
-        if self.wx_opn_error_count > 5:
+        if self.wx_opn_error_count >= 5:
             self.report_success(self.wx_opn_error_count, 'OpenWeatherMap')
         self.wx_opn_error_count = 0
         #
@@ -284,8 +284,8 @@ class GetWeather:
             #
             # Also provide email and text message success notification if required
             #
-            if self.wx_link_error_count > 5:
-                self.report_success(self.wx_link_error_count, 'Weather Underground')
+            if self.wx_link_error_count >= 5:
+                self.report_success(self.wx_link_error_count, 'WeatherLink')
             self.wx_link_error_count = 0
             result=response.json()
             dumpedic = json.dumps(result)
