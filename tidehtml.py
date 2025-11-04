@@ -173,8 +173,6 @@ class CreateHTML:
                 wind_direction_symbol = weather['wind_direction_symbol']+' '
             if wind_gust == 0 and wind_speed != 0:
                 wind_gust = wind_speed
-            with open('/var/www/html/tidehtml.log', 'a') as logfile:
-                logfile.write('wind_speed type: '+str(type(wind_speed)))
             if baro_trend != 0 and baro_trend < -0.01:
                 baro = '&darr; '+str(baro)+' &darr;'
             elif baro_trend != 0 and baro_trend > 0.01:
