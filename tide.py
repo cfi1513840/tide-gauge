@@ -221,10 +221,10 @@ class Tide:
         if 'sim' not in sys.argv:    
             tide_readings = sensor.read_sensor()
         if tide_readings:
+            tide_level = tide_readings.get('R')
             db.insert_tide(tide_readings)
-            if int(tide_readings.get('S')) == self.stationid:
+            if int(tide_readings.get('S')) == self.stationid and tide_level != None:
                 self.sensor_readings = tide_readings
-                tide_level = tide_readings.get('R')
                 if not self.tide_init:
                     for idx in range(0,20):
                         self.tide_average = self.tide_average[1:]+[tide_level]
