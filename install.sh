@@ -88,7 +88,9 @@ if [ $answ == "Y" ] || [ $answ == "y" ]; then
   sudo cp -v tide.service /lib/systemd/system/
 fi
 sudo systemctl enable tide
-python makekeys.py
+if [keyfound == 1]; then
+  python makekeys.py
+fi
 echo
 grep "HTML_DIRECTORY" tide.env > grep.tmp
 vari="$(cat grep.tmp)"
@@ -112,6 +114,19 @@ if [ $jsonfound == 1 ]; then
   echo
   read -p "Do you want to proceed? Y/N: " answ
   if [ $answ != "Y" ] && [ $answ != "y" ]; then
+    sudo cp -v sqltides.db ${htmldir}tides.db
+    sudo cp -v tide_constants.json ${htmldir}tide_constants.json
+    sudo cp -v tide.env ${htmldir}.
+    sudo cp -v *.png ${htmldir}.
+    sudo cp -v index.html ${htmldir}tide.html
+    sudo cp -v *.html ${htmldir}.
+    sudo cp -v *.cgi ${cgidir}.
+    sudo chown www-data ${htmldir}*
+    sudo chgrp www-data ${htmldir}*
+    sudo chmod 660 ${htmldir}*
+    sudo chown www-data ${cgidir}*
+    sudo chgrp www-data ${cgidir}*
+    sudo chmod 770 ${cgidir}*  
     exit
   fi
 fi
@@ -153,6 +168,7 @@ else
     sudo mv -v tide_constants.tmp ${htmldir}tide_constants.json  
 fi  
 sudo cp -v sqltides.db ${htmldir}tides.db
+sudo cp -v tide_constants.json ${htmldir}tide_constants.json
 sudo cp -v tide.env ${htmldir}.
 sudo cp -v *.png ${htmldir}.
 sudo cp -v index.html ${htmldir}tide.html
