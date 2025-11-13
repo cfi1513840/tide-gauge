@@ -353,6 +353,7 @@ class Tide:
                 wxhtml.wxproc(self.iparams_dict)
             self.html.create(self.weather, self.ndbc_data, predict_list,
               self.tide_list, self.iparams_dict, self.sensor_readings)
+            cur_station = self.stationid
             alt_station = 2 if self.stationid == 1 else 1
             if (not self.station_oos and ((self.stationid == 1 and self.current_time >
               self.last_station1_time + timedelta(minutes=5)) or
@@ -365,7 +366,7 @@ class Tide:
                     self.stationid = alt_station
                     db.update_stationid(alt_station)
                     msgsuff = f', switching to Station {str(alt_station)}'
-                text = (self.message_time+f' {cons.HOSTNAME} Station {self.stationid} has not reported in '+
+                text = (self.message_time+f' {cons.HOSTNAME} Station {cur_station} has not reported in '+
                   f'over 5 minutes{msgsuff}')
                 for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
                     if twilio_phone_recipient == None:
