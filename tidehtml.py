@@ -373,7 +373,7 @@ class CreateHTML:
         outfile.write (f'{self.cons.STATION_LOCATION} Tide & Weather - {dispdate}.&nbsp&nbspSunrise: {sunrise} - Sunset: {sunset}</span></p>\n')
         outfile.write ('</td>\n')
         outfile.write ('<td colspan="4" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
-        outfile.write (f'BatV: {round(float(batv)/1000, 3)}&nbsp&nbsp&nbspSolarV: {round(float(solarv)/1000, 3)}&nbsp&nbsp&nbsprssi: {rssi}</span></p>\n')
+        outfile.write (f'BatV: {round(float(batv)/1000, 3)}&nbsp&nbsp&nbsprssi: {rssi}</span></p>\n')
         outfile.write ('</td>\n')
         outfile.write ('<td colspan="2" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         outfile.write (f'<form action="/alertlogin.html"><button type="submit">Alerts</button></form></span></p>\n')
