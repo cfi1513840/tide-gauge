@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/home/tide/.tidenv/bin/python3
 import cgi, cgitb
 import os
 from datetime import datetime

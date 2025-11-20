@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/home/tide/.tidenv/bin/python3
 import cgi, cgitb
 from datetime import datetime
 import sqlite3
