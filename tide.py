@@ -386,7 +386,7 @@ class Tide:
     def send_visit_report(self):
 
         self.visit = True
-        grephome = ["grep -o 'CoastalMaine.png' /var/log/apache2/access.log.1  | wc -l"]
+        grephome = ["grep -o 'webimage.png' /var/log/apache2/access.log.1  | wc -l"]
         greptide = ["grep -o 'GET /tide.html' /var/log/apache2/access.log.1  | wc -l"]
         grepuser = ["grep -o 'GET /alertlogin.html' /var/log/apache2/access.log.1  | wc -l"]
         grepumod = ["grep -o 'POST /cgi-bin/alertform.cgi' /var/log/apache2/access.log.1  | wc -l"]
