@@ -115,18 +115,6 @@ class Tide:
             self.tk_mode = True
         if self.tk_mode:
             import tidedisplay
-            #self.iparams_dict = db.fetch_iparams()
-            #self.stationid = self.iparams_dict.get('stationid')
-            #self.station1cal = self.iparams_dict.get('station1cal')
-            #self.station2cal = self.iparams_dict.get('station2cal')
-            #self.s1enable = self.iparams_dict.get('s1enable')
-            #self.s2enable = self.iparams_dict.get('s2enable')
-            #state.debug = self.iparams_dict.get('debug')
-            #self.tide_only = self.iparams_dict.get('tide_only')
-            #display_date_and_time = sunny.get_suntimes(cons, db)
-            #self.sunrise = display_date_and_time[3]
-            #self.sunset = display_date_and_time[4]
-            #self.html = tidehtml.CreateHTML(cons, self.tide_only)
             self.display = tidedisplay.TideDisplay(self.stationid, cons, self.tide_only)
             self.display.master.title(
               f"{cons.STATION_LOCATION} Tide Monitor Panel "+
@@ -268,7 +256,7 @@ class Tide:
                 pass
 
         if (self.main_loop_count == 2 and (self.weather_retry or 
-          self.current_time >= self.last_weather_time + timedelta(minutes=3))):
+          self.current_time >= self.last_weather_time + timedelta(minutes=5))):
             #
             # Local weather is updated every three minutes
             #
