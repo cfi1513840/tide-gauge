@@ -11,6 +11,7 @@ weather reports. Combine current observations with atmospheric and marine
 forecasts for local display and website presentation.
 """
 import sys
+import os
 import subprocess
 from datetime import datetime, timedelta
 import time
@@ -72,6 +73,7 @@ class Tide:
         self.last_weather_time = self.current_time
         self.last_station1_time = self.current_time
         self.last_station2_time = self.current_time
+        self.last_db_copy_time = self.current_time
         self.main_loop_count = 0
         state.debug = 0
         self.tide1 = 0
@@ -318,6 +320,14 @@ class Tide:
             noaa_tide = getnoaa.noaa_tide()
             if noaa_tide:
                 db.insert_tide_predicts(noaa_tide)
+                
+        if (self.main_loop_count == 7 and  
+          self.current_time >= self.last_db_copy_time + timedelta(minutes=20))):
+            #
+            # SQLite3 database is copied every 20 minutes for further processing 
+            #
+            self.last_db_copy_time = self.current_time
+            os.system(f'cp {cons.SQL_PATH} {cons.SQL_COPY}')            
 
         if self.main_loop_count >= 12:
             self.main_loop_count = 0

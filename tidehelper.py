@@ -69,6 +69,8 @@ class Constants:
 
     EMAIL_USERNAME = secure_dict['EMAIL_USERNAME']
     EMAIL_PASSWORD = secure_dict['EMAIL_PASSWORD']
+    BREVO_USERNAME = secure_dict['BREVO_EMAIL_USERNAME']
+    BREVO_PASSWORD = secure_dict['BREVO_EMAIL_PASSWORD']
     INFLUXDB_TOKEN = secure_dict['INFLUXDB_TOKEN']
     INFLUXDB_ORG = secure_dict['INFLUXDB_ORG']
     INFLUXDB_BUCKET = secure_dict['INFLUXDB_BUCKET']
@@ -78,6 +80,7 @@ class Constants:
     OBSCAPE_USER = secure_dict['OBSCAPE_USER']
     OBSCAPE_KEY = secure_dict['OBSCAPE_KEY']
     SMTP_SERVER = secure_dict['SMTP_SERVER']
+    BREVO_SMTP_SERVER = secure_dict['BREVO_SMTP_SERVER']
     SMTP_PORT = secure_dict['SMTP_PORT']
     TWILIO_ACCOUNT_SID = secure_dict['TWILIO_ACCOUNT_SID']
     TWILIO_AUTH_TOKEN = secure_dict['TWILIO_AUTH_TOKEN']
@@ -114,6 +117,7 @@ class Constants:
         LATITUDE = float(os.getenv('STATION_LATITUDE'))
         LONGITUDE = float(os.getenv('STATION_LONGITUDE'))
         SQL_PATH = os.getenv('SQL_PATH')
+        SQL_COPY = os.getenv('SQL_COPY')
         NDBC_STATIONS = os.getenv('NDBC_STATIONS').split(",")
         NOAA_STATION = os.getenv('NOAA_STATION')
         NOAA_STATION_NAME = os.getenv('NOAA_STATION_NAME')
