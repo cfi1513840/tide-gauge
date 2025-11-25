@@ -44,7 +44,7 @@ def change_password(valkey):
    print('   <body id="uform"><font size = "5">')
    print('   <div class="center-screen">')
    print('    <span style="border:2px black solid; width: 450px;">')
-   print('    <img src="/CoastalMaine.png"')
+   print('    <img src="/webimage.png"')
    print('         width="400" height="300"/>')
    print('      <h1 style="width: 400px; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Tide Alert Change Password</h1>')
    print('      <p>')

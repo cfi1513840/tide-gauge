@@ -1130,7 +1130,7 @@ elif not entryfound and admin != '1':
     print ('<body bgcolor="black"><font size = "4">')
     print ('<div class="center-screen">')
     print ('<span style="border:2px black solid; width: 450px; background-color: #FFE4C4;">')
-    print ('<img src="/CoastalMaine.png" width="450" height="300"/>')
+    print ('<img src="/webimage.png" width="450" height="300"/>')
     print ('<h1 style="width: 430px; text-align: center; font-size: '+
       '25px; font-color: black; padding: 4px;">Alert Request</h1>')
     print (f'<p style="width: 438px; text-align: center; font-size: '+
