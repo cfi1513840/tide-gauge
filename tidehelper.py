@@ -229,7 +229,7 @@ class Notify:
         if debug:
             print ('Email notify to '+email_recipient+'\n'+email_message)
             return
-        if self.cons.EMAIL_SERVICE != 'brevo'
+        if self.cons.EMAIL_SERVICE != 'brevo':
             try:
                 session = smtplib.SMTP(self.cons.SMTP_SERVER,
                 self.cons.SMTP_PORT)
