@@ -380,10 +380,17 @@ class CreateHTML:
         outfile.write ('</td>\n')
         outfile.write ('</tr>\n')
         if not self.tide_only:
-            outfile.write ('<tr valign="middle">\n') 
-            outfile.write (f'<td colspan="2"><p><a href="{self.WX_UND_URL}">\n')
-            outfile.write (f'Local Weather</a></p>\n')
-            outfile.write ('</td>\n')
+            outfile.write ('<tr valign="middle">\n')
+            if self.cons.WX_SERVICE == 'openwx':
+                outfile.write ('<td colspan="2">\n')
+                outfile.write ('<p style="font-size: 0.65rem; opacity: 0.6;">\n')
+                outfile.write ('Weather data provided by '
+                  '<a href="https://openweathermap.org/" target="_blank">OpenWeather</a></p>\n')
+                outfile.write ('</td>\n')
+            elif self.cons.WX_SERVICE == 'wxund':                            
+                outfile.write (f'<td colspan="2"><p><a href="{self.WX_UND_URL}">\n')
+                outfile.write (f'Local Weather</a></p>\n')
+                outfile.write ('</td>\n')
             outfile.write ('<td><p>Air Temp</p>\n')
             outfile.write ('</td>\n')
             outfile.write ('<td><p>humidity</p>\n')
