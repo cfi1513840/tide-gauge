@@ -138,8 +138,9 @@ class Tide:
               "Content-Type:text/html"]
             email_headers =  "\r\n".join(email_headers)
             notify.send_email(email_recipient, email_headers, text, state.debug,)
-        self.weather = getwx.weather_underground(self.tide_only)
-        if not self.weather:
+        if cons.WX_SERVICE == 'wxund':
+            self.weather = getwx.weather_underground(self.tide_only)
+        elif cons.WX_SERVICE == 'openwx':
             self.weather = getwx.open_weather_map(self.tide_only)
         if self.weather:
             db.insert_weather(self.weather)

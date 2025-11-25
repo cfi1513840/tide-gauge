@@ -24,6 +24,7 @@ from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from dotenv import load_dotenv, find_dotenv
 from twilio.rest import Client
+from email.message import EmailMessage
 
 class Constants:
     """
@@ -118,6 +119,8 @@ class Constants:
         LONGITUDE = float(os.getenv('STATION_LONGITUDE'))
         SQL_PATH = os.getenv('SQL_PATH')
         SQL_COPY = os.getenv('SQL_COPY')
+        EMAIL_SERVICE = os.getenv('EMAIL_SERVICE')
+        WX_SERVICE = os.getenv('WX_SERVICE')
         NDBC_STATIONS = os.getenv('NDBC_STATIONS').split(",")
         NOAA_STATION = os.getenv('NOAA_STATION')
         NOAA_STATION_NAME = os.getenv('NOAA_STATION_NAME')
@@ -226,19 +229,36 @@ class Notify:
         if debug:
             print ('Email notify to '+email_recipient+'\n'+email_message)
             return
-        try:
-            session = smtplib.SMTP(self.cons.SMTP_SERVER,
-            self.cons.SMTP_PORT)
-            session.ehlo()
-            session.starttls()
-            session.ehlo()
-            session.login(self.cons.EMAIL_USERNAME,self.cons.EMAIL_PASSWORD)
-            session.sendmail(
-                self.cons.EMAIL_USERNAME, email_recipient, \
-                email_headers+"\r\n\r\n"+email_message)
-            session.quit()
-        except Exception as errmsg:
-            logging.warning(str(errmsg))
+        if self.cons.EMAIL_SERVICE != 'brevo'
+            try:
+                session = smtplib.SMTP(self.cons.SMTP_SERVER,
+                self.cons.SMTP_PORT)
+                session.ehlo()
+                session.starttls()
+                session.ehlo()
+                session.login(self.cons.EMAIL_USERNAME,self.cons.EMAIL_PASSWORD)
+                session.sendmail(
+                    self.cons.EMAIL_USERNAME, email_recipient, \
+                    email_headers+"\r\n\r\n"+email_message)
+                session.quit()
+            except Exception as errmsg:
+                logging.warning(str(errmsg))
+        else:    
+            try:
+                sub = {item.split(":")[0].strip(): item.split(":")[1].strip() for item in email_headers}
+                sub = sub["Subject"]
+                msg = EmailMessage()
+                msg["From"] = "tidealert@bbitide.org"
+                msg["To"] = email_recipient
+                msg["Subject"] = sub
+                msg.set_content(email_message)
+                with smtplib.SMTP(self.cons.BREVO_SMTP_SERVER, self.cons.SMTP_PORT) as server:
+                    server.starttls()
+                    server.login(self.cons.BREVO_SMTP_USERNAME, self.cons.BREVO_SMTP_PASSWORD)
+                    server.send_message(msg)
+                
+            except Exception as errmsg:
+                logging.warning(str(errmsg))
 
 class ValType:
     """Validate variable type"""
