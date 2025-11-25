@@ -245,8 +245,13 @@ class Notify:
                 logging.warning(str(errmsg))
         else:    
             try:
-                sub = {item.split(":")[0].strip(): item.split(":")[1].strip() for item in email_headers}
-                sub = sub["Subject"]
+                sub = None
+                fields = email_headers.split('\r\n')
+                for ent in fields:
+                    ent = ent.strip()
+                    if ent[:9] == 'Subject: ':
+                        sub = ent[9:]
+                        break
                 msg = EmailMessage()
                 msg["From"] = "tidealert@bbitide.org"
                 msg["To"] = email_recipient
@@ -254,7 +259,7 @@ class Notify:
                 msg.set_content(email_message)
                 with smtplib.SMTP(self.cons.BREVO_SMTP_SERVER, self.cons.SMTP_PORT) as server:
                     server.starttls()
-                    server.login(self.cons.BREVO_SMTP_USERNAME, self.cons.BREVO_SMTP_PASSWORD)
+                    server.login(self.cons.BREVO_USERNAME, self.cons.BREVO_PASSWORD)
                     server.send_message(msg)
                 
             except Exception as errmsg:
