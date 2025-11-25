@@ -265,8 +265,9 @@ class Tide:
             #
             self.ndbc_data = {}
             self.last_weather_time = self.current_time
-            self.weather = getwx.weather_underground(self.tide_only)
-            if not self.weather:
+            if cons.WX_SERVICE == 'wxund':
+                self.weather = getwx.weather_underground(self.tide_only)
+            elif cons.WX_SERVICE == 'openwx':
                 self.weather = getwx.open_weather_map(self.tide_only)
             if self.weather:
                 self.weather_retry = False
