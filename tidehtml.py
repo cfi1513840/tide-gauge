@@ -382,8 +382,8 @@ class CreateHTML:
         if not self.tide_only:
             outfile.write ('<tr valign="middle">\n')
             if self.cons.WX_SERVICE == 'openwx':
-                outfile.write ('<td colspan="2">\n')
-                outfile.write ('<p style="font-size: 0.65rem; opacity: 0.6; padding: 0px; margin: 0px; text-indent: 0px;">\n')
+                outfile.write ('<td colspan="2" style="width:1%; white-space:nowrap;">\n')
+                outfile.write ('<p style="font-size: 0.8rem; opacity: 0.8;">\n')
                 outfile.write ('Weather data provided by '
                   '<a href="https://openweathermap.org/" target="_blank">OpenWeather</a></p>\n')
                 outfile.write ('</td>\n')
