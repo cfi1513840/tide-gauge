@@ -43,7 +43,7 @@ class CreateWxHTML:
         self.outfile.write (f'<table border="2" cellpadding="2" cellspacing="2" style="border-color: #000000; border-style: solid; background-color: #ccffff;">\n')
         self.outfile.write ('<tr valign="middle">\n')
         self.outfile.write (f'<td colspan="{nbrcols}" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
-        headers = {'User-Agent': '(bbitide.org, alert@bbitidereport.com)'}
+        headers = {'User-Agent': '(bbitide.org, tidealert@bbitide.org)'}
         fcurl = f"https://api.weather.gov/gridpoints/{self.local_points}/forecast"
         response = requests.get(fcurl, headers=headers)
         if str(response) != '<Response [200]>':
@@ -156,7 +156,7 @@ class CreateWxHTML:
         self.outfile.write (f'Hourly Marine Point Forecast - {self.cons.NDBC_LOCATION} - Location: {self.cons.NDBC_LATITUDE} {self.cons.NDBC_LONGITUDE}\n')
         self.outfile.write ('</th>\n')
         self.outfile.write ('</tr>\n')
-        headers = {'User-Agent': '(bbitide.org, alert@bbitidereport.com)'}
+        headers = {'User-Agent': '(bbitide.org, tidealert@bbitide.org)'}
         fcurl = f"https://api.weather.gov/gridpoints/{self.marine_points}/" 
         response = requests.get(fcurl, headers=headers)
         if str(response) != '<Response [200]>':
