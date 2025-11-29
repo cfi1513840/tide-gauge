@@ -315,6 +315,7 @@ if True:
    grid_height = 30
    if len(tidelist) != 0:
       tidesup = True
+      s2cnt = 0
       for chkent in tidelist:
          tidents += 1
          if station1 and chkent[1] == 1 and s1enable and chkent[2] != None:
@@ -323,10 +324,12 @@ if True:
             if chkent[2] < mintide:
                mintide = station1cal - chkent[2]/12
          elif station2 and chkent[1] == 2 and s2enable and chkent[2] != None:
+            s2cnt += 1
             if chkent[2] > maxtide:
                maxtide = station2cal - chkent[2]/12
             if chkent[2] < mintide:
                mintide = station2cal - chkent[2]/12 
+   print ('station2 entries: '+str(s2cnt))
    if len(batvlist) != 0 and s1enable:
       for chkent in batvlist:
          if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 3.3:
@@ -903,7 +906,10 @@ def proc_data():
                            varistart_y = vari_y
                         variinit = True
                         if varistart_x == -99: varistart_x = tide_x
-                        if varistart_y == -99: varistart_y = vari_y                    
+                        if varistart_y == -99: varistart_y = vari_y
+               if debugit:
+                  print ('stationid: '+str(tidelist[aidx][1])
+                  debugit -= 1                  
                if station2 and s2enable and tidelist[aidx][1] == 2 and tidelist[aidx][2] != None:
                   tide_y = tide_end_y-int(((station2cal-tidelist[aidx][2]/12)-math.floor(mintide))*tide_grid_y)
                   tideft = station2cal-tidelist[aidx][2]/12
