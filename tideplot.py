@@ -908,7 +908,7 @@ def proc_data():
                         if varistart_x == -99: varistart_x = tide_x
                         if varistart_y == -99: varistart_y = vari_y
                if debugit:
-                  print ('stationid: '+str(tidelist[aidx][1])
+                  print ('stationid: '+str(tidelist[aidx][1]))
                   debugit -= 1                  
                if station2 and s2enable and tidelist[aidx][1] == 2 and tidelist[aidx][2] != None:
                   tide_y = tide_end_y-int(((station2cal-tidelist[aidx][2]/12)-math.floor(mintide))*tide_grid_y)
