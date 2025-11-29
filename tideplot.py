@@ -170,7 +170,7 @@ station2 = False
 wind = False
 rain = False
 temp = False
-debugit = 3
+debugit = 30
 #
 # Get station name for webpage title
 #
@@ -905,13 +905,13 @@ def proc_data():
                         if varistart_x == -99: varistart_x = tide_x
                         if varistart_y == -99: varistart_y = vari_y                    
                if station2 and s2enable and tidelist[aidx][1] == 2 and tidelist[aidx][2] != None:
-                  if debugit > 0:
-                     print ('processing station 2 entry')
-                     debugit -= 1
                   tide_y = tide_end_y-int(((station2cal-tidelist[aidx][2]/12)-math.floor(mintide))*tide_grid_y)
                   tideft = station2cal-tidelist[aidx][2]/12
                   varift = tideft-predendft
                   vari_y = vari2_end_y-int((varift+2)*grid_height)
+                  if debugit > 0:
+                     print ('savetime2: '+str(savtime2)+' tidetime: '+str(tidetime))
+                     debugit -= 1
                   if savetime2 == 0 or tidetime > savetime2 + timedelta(minutes=15):               
                      outfile.write ('ctx.fillStyle = "darkgreen";\n')
                      outfile.write (f'ctx.fillRect({tide_x},{tide_y},1,2);\n')
