@@ -323,8 +323,8 @@ class Tide:
             if noaa_tide:
                 db.insert_tide_predicts(noaa_tide)
                 
-        if (self.main_loop_count == 7 and  
-          self.current_time >= self.last_db_copy_time + timedelta(minutes=20)):
+        if (self.main_loop_count == 7 and self.current_time.minute % 20 == 0 and 
+          self.current_time > self.last_db_copy_time):
             #
             # SQLite3 database is copied every 20 minutes for further processing 
             #
