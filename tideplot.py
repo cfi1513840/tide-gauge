@@ -904,7 +904,10 @@ def proc_data():
                         variinit = True
                         if varistart_x == -99: varistart_x = tide_x
                         if varistart_y == -99: varistart_y = vari_y                    
-               elif station2 and s2enable and tidelist[aidx][1] == 2 and tidelist[aidx][2] != None:
+               if station2 and s2enable and tidelist[aidx][1] == 2 and tidelist[aidx][2] != None:
+                  if debugit > 0:
+                     print ('processing station 2 entry')
+                     debugit -= 1
                   tide_y = tide_end_y-int(((station2cal-tidelist[aidx][2]/12)-math.floor(mintide))*tide_grid_y)
                   tideft = station2cal-tidelist[aidx][2]/12
                   varift = tideft-predendft
@@ -1250,12 +1253,12 @@ def proc_data():
             plottime = tidetime.timestamp() - starttime.timestamp()
             startx = int((plottime+offtime)*(plot_width-30)/86400/plotdays+30)
             hourtime = tidetime.hour
-            if s1enable and station1 and ent[1] != None:
-               tidestate = ent[2]
+            if s1enable and station1 and ent[1] == 1 and ent[2] != None:
+               tidestate = str(ent[1]) # temporary until front end processing implemented
                if tidestate == 'low' or tidestate == 'high':
                   if turntime == '' or abs(hourtime-turntime) >= 3:
                      turntime = hourtime
-                     peak = format(ent[1],'.1f')
+                     peak = format(ent[2],'.1f')
                      peaks = peak+' '+hrmin
                      outfile.write (f'ctx.fillStyle = "#ffffff";\n')
                      outfile.write (f'ctx.strokeRect({startx-21}, {tag_y-19}, 42, 30);\n')
@@ -1263,8 +1266,8 @@ def proc_data():
                      outfile.write (f'ctx.fillStyle = "blue";\n')
                      outfile.write (f'ctx.fillText("{hrmin}", {startx}, {tag_y+9});\n')
                      outfile.write (f'ctx.fillText("{peak}", {startx}, {tag_y-6});\n')
-            if s2enable and station2 and ent[3] != None:
-               tidestate = ent[4]
+            if s2enable and station2 and ent[1] == 2 and ent[2] != None:
+               tidestate = str(ent[1]) # temporary until front end processing implemented
                if tidestate == 'low' or tidestate == 'high':
                   if turntime2 == '' or abs(hourtime-turntime2) >= 3:
                      turntime2 = hourtime
