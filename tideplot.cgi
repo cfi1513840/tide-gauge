@@ -197,8 +197,8 @@ except:
 #
 # Read initialization data from iparams table
 #
-#try:
-if True:
+try:
+#if True:
    sqlcur.execute("select * from iparams")
    iparams = sqlcur.fetchall()
    banflag = 0
@@ -421,10 +421,10 @@ if True:
             if chkent[2] < mintide:
                mintide = station1cal - chkent[2]/12
          elif station2 and chkent[1] == 2 and s2enable and chkent[2] != None:
-            if chkent[2] > maxtide:
-               maxtide = station2cal - chkent[2]/12
-            if chkent[2] < mintide:
-               mintide = station2cal - chkent[2]/12 
+            if chkent[2] > maxtide2:
+               maxtide2 = station2cal - chkent[2]/12
+            if chkent[2] < mintide2:
+               mintide2 = station2cal - chkent[2]/12 
       if mintide == 99 or maxtide == -99:
          station1 = False
       if mintide2 == 99 or maxtide2 == -99:
@@ -585,8 +585,8 @@ if True:
    if batv2 and s2enable:
       batv2_start_y = next_y+gap_size
       batv2_end_y = int(batv2_height+batv2_start_y)
-#except Exception as errmsg:
-else:
+except Exception as errmsg:
+#else:
    pline = msgtime+' Error - '+str(errmsg)
    with open('/var/www/html/tideplot.log', 'a') as logfile:
             logfile.write (pline+'\n')
@@ -997,7 +997,7 @@ def proc_data():
          if b2idx+1 < batv2len-1:
             batv2timenext = datetime.strptime(batv2list[b2idx+1][0][:16], mintimeformat)
          if tidesup:
-            if tidetime == predtime_hm:
+            while tidetime == predtime_hm and aidx < tidelen-1:
                if station1 and s1enable and tidelist[aidx][1] == 1 and tidelist[aidx][2] != None:
                   tide_y = tide_end_y-int(((station1cal-tidelist[aidx][2]/12) -math.floor(mintide))*tide_grid_y)
                   tideft = station1cal-tidelist[aidx][2]/12
@@ -1038,8 +1038,8 @@ def proc_data():
                   varift = tideft-predendft
                   vari_y = vari2_end_y-int((varift+2)*grid_height)
                   if savetime2 == 0 or tidetime > savetime2 + timedelta(minutes=15):               
-                     print ('ctx.fillStyle = "darkgreen";\n')
-                     print (f'ctx.fillRect({tide_x},{tide_y},1,2);\n')
+                     #print ('ctx.fillStyle = "darkgreen";\n')
+                     #print (f'ctx.fillRect({tide_x},{tide_y},1,2);\n')
                   else:
                      print (f'ctx.strokeStyle = "darkgreen";\n')
                      print (f'ctx.beginPath();\n')
@@ -1066,11 +1066,14 @@ def proc_data():
                         if vari2start_x == -99: vari2start_x = tide_x
                         if vari2start_y == -99: vari2start_y = vari_y                                            
                aidx += 1
-            else:
-               while tidetimenext < predtimenext and aidx < tidelen-1:
-                  aidx += 1
-                  if aidx < tidelen-1:
-                     tidetimenext = datetime.strptime(tidelist[aidx][0][:16], mintimeformat)
+               if aidx < tidelen-1:
+                  tidetime = datetime.strptime(tidelist[aidx][0][:16], mintimeformat)
+               if aidx+1 < tidelen-1:
+                  tidetimenext = datetime.strptime(tidelist[aidx+1][0][:16], mintimeformat)
+            while tidetimenext < predtimenext and aidx < tidelen-1:
+               aidx += 1
+               if aidx < tidelen-1:
+                  tidetimenext = datetime.strptime(tidelist[aidx][0][:16], mintimeformat)
 
          if s1enable and batv and len(batvlist) != 0:
             if batvtime == predtime_hm:
