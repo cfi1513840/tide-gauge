@@ -222,8 +222,8 @@ if True:
       tagchk = 'checked'
       station1 =  True
       station1chk = 'checked'
-      station2 =  True
-      station2chk = 'checked'
+      station2 =  False
+      station2chk = ''
       wind = True
       windchk = 'checked'
       rain = True
