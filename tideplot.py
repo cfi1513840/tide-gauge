@@ -944,7 +944,7 @@ def proc_data():
                if aidx < tidelen-1:
                   tidetime = datetime.strptime(tidelist[aidx][0][:16], mintimeformat)
                if aidx+1 < tidelen-1:
-                  tidetimenext = datetime.strptime(tidelist[aidx+1][0][:16], mintimeformat                                            
+                  tidetimenext = datetime.strptime(tidelist[aidx+1][0][:16], mintimeformat)                                            
             while tidetimenext < predtimenext and aidx < tidelen-1:
                aidx += 1
                if aidx < tidelen-1:
