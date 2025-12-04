@@ -28,7 +28,6 @@ class GetWeather:
         self.NDBC_report_flag = 0
         self.NDBC_error_count = 0
         self.rain_24h = ''
-        self.rain_1h
         
     def weather_underground(self, tide_only):
         #print ('getting wx underground')
