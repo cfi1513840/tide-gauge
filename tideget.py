@@ -206,7 +206,7 @@ class GetWeather:
                 rain = loadedic['rain']
                 if '1h' in rain:
                     weather['rain_rate'] = rain['1h']
-                    if phase == 'hour' or phase == 'day'
+                    if phase == 'hour' or phase == 'day':
                         self.rain_24h += rain['1h']
             weather['rain_today'] = self.rain_24h
             if phase == 'day':
