@@ -141,7 +141,7 @@ class Tide:
         if cons.WX_SERVICE == 'wxund':
             self.weather = getwx.weather_underground(self.tide_only)
         elif cons.WX_SERVICE == 'openwx':
-            self.weather = getwx.open_weather_map(self.tide_only)
+            self.weather = getwx.open_weather_map('hour', self.tide_only)
         if self.weather:
             db.insert_weather(self.weather)
             wxhtml.wxproc(self.iparams_dict)
@@ -259,16 +259,23 @@ class Tide:
                 pass
 
         if (self.main_loop_count == 2 and (self.weather_retry or 
-          self.current_time >= self.last_weather_time + timedelta(minutes=5))):
+          self.current_time >= self.last_weather_time + timedelta(minutes=5) or
+          current_minute == 0)):
             #
-            # Local weather is updated every three minutes
+            # Local weather is updated on the hour and every five minutes
             #
+            if self.save_the_day != current_day:
+                phase = 'day'
+            elif current_minute == 0:
+                phase = 'hour'
+            else:
+                phase = 'minute'                
             self.ndbc_data = {}
             self.last_weather_time = self.current_time
             if cons.WX_SERVICE == 'wxund':
                 self.weather = getwx.weather_underground(self.tide_only)
             elif cons.WX_SERVICE == 'openwx':
-                self.weather = getwx.open_weather_map(self.tide_only)
+                self.weather = getwx.open_weather_map(phase, self.tide_only)
             if self.weather:
                 self.weather_retry = False
                 db.insert_weather(self.weather)

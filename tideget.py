@@ -27,6 +27,8 @@ class GetWeather:
         self.local_tz = pytz.timezone('America/New_york')
         self.NDBC_report_flag = 0
         self.NDBC_error_count = 0
+        self.rain_24h = ''
+        self.rain_1h
         
     def weather_underground(self, tide_only):
         #print ('getting wx underground')
@@ -123,7 +125,7 @@ class GetWeather:
         except Exception as errmsg:
             logging.warning(errmsg)
 
-    def open_weather_map(self, tide_only):
+    def open_weather_map(self, phase, tide_only):
         #print ('getting open_weather_map')
         if tide_only: return {}
         """Method to get OpenWeatherMap observations for the local area"""
@@ -204,8 +206,11 @@ class GetWeather:
                 rain = loadedic['rain']
                 if '1h' in rain:
                     weather['rain_rate'] = rain['1h']
-                if '3h' in rain:
-                    weather['rain_today'] = rain['3h']
+                    if phase == 'hour' or phase == 'day'
+                        self.rain_24h += rain['1h']
+            weather['rain_today'] = self.rain_24h
+            if phase == 'day':
+                self.rain_24h = ''
         except ValueError as errmsg:
             logging.warning('Error processing OpenWeatherMap response '+str(errmsg))
             return {}
@@ -222,7 +227,7 @@ class GetWeather:
         weather['dewpoint'] = int(dewpoint*1.8+32)
         weather['temperature'] = round(temperature)
         return weather
-######################################################################
+
     def weather_link(self, tide_only):
         #print ('getting weather link')
         if tide_only: return {}
