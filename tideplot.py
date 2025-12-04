@@ -20,16 +20,16 @@ global tide, tk, log, prout, selectedtide, logfile, radinc, curtime, windlist, \
        tide_start_y, tide_end_y, tide_height, station1, station2, station1chk, station2chk, \
        vari_start_y, vari_end_y, vari_height, msgtime, grid_height, \
        vari2_start_y, vari2_end_y, vari2_height, station1cal, station2cal, \
-       wind_start_y, wind_end_y, wind_height, s1enable, s2enable, \
-       rain_start_y, rain_end_y, rain_height, maxpred, minpred, predave, \
+       wind_start_y, wind_end_y, windir_start_y, windir_end_y, wind_height, s1enable, s2enable, \
+       windir_height, rain_start_y, rain_end_y, rain_height, maxpred, minpred, predave, \
        temp_start_y, temp_end_y, temp_height, tag_y, wxsup, tideave, \
-       batv, batv_start_y, batv_end_y, batv_height, debugit, \
+       batv, batv_start_y, batv_end_y, batv_height, debugit, minwind, maxwind, \
        batv_grid_nbr, batv_grid_y, batvinit, batv_y_fact, tide_station_url, \
        batv2, batv2_start_y, batv2_end_y, batv2_height, station_location, \
-       batv2_grid_nbr, batv2_grid_y, batv2init, batv2_y_fact, \
+       batv2_grid_nbr, batv2_grid_y, batv2init, batv2_y_fact, mintemp, maxtemp, \
        dtime_start_y, dtime_end_y, dtime_height, banflag, banner, \
-       tide_grid_nbr, vari_grid_nbr, wind_grid_nbr, rain_grid_nbr, \
-       tide_grid_y, vari_grid_y, wind_grid_y, rain_grid_y, tidesup, \
+       tide_grid_nbr, vari_grid_nbr, wind_grid_nbr, windir_grid_nbr, rain_grid_nbr, \
+       tide_grid_y, vari_grid_y, wind_grid_y, windir_grid_y, rain_grid_y, tidesup, \
        temp_grid_nbr, temp_grid_y, windarrow, tidelist, dbquerytime, \
        listDate, localsunrise, localsunset, sun, mintide, minbatv, \
        maxbatv, minbatv2, maxbatv2, batvlist, batv2list, sun, localsunrise, localsunset
@@ -156,6 +156,85 @@ def tide_predict():
             minpred = chkent[2]
    return
 
+def get_epochs(tide_list):
+   trend1 = ''
+   trend2 = ''
+   epochs = []
+   tide_average1 = [0 for x in range(0,15)]
+   last_average1 = 0
+   max_tide1 = -99
+   min_tide1 = 99
+   tide_average2 = [0 for x in range(0,15)]
+   last_average2 = 0
+   max_tide2 = -99
+   min_tide2 = 99
+   new_tide_list = []
+   index1 = 0
+   index2 = 0
+   for entry in tide_list:
+      new_tide_list.append([entry[0], entry[1], entry[2], ''])
+      if entry[1] == 1:
+         if entry[2] > max_tide1:
+            max_tide1 = entry[2]
+            max_tide_time1 = entry[0]
+         if entry[2] < min_tide1:
+            min_tide1 = entry[2]
+            min_tide_time1 = entry[0]
+         tide_average1 = tide_average1[1:]+[entry[2]]
+         index1 += 1
+      elif entry[1] == 2:
+         if entry[2] > max_tide2:
+            max_tide2 = entry[2]
+            max_tide_time2 = entry[0]
+         if entry[2] < min_tide2:
+            min_tide2 = entry[2]
+            min_tide_time2 = entry[0]
+         tide_average2 = tide_average2[1:]+[entry[2]]
+         index2 += 1
+      if index1 != 0 and index1 % 15 == 0 and entry[1] == 1:
+         average1 = sum(tide_average1)/len(tide_average1)
+         if last_average1 == 0:
+            last_average1 = average1
+            continue
+         if average1 > last_average1 + 0.05:
+            if trend1 == 'low':
+               epochs.append([min_tide_time1,1,trend1])
+               min_tide1 = 99
+               max_tide1 = -99                        
+            trend1 = 'high'
+         elif average1 < last_average1 - 0.05:
+            if trend1 == 'high':
+               epochs.append([max_tide_time1,1,trend1])
+               min_tide1 = 99
+               max_tide1 = -99                            
+            trend1 = 'low'
+         last_average1 = average1
+
+      elif index2 != 0 and index2 % 15 == 0 and entry[1] == 2:
+         average2 = sum(tide_average2)/len(tide_average2)
+         if last_average2 == 0:
+            last_average2 = average2
+            continue
+         if average2 > last_average2 + 0.05:
+            if trend2 == 'low':
+               epochs.append([min_tide_time2,2,trend2])
+               min_tide2 = 99
+               max_tide2 = -99                        
+            trend2 = 'high'
+         elif average2 < last_average2 - 0.05:
+            if trend2 == 'high':
+               epochs.append([max_tide_time2,2,trend2])
+               min_tide2 = 99
+               max_tide2 = -99                            
+            trend2 = 'low'
+         last_average2 = average2
+
+   for index, entry in enumerate(new_tide_list):
+      for epoch_entry in epochs:
+         if entry[0] == epoch_entry[0] and entry[1] == epoch_entry[1]:
+            new_tide_list[index][3] = epoch_entry[2]
+   return new_tide_list
+    
 date = date.today()
 curtime = datetime.now()
 msgtime = str(curtime)[:-10]
@@ -194,8 +273,8 @@ except:
 #
 # Read initialization data from iparams table
 #
-try:
-#if True:
+#try:
+if True:
    sqlcur.execute("select * from iparams")
    iparams = sqlcur.fetchall()
    banflag = 0
@@ -259,7 +338,10 @@ try:
    dbquerytime = curtime - timedelta(days=plotdays)
    sqlcur.execute("select dtime, stationid, distance from sensors where dtime "+ \
                     "between ? and ? order by dtime", (str(dbquerytime),str(curtime)))
-   tidelist = sqlcur.fetchall()  
+   tidelist = sqlcur.fetchall()
+
+   tidelist = get_epochs(tidelist)
+
    if s1enable:
       sqlcur.execute("select dtime, batv from sensors where stationid = 1 and dtime "+ \
                     "between ? and ? order by dtime", (str(dbquerytime),str(curtime)))
@@ -284,16 +366,21 @@ try:
    tideave = 0
    tideave2 = 0
    maxtide = -99
+   maxtide2 = -99
    mintide = 99
-   tidents = 0
-   tidents2 = 0
+   mintide2 = 99
    minbatv = 99
    maxbatv = -99
    minbatv2 = 99
    maxbatv2 = -99
+   minwind = 99
+   maxwind = -99
+   mintemp = 99
+   maxtemp = -99
    tide_grid_nbr = 0
    vari_grid_nbr = 0
    wind_grid_nbr = 0
+   windir_grid_nbr = 0
    rain_grid_nbr = 0
    temp_grid_nbr = 0
    batv_grid_nbr = 0
@@ -308,6 +395,7 @@ try:
    tide_grid_y = 0
    vari_grid_y = 0
    wind_grid_y = 0
+   windir_grid_y = 0
    rain_grid_y = 0
    temp_grid_y = 0
    batv_grid_y = 0
@@ -316,17 +404,26 @@ try:
    if len(tidelist) != 0:
       tidesup = True
       for chkent in tidelist:
-         tidents += 1
-         if station1 and chkent[1] == 1 and s1enable and chkent[2] != None:
-            if chkent[2] > maxtide:
-               maxtide = station1cal - chkent[2]/12 
-            if chkent[2] < mintide:
-               mintide = station1cal - chkent[2]/12
-         elif station2 and chkent[1] == 2 and s2enable and chkent[2] != None:
-            if chkent[2] > maxtide2:
-               maxtide2 = station2cal - chkent[2]/12
-            if chkent[2] < mintide2:
-               mintide2 = station2cal - chkent[2]/12 
+         if station1 and chkent[1] == 1 and s1enable:
+            tidelevel = station1cal-chkent[2]/12
+            if tidelevel > maxtide:
+               maxtide = tidelevel 
+            if tidelevel < mintide:
+               mintide = tidelevel
+         elif station2 and chkent[1] == 2 and s2enable:
+            tidelevel = station2cal-chkent[2]/12
+            if tidelevel > maxtide2:
+               maxtide2 = tidelevel
+            if tidelevel < mintide2:
+               mintide2 = tidelevel 
+      if mintide == 99 or maxtide == -99:
+         station1 = False
+      if mintide2 == 99 or maxtide2 == -99:
+         station2 = False
+      if mintide2 < mintide:
+         mintide = mintide2
+      if maxtide2 > maxtide:
+         maxtide = maxtide2
    if len(batvlist) != 0 and s1enable:
       for chkent in batvlist:
          if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 3.3:
@@ -338,10 +435,10 @@ try:
       if minbatv == 99 or maxbatv == -99:
          batv = False
       else:
-         minbatv1 = int(minbatv/0.01)
-         minbatv = round(minbatv1*0.01,2)
-         maxbatv1 = int(maxbatv/0.01)
-         maxbatv = round(maxbatv1*0.01+0.01,2)
+         minbatv1 = int(minbatv/0.02)
+         minbatv = round(minbatv1*0.02,2)
+         maxbatv1 = int(maxbatv/0.02)
+         maxbatv = round(maxbatv1*0.02+0.02,2)
    else:
       batv = False
    if len(batv2list) != 0 and s2enable:
@@ -354,12 +451,35 @@ try:
       if minbatv2 == 99 or maxbatv2 == -99:
          batv2 = False
       else:
-         minbatv1 = int(minbatv2/0.01)
-         minbatv2 = round(minbatv1*0.01,2)
-         maxbatv1 = int(maxbatv2/0.01)
-         maxbatv2 = round(maxbatv1*0.01+0.01,2)
+         #minbatv1 = int(minbatv2/0.01)
+         #minbatv2 = round(minbatv1*0.01,2)
+         #maxbatv1 = int(maxbatv2/0.01)
+         #maxbatv2 = round(maxbatv1*0.01+0.01,2)
+         minbatv1 = int(minbatv2/0.02)
+         minbatv2 = round(minbatv1*0.02,2)
+         maxbatv1 = int(maxbatv2/0.02)
+         maxbatv2 = round(maxbatv1*0.02+0.02,2)
+
    else:
       batv2 = False
+      
+   if len(wxlist) != 0:
+      for chkent in wxlist:
+         if chkent[1] != None:
+            if chkent[1] > maxtemp:
+               maxtemp = chkent[1]
+            if chkent[1] < mintemp:
+               mintemp = chkent[1]
+         if chkent[4] != None:
+            if chkent[4] > maxwind:
+               maxwind = chkent[4]
+            if chkent[4] < minwind:
+               minwind = chkent[4]
+      if mintemp == 99 or maxtemp == -99:
+         pass
+   else:
+      pass
+           
    if maxpred > maxtide:
       maxtide = maxpred
    if minpred < mintide:
@@ -376,11 +496,16 @@ try:
       total_grids += vari_grid_nbr
       nbr_gaps += 1
    if wind:
-      wind_grid_nbr = 8
+      windir_grid_nbr = 1
+      total_grids += windir_grid_nbr
+      windir_height = windir_grid_nbr*grid_height
+      windir_grid_y = windir_height/windir_grid_nbr
+      wind_grid_nbr = round((maxwind-minwind)/5+0.5)
+      #wind_grid_nbr = 8
       total_grids += wind_grid_nbr
       nbr_gaps += 1
       wind_height = wind_grid_nbr*grid_height
-      wind_grid_y = round(wind_height/wind_grid_nbr/10,3)
+      wind_grid_y = round(wind_height/wind_grid_nbr/5,3)
    if rain:
       rain_grid_nbr = 4
       total_grids += rain_grid_nbr
@@ -388,13 +513,14 @@ try:
       rain_height = rain_grid_nbr*grid_height
       rain_grid_y = round(rain_height/rain_grid_nbr,3)
    if temp:
-      temp_grid_nbr = 9
+      #temp_grid_nbr = 9
+      temp_grid_nbr = round((maxtemp-mintemp)/5+0.5)
       total_grids += temp_grid_nbr
       nbr_gaps += 1
       temp_height = temp_grid_nbr*grid_height
       temp_grid_y = round(temp_height/temp_grid_nbr,3)
    if batv and s1enable:
-      batv_grid_nbr = round((maxbatv-minbatv)/0.01)
+      batv_grid_nbr = round((maxbatv-minbatv)/0.02)
       total_grids += batv_grid_nbr  
       nbr_gaps += 1
       batv_grid_span = round(maxbatv-minbatv,2)
@@ -402,7 +528,7 @@ try:
       batv_grid_y = round(batv_height/batv_grid_nbr,3)
       batv_y_fact = batv_height/batv_grid_span
    if batv2 and s2enable:
-      batv2_grid_nbr = round((maxbatv2-minbatv2)/0.01)
+      batv2_grid_nbr = round((maxbatv2-minbatv2)/0.02)
       total_grids += batv2_grid_nbr  
       nbr_gaps += 1
       batv2_grid_span = round(maxbatv2-minbatv2,2)
@@ -451,7 +577,9 @@ try:
       vari2_end_y = int(vari_height+vari2_start_y)
       next_y = vari2_end_y
    if wind:
-      wind_start_y = next_y+gap_size
+      windir_start_y = next_y+gap_size
+      windir_end_y = int(windir_height+windir_start_y)
+      wind_start_y = windir_end_y
       wind_end_y = int(wind_height+wind_start_y)
       next_y = wind_end_y
    if rain:
@@ -469,8 +597,8 @@ try:
    if batv2 and s2enable:
       batv2_start_y = next_y+gap_size
       batv2_end_y = int(batv2_height+batv2_start_y)
-#else:
-except Exception as errmsg:
+else:
+#except Exception as errmsg:
    pline = msgtime+' Error - '+str(errmsg)
    with open('/var/www/html/tideplot.log', 'a') as logfile:
       logfile.write (pline+'\n')
@@ -485,16 +613,16 @@ def proc_data():
           tide_start_y, tide_end_y, tide_height, station1, station2, station1chk, station2chk, \
           vari_start_y, vari_end_y, vari_height, msgtime, grid_height, \
           vari2_start_y, vari2_end_y, vari2_height, left_scale_x, right_scale_x, \
-          wind_start_y, wind_end_y, wind_height, s1enable, s2enable, \
-          rain_start_y, rain_end_y, rain_height, tideave, station1cal, station2cal, \
+          wind_start_y, wind_end_y, windir_start_y, windir_end_y, wind_height, s1enable, s2enable, \
+          windir_height, rain_start_y, rain_end_y, rain_height, tideave, station1cal, station2cal, \
           temp_start_y, temp_end_y, temp_height, tag_y, wxsup, station_location, \
-          batv, batv_start_y, batv_end_y, batv_height, debugit, \
-          batv_grid_nbr, batv_grid_y, batvinit, batv_y_fact, \
+          batv, batv_start_y, batv_end_y, batv_height, debugit, minwind, maxwind, \
+          batv_grid_nbr, batv_grid_y, batvinit, batv_y_fact, mintemp, maxtemp, \
           dtime_start_y, dtime_end_y, dtime_height, banflag, banner, \
-          tide_grid_nbr, vari_grid_nbr, wind_grid_nbr, rain_grid_nbr, \
-          tide_grid_y, vari_grid_y, wind_grid_y, rain_grid_y, tidesup, \
+          tide_grid_nbr, vari_grid_nbr, wind_grid_nbr, windir_grid_nbr, rain_grid_nbr, \
+          tide_grid_y, vari_grid_y, wind_grid_y, windir_grid_y, rain_grid_y, tidesup, \
           temp_grid_nbr, temp_grid_y, windarrow, tidelist, dbquerytime, \
-          listDate, localsunrise, localsunset, sun, mintide, minpred
+          listDate, localsunrise, localsunset, sun, mintide, mintide2, minpred
    canw_str = str(canvas_width)
    bored = 25
    currenttime = datetime.now()
@@ -544,10 +672,10 @@ def proc_data():
    outfile.write ('<input type="hidden" name="screenwidth" id="screenwidth" value=''/>\n')
    outfile.write ('<input type="hidden" name="screenheight" id="screenheight" value=''/>\n')
    if s1enable:
-      outfile.write ('<label for="station1">Station 1</label>\n')
+      outfile.write ('<label for="station1">Sensor 1</label>\n')
       outfile.write (f'<input type="checkbox" id="station1" name="station1" value="1" {station1chk}>&nbsp&nbsp&nbsp&nbsp\n')
    if s2enable:
-      outfile.write ('<label for="station2">Station 2</label>\n')
+      outfile.write ('<label for="station2">Sensor 2</label>\n')
       outfile.write (f'<input type="checkbox" id="station2" name="station2" value="0" {station2chk}>&nbsp&nbsp&nbsp&nbsp\n')
    outfile.write ('<label for="tags">Tide Markers</label>\n')
    outfile.write (f'<input type="checkbox" id="tags" name="tags" value="1" {tagchk}>&nbsp&nbsp&nbsp&nbsp\n')
@@ -641,7 +769,7 @@ def proc_data():
          outfile.write ('ctx.strokeStyle = "black";\n')
       else:
          outfile.write ('ctx.strokeStyle = "gray";\n')
-      linbr = str(x+int(mintide))
+      linbr = str(x+int(math.floor(mintide)))
       outfile.write ('ctx.beginPath();\n')
       outfile.write (f'ctx.moveTo({x_start},{int(gridy)});\n')
       outfile.write (f'ctx.lineTo({gridx},{int(gridy)});\n')
@@ -700,24 +828,28 @@ def proc_data():
          gridy += grid_height
    if wind:
       gridy = 0
-      for x in range(0,wind_grid_nbr+1):
-         if x == 0 or x == wind_grid_nbr:
+      for x in range(0,windir_grid_nbr+wind_grid_nbr+1):
+         if x == 0 or x == windir_grid_nbr+wind_grid_nbr:
             outfile.write ('ctx.strokeStyle = "black";\n')
          else:
             outfile.write ('ctx.strokeStyle = "gray";\n')
+
          outfile.write ('ctx.beginPath();\n')
-         outfile.write (f'ctx.moveTo({x_start},{int(wind_start_y+gridy)});\n')
-         outfile.write (f'ctx.lineTo({plot_width},{int(wind_start_y+gridy)});\n')
+         outfile.write (f'ctx.moveTo({x_start},{int(windir_start_y+gridy)});\n')
+         outfile.write (f'ctx.lineTo({plot_width},{int(windir_start_y+gridy)});\n')
          outfile.write ('ctx.stroke();\n')
-         outfile.write (f'ctx.fillText("{str((wind_grid_nbr-x)*10)}", {left_scale_x}, {int(wind_start_y+gridy+6)});\n')                          
-         outfile.write (f'ctx.fillText("{str((wind_grid_nbr-x)*10)}", {right_scale_x}, {int(wind_start_y+gridy+6)});\n')                          
-         gridy += wind_grid_y*10
+         if x == 0:
+            gridy += wind_grid_y*5
+            continue
+         outfile.write (f'ctx.fillText("{str(((wind_grid_nbr-x)+1)*5)}", {left_scale_x}, {int(windir_start_y+gridy+6)});\n')                          
+         outfile.write (f'ctx.fillText("{str(((wind_grid_nbr-x)+1)*5)}", {right_scale_x}, {int(windir_start_y+gridy+6)});\n')                          
+         gridy += wind_grid_y*5
       outfile.write ('ctx.beginPath();\n')
-      outfile.write (f'ctx.moveTo({x_start},{wind_start_y});\n')
+      outfile.write (f'ctx.moveTo({x_start},{windir_start_y});\n')
       outfile.write (f'ctx.lineTo({x_start},{wind_end_y});\n')
       outfile.write ('ctx.stroke();\n')
       outfile.write ('ctx.beginPath();\n')
-      outfile.write (f'ctx.moveTo({plot_width},{wind_start_y});\n')
+      outfile.write (f'ctx.moveTo({plot_width},{windir_start_y});\n')
       outfile.write (f'ctx.lineTo({plot_width},{wind_end_y});\n')
       outfile.write ('ctx.stroke();\n')                           
    if rain:
@@ -744,6 +876,7 @@ def proc_data():
       outfile.write (f'ctx.lineTo({plot_width},{rain_end_y});\n')
       outfile.write ('ctx.stroke();\n') 
    if temp:
+      print (str(mintemp),str(maxtemp))
       gridy = 0
       for x in range(0,temp_grid_nbr+1):
          if x == 0 or x == temp_grid_nbr:
@@ -755,8 +888,8 @@ def proc_data():
          outfile.write (f'ctx.lineTo({plot_width},{int(temp_start_y+gridy)});\n')
          outfile.write ('ctx.stroke();\n')
          outfile.write ('ctx.fillStyle = "black";\n')
-         outfile.write (f'ctx.fillText("{str((temp_grid_nbr-x)*10)}", {left_scale_x}, {int(temp_start_y+gridy+5)});\n')                          
-         outfile.write (f'ctx.fillText("{str((temp_grid_nbr-x)*10)}", {right_scale_x}, {int(temp_start_y+gridy+5)});\n')                          
+         outfile.write (f'ctx.fillText("{str((temp_grid_nbr-x)*5+(round(mintemp/5)*5))}", {left_scale_x}, {int(temp_start_y+gridy+5)});\n')                          
+         outfile.write (f'ctx.fillText("{str((temp_grid_nbr-x)*5+(round(mintemp/5)*5))}", {right_scale_x}, {int(temp_start_y+gridy+5)});\n')                          
          gridy += temp_grid_y         
       outfile.write ('ctx.beginPath();\n')
       outfile.write (f'ctx.moveTo({x_start},{temp_start_y});\n')
@@ -778,8 +911,8 @@ def proc_data():
          outfile.write (f'ctx.lineTo({plot_width},{int(batv_start_y+gridy)});\n')
          outfile.write ('ctx.stroke();\n')
          outfile.write ('ctx.fillStyle = "black";\n')
-         outfile.write (f'ctx.fillText({format(maxbatv-x*0.01,".2f")}, {left_scale_x}, {int(batv_start_y+gridy+5)});\n')                          
-         outfile.write (f'ctx.fillText({format(maxbatv-x*0.01,".2f")}, {right_scale_x}, {int(batv_start_y+gridy+5)});\n')                          
+         outfile.write (f'ctx.fillText({format(maxbatv-x*0.02,".2f")}, {left_scale_x}, {int(batv_start_y+gridy+5)});\n')                          
+         outfile.write (f'ctx.fillText({format(maxbatv-x*0.02,".2f")}, {right_scale_x}, {int(batv_start_y+gridy+5)});\n')                          
          gridy += batv_grid_y        
       outfile.write ('ctx.beginPath();\n')
       outfile.write (f'ctx.moveTo({x_start},{batv_start_y});\n')
@@ -801,8 +934,8 @@ def proc_data():
          outfile.write (f'ctx.lineTo({plot_width},{int(batv2_start_y+gridy)});\n')
          outfile.write ('ctx.stroke();\n')
          outfile.write ('ctx.fillStyle = "black";\n')
-         outfile.write (f'ctx.fillText({format(maxbatv2-x*0.01,".2f")}, {left_scale_x}, {int(batv2_start_y+gridy+5)});\n')                          
-         outfile.write (f'ctx.fillText({format(maxbatv2-x*0.01,".2f")}, {right_scale_x}, {int(batv2_start_y+gridy+5)});\n')                          
+         outfile.write (f'ctx.fillText({format(maxbatv2-x*0.02,".2f")}, {left_scale_x}, {int(batv2_start_y+gridy+5)});\n')                          
+         outfile.write (f'ctx.fillText({format(maxbatv2-x*0.02,".2f")}, {right_scale_x}, {int(batv2_start_y+gridy+5)});\n')                          
          gridy += batv2_grid_y         
       outfile.write ('ctx.beginPath();\n')
       outfile.write (f'ctx.moveTo({x_start},{batv2_start_y});\n')
@@ -870,12 +1003,13 @@ def proc_data():
             batv2timenext = datetime.strptime(batv2list[b2idx+1][0][:16], mintimeformat)
          if tidesup:
             while tidetime == predtime_hm and aidx < tidelen-1:
-               if station1 and s1enable and tidelist[aidx][1] == 1 and tidelist[aidx][2] != None:
+               if station1 and s1enable and tidelist[aidx][1] == 1:
                   tide_y = tide_end_y-int(((station1cal-tidelist[aidx][2]/12) -math.floor(mintide))*tide_grid_y)
                   tideft = station1cal-tidelist[aidx][2]/12
                   varift = tideft-predendft
                   vari_y = vari_end_y-int((varift+2)*grid_height)
-                  if savetime == 0 or tidetime > savetime + timedelta(minutes=15):          #outfile.write ('ctx.fillStyle = "blue";\n')
+                  if savetime == 0 or tidetime > savetime + timedelta(minutes=15):
+                     #outfile.write ('ctx.fillStyle = "blue";\n')
                      #outfile.write (f'ctx.fillRect({tide_x},{tide_y},1,2);\n')
                      pass
                   else:
@@ -903,10 +1037,7 @@ def proc_data():
                         variinit = True
                         if varistart_x == -99: varistart_x = tide_x
                         if varistart_y == -99: varistart_y = vari_y
-               #if debugit:
-               #   print ('stationid: '+str(tidelist[aidx][1]))
-               #   debugit -= 1                  
-               if station2 and s2enable and tidelist[aidx][1] == 2 and tidelist[aidx][2] != None:
+               if station2 and s2enable and tidelist[aidx][1] == 2:
                   tide_y = tide_end_y-int(((station2cal-tidelist[aidx][2]/12)-math.floor(mintide))*tide_grid_y)
                   tideft = station2cal-tidelist[aidx][2]/12
                   varift = tideft-predendft
@@ -1125,7 +1256,7 @@ def proc_data():
                if wind and wxinit:
                   if wxlist[widx][4] != '' and wxlist[widx][4] is not None:
                      wxendx = int((plottime+offtime)*(plot_width-30)/86400/plotdays+30)
-                     wxendy = wind_end_y-int(wxlist[widx][4]*grid_height/10)
+                     wxendy = wind_end_y-int(wxlist[widx][4]*grid_height/5)
                      windlist.append(wxendy)
                      if wxlist[widx][4] > maxwind:
                         maxwind = wxlist[widx][4]
@@ -1152,7 +1283,7 @@ def proc_data():
                            for point in windarrow:
                               x = point[0]
                               y = point[1]
-                              newarrow.append([int(x*windcos-y*windsin+wxendx),int(x*windsin+y*windcos+wxendy-75)])
+                              newarrow.append([int(x*windcos-y*windsin+wxendx),int(x*windsin+y*windcos+windir_start_y+grid_height/2)])
                            outfile.write (f'ctx.strokeStyle = "purple";\n')
                            outfile.write (f'ctx.beginPath();\n')
                            outfile.write (f'ctx.moveTo({newarrow[0][0]},{newarrow[0][1]});\n')
@@ -1171,7 +1302,7 @@ def proc_data():
                elif wind:
                   if wxlist[widx][4] != '' and wxlist[widx][4] is not None:
                      wxstartx = int((plottime+offtime)*(plot_width-30)/86400/plotdays+30)
-                     wxstarty = wind_end_y-int(wxlist[widx][4]*grid_height/10)
+                     wxstarty = wind_end_y-int(wxlist[widx][4]*grid_height/5)
                      windlist.append(wxstarty)
                      windcount += 1
                      if windcount == 5:
@@ -1203,7 +1334,7 @@ def proc_data():
                if temp and txinit:
                   if wxlist[widx][1] != '' and wxlist[widx][1] is not None:
                      txendx = int((plottime+offtime)*(plot_width-30)/86400/plotdays+30)
-                     txendy = temp_end_y-int((wxlist[widx][1])*grid_height/10)
+                     txendy = temp_end_y-int((wxlist[widx][1]-mintemp)/5*grid_height)
                      if widx % 10 == 0:
                         outfile.write (f'ctx.strokeStyle = "red";\n')
                         outfile.write (f'ctx.beginPath();\n')
@@ -1217,7 +1348,7 @@ def proc_data():
                elif temp:
                   if wxlist[widx][1] != '' and wxlist[widx][1] is not None:
                      txstartx = int((plottime+offtime)*(plot_width-30)/86400/plotdays+30)
-                     txstarty = temp_end_y-int((wxlist[widx][1])*grid_height/10)
+                     txstarty = temp_end_y-int((wxlist[widx][1]-mintemp)/5*grid_height)
                      txstarthx = txstartx
                      txstarthy = txstarty
                      txinit = True
@@ -1256,12 +1387,12 @@ def proc_data():
             plottime = tidetime.timestamp() - starttime.timestamp()
             startx = int((plottime+offtime)*(plot_width-30)/86400/plotdays+30)
             hourtime = tidetime.hour
-            if s1enable and station1 and ent[1] == 1 and ent[2] != None:
-               tidestate = str(ent[1]) # temporary until front end processing implemented
+            if s1enable and station1 and ent[1] == 1:
+               tidestate = str(ent[3]) 
                if tidestate == 'low' or tidestate == 'high':
                   if turntime == '' or abs(hourtime-turntime) >= 3:
                      turntime = hourtime
-                     peak = format(ent[2],'.1f')
+                     peak = format(station1cal-ent[2]/12,'.1f')
                      peaks = peak+' '+hrmin
                      outfile.write (f'ctx.fillStyle = "#ffffff";\n')
                      outfile.write (f'ctx.strokeRect({startx-21}, {tag_y-19}, 42, 30);\n')
@@ -1269,17 +1400,17 @@ def proc_data():
                      outfile.write (f'ctx.fillStyle = "blue";\n')
                      outfile.write (f'ctx.fillText("{hrmin}", {startx}, {tag_y+9});\n')
                      outfile.write (f'ctx.fillText("{peak}", {startx}, {tag_y-6});\n')
-            if s2enable and station2 and ent[1] == 2 and ent[2] != None:
-               tidestate = str(ent[1]) # temporary until front end processing implemented
+            if s2enable and station2 and ent[1] == 2:
+               tidestate = str(ent[3]) 
                if tidestate == 'low' or tidestate == 'high':
                   if turntime2 == '' or abs(hourtime-turntime2) >= 3:
                      turntime2 = hourtime
-                     peak = format(ent[3],'.1f')
+                     peak = format(station2cal-ent[2]/12,'.1f')
                      peaks = peak+' '+hrmin
                      outfile.write (f'ctx.fillStyle = "#ffffff";\n')
                      outfile.write (f'ctx.strokeRect({startx-21}, {tag_y-51}, 42, 30);\n')
                      outfile.write (f'ctx.fillRect({startx-21}, {tag_y-51}, 42, 30);\n')
-                     outfile.write (f'ctx.fillStyle = "green";\n')
+                     outfile.write (f'ctx.fillStyle = "darkgreen";\n')
                      outfile.write (f'ctx.fillText("{hrmin}", {startx}, {tag_y-23});\n')
                      outfile.write (f'ctx.fillText("{peak}", {startx}, {tag_y-38});\n')
          except Exception as errmsg:
@@ -1383,9 +1514,9 @@ def proc_data():
    outfile.write ('ctx.textAlign = "center";\n')
    outfile.write ('ctx.font = "14px Arial";\n')
    outfile.write ('ctx.fillStyle = "blue";\n')
-   outfile.write (f'ctx.fillText("Station 1", {plot_width/4}, {tide_start_y-4});\n')
+   outfile.write (f'ctx.fillText("Sensor 1", {plot_width/4}, {tide_start_y-4});\n')
    outfile.write ('ctx.fillStyle = "darkgreen";\n')
-   outfile.write (f'ctx.fillText("Station 2", {plot_width/4*2}, {tide_start_y-4});\n')
+   outfile.write (f'ctx.fillText("Sensor 2", {plot_width/4*2}, {tide_start_y-4});\n')
    if not tidesup and banflag == '1':
       outfile.write ('ctx.fillStyle = "black";\n')
       outfile.write (f'ctx.fillText("{banner}", {plot_width/2}, {tide_end_y-10});\n')      
@@ -1393,13 +1524,13 @@ def proc_data():
    outfile.write (f'ctx.fillText("Predicted", {plot_width/4*3}, {tide_start_y-4});\n')
    if s1enable and station1:
       outfile.write ('ctx.fillStyle = "blue";\n')
-      outfile.write (f'ctx.fillText("Variance between Station 1 and predicted high and low tide in feet", {plot_width/2}, {vari_start_y-4});\n')
+      outfile.write (f'ctx.fillText("Variation between Sensor 1 and tide in feet", {plot_width/2}, {vari_start_y-4});\n')
    if s2enable and station2:
       outfile.write ('ctx.fillStyle = "darkgreen";\n')
-      outfile.write (f'ctx.fillText("Variance between Station 2 and predicted high and low tide in feet", {plot_width/2}, {vari2_start_y-4});\n')
+      outfile.write (f'ctx.fillText("Variation between Sensor 2 and predicted tide in feet", {plot_width/2}, {vari2_start_y-4});\n')
    if wind:   
       outfile.write ('ctx.fillStyle = "purple";\n')
-      outfile.write (f'ctx.fillText("Wind speed and direction (mph)", {plot_width/2}, {wind_start_y-4});\n')
+      outfile.write (f'ctx.fillText("Wind speed (mph) and direction (arrow indicates wind direction relative to north)", {plot_width/2}, {windir_start_y-4});\n')
    if rain:      
       outfile.write ('ctx.fillStyle = "black";\n')
       outfile.write (f'ctx.fillText("Daily rainfall in inches", {plot_width/2}, {rain_start_y-4});\n')                          
@@ -1408,9 +1539,9 @@ def proc_data():
       outfile.write (f'ctx.fillText("Temperature in degrees F", {plot_width/2}, {temp_start_y-4});\n')                          
    if s1enable and batv:      
       outfile.write ('ctx.fillStyle = "black";\n')
-      outfile.write (f'ctx.fillText("Station 1 Sensor Battery Voltage", {plot_width/2}, {batv_start_y-4});\n')                          
+      outfile.write (f'ctx.fillText("Sensor 1 Battery Voltage", {plot_width/2}, {batv_start_y-4});\n')                          
    if s2enable and batv2:      
-      outfile.write (f'ctx.fillText("Station 2 Sensor Battery Voltage", {plot_width/2}, {batv2_start_y-4});\n')                          
+      outfile.write (f'ctx.fillText("Sensor 2 Battery Voltage", {plot_width/2}, {batv2_start_y-4});\n')                          
    outfile.write ('</script>\n')
    outfile.write ('</div>\n')
    outfile.write ('</body>\n')
