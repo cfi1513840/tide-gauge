@@ -471,6 +471,8 @@ try:
    maxwind = -99
    mintemp = 99
    maxtemp = -99
+   minrain = 99
+   maxrain = -99
    tide_grid_nbr = 0
    vari_grid_nbr = 0
    wind_grid_nbr = 0
@@ -533,10 +535,10 @@ try:
       if minbatv == 99 or maxbatv == -99:
          batv = False
       else:
-         minbatv1 = int(minbatv/0.02)
-         minbatv = round(minbatv1*0.02,2)
-         maxbatv1 = int(maxbatv/0.02)
-         maxbatv = round(maxbatv1*0.02+0.02,2)
+         minbatv1 = int(minbatv/0.05)
+         minbatv = round(minbatv1*0.05,2)
+         maxbatv1 = int(maxbatv/0.05)
+         maxbatv = round(maxbatv1*0.05+0.05,2)
    else:
       batv = False       
    if len(batv2list) != 0 and s2enable:
@@ -549,27 +551,34 @@ try:
       if minbatv2 == 99 or maxbatv2 == -99:
          batv2 = False
       else:
-         minbatv1 = int(minbatv2/0.02)
-         minbatv2 = round(minbatv1*0.02,2)
-         maxbatv1 = int(maxbatv2/0.02)
-         maxbatv2 = round(maxbatv1*0.02+0.02,2)
+         minbatv1 = int(minbatv2/0.05)
+         minbatv2 = round(minbatv1*0.05,2)
+         maxbatv1 = int(maxbatv2/0.05)
+         maxbatv2 = round(maxbatv1*0.05+0.05,2)
    else:
       batv2 = False
       
    if len(wxlist) != 0:
       for chkent in wxlist:
-         if chkent[1] != None:
+         if chkent[1] != None and chkent[1] != 0 and chkent[1] != '':
             if chkent[1] > maxtemp:
                maxtemp = chkent[1]
             if chkent[1] < mintemp:
                mintemp = chkent[1]
-         if chkent[4] != None:
+         if chkent[4] != None and chkent[4] != 0 and chkent[4] != '':
             if chkent[4] > maxwind:
                maxwind = chkent[4]
             if chkent[4] < minwind:
                minwind = chkent[4]
+         if chkent[10] != None and chkent[10] != 0 and chkent[10] != '':
+            if chkent[10] > maxrain:
+               maxrain = chkent[10]
+            if chkent[10] < minrain:
+               minrain = chkent[10]
       if mintemp == 99 or maxtemp == -99:
-         pass
+          temp = False
+      if minrain == 99 or maxrain == -99:
+          rain = False
    else:
       pass
    if maxpred > maxtide:
@@ -610,10 +619,7 @@ try:
       temp_height = temp_grid_nbr*grid_height
       temp_grid_y = round(temp_height/temp_grid_nbr,3)
    if batv and s1enable:
-      #with open('/var/www/html/tideplot.log', 'a') as logfile:
-      #   logfile.write ('maxbatv: '+str(maxbatv)+'\n')
-      #   logfile.write ('minbatv: '+str(minbatv)+'\n')
-      batv_grid_nbr = round((maxbatv-minbatv)/0.02)
+      batv_grid_nbr = round((maxbatv-minbatv)/0.05)
       total_grids += batv_grid_nbr  
       nbr_gaps += 1
       batv_grid_span = round(maxbatv-minbatv,2)
@@ -621,10 +627,7 @@ try:
       batv_grid_y = round(batv_height/batv_grid_nbr,3)
       batv_y_fact = batv_height/batv_grid_span
    if batv2 and s2enable:
-      #with open('/var/www/html/tideplot.log', 'a') as logfile:
-      #   logfile.write ('maxbatv: '+str(maxbatv2)+'\n')
-      #   logfile.write ('minbatv: '+str(minbatv2)+'\n')
-      batv2_grid_nbr = round((maxbatv2-minbatv2)/0.02)
+      batv2_grid_nbr = round((maxbatv2-minbatv2)/0.05)
       total_grids += batv2_grid_nbr  
       nbr_gaps += 1
       batv2_grid_span = round(maxbatv2-minbatv2,2)
@@ -1019,8 +1022,8 @@ def proc_data():
          print (f'ctx.lineTo({plot_width},{int(batv_start_y+gridy)});\n')
          print ('ctx.stroke();\n')
          print ('ctx.fillStyle = "black";\n')
-         print (f'ctx.fillText({format(maxbatv-x*0.02,".2f")}, {left_scale_x}, {int(batv_start_y+gridy+5)});\n')                          
-         print (f'ctx.fillText({format(maxbatv-x*0.02,".2f")}, {right_scale_x}, {int(batv_start_y+gridy+5)});\n')                          
+         print (f'ctx.fillText({format(maxbatv-x*0.05,".2f")}, {left_scale_x}, {int(batv_start_y+gridy+5)});\n')                          
+         print (f'ctx.fillText({format(maxbatv-x*0.05,".2f")}, {right_scale_x}, {int(batv_start_y+gridy+5)});\n')                          
          gridy += batv_grid_y        
       print ('ctx.beginPath();\n')
       print (f'ctx.moveTo({x_start},{batv_start_y});\n')
@@ -1042,8 +1045,8 @@ def proc_data():
          print (f'ctx.lineTo({plot_width},{int(batv2_start_y+gridy)});\n')
          print ('ctx.stroke();\n')
          print ('ctx.fillStyle = "black";\n')
-         print (f'ctx.fillText({format(maxbatv2-x*0.02,".2f")}, {left_scale_x}, {int(batv2_start_y+gridy+5)});\n')                          
-         print (f'ctx.fillText({format(maxbatv2-x*0.02,".2f")}, {right_scale_x}, {int(batv2_start_y+gridy+5)});\n')                          
+         print (f'ctx.fillText({format(maxbatv2-x*0.05,".2f")}, {left_scale_x}, {int(batv2_start_y+gridy+5)});\n')                          
+         print (f'ctx.fillText({format(maxbatv2-x*0.05,".2f")}, {right_scale_x}, {int(batv2_start_y+gridy+5)});\n')                          
          gridy += batv2_grid_y         
       print ('ctx.beginPath();\n')
       print (f'ctx.moveTo({x_start},{batv2_start_y});\n')
