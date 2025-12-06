@@ -168,7 +168,11 @@ class CreateHTML:
             if 'rain_rate' in weather:
                 rain_rate = str(weather['rain_rate'])+' in/hr'
             if 'rain_today' in weather:
-                rain_today = str(weather['rain_today'])+' in'
+                rain_today = weather['rain_today']
+                if rain_today != 0:
+                    rain_today = str(weather['rain_today'])+' in'
+                else:
+                    rain_today = ''
             if 'wind_direction_symbol' in weather:
                 wind_direction_symbol = weather['wind_direction_symbol']+' '
             if wind_gust == 0 and wind_speed != 0:

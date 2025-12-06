@@ -99,7 +99,7 @@ class TideDisplay:
                     column = 4, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Gusts',
                     wraplength = 75, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 7).grid(row = 0,
+                    relief = tk.RIDGE, width = 12).grid(row = 0,
                     column = 5,sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Barometer',
                     wraplength = 85, font = ("Arial", 12, 'bold'),
@@ -111,7 +111,7 @@ class TideDisplay:
                     column = 7, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Rain Today',
                     wraplength = 100, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 12).grid(row = 0,
+                    relief = tk.RIDGE, width = 14).grid(row = 0,
                     column = 8, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.temperature_tk_var, font = ("Arial", 12, 'bold'),
@@ -131,7 +131,7 @@ class TideDisplay:
                     column = 4, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.wind_gust_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 7).grid(row = 1,
+                    relief = tk.RIDGE, width = 12).grid(row = 1,
                     column = 5, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.baro_tk_var, font = ("Arial", 12, 'bold'),
@@ -143,7 +143,7 @@ class TideDisplay:
                     column = 7, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.rain_today_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 12).grid(row = 1,
+                    relief = tk.RIDGE, width = 14).grid(row = 1,
                     column = 8, sticky = tk.NSEW)
             tk.Label(proc_frame, fg='White', bg = 'DarkBlue',
                     textvariable = self.ndbc_title_tk_var,
@@ -173,7 +173,7 @@ class TideDisplay:
                     column = 4, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Gusts',
                     wraplength = 85, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 14).grid(row = 3,
+                    relief = tk.RIDGE, width = 12).grid(row = 3,
                     column = 5, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Barometer',
                     wraplength = 100, font = ("Arial", 12, 'bold'),
@@ -183,9 +183,9 @@ class TideDisplay:
                     wraplength = 100, font = ("Arial", 12, 'bold'),
                     relief = tk.RIDGE, width = 12).grid(row = 3,
                     column = 7, sticky = tk.NSEW)
-            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Visibility',
+            tk.Label(proc_frame, bg = 'LightBlue1', text = 'Wave Direction',
                     wraplength = 125, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 12).grid(row = 3,
+                    relief = tk.RIDGE, width = 14).grid(row = 3,
                     column = 8, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_time_tk_var, font = ("Arial", 12, 'bold'),
@@ -209,7 +209,7 @@ class TideDisplay:
                     column = 4, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_gust_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 14).grid(row = 4,
+                    relief = tk.RIDGE, width = 12).grid(row = 4,
                     column = 5, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_baro_tk_var, font = ("Arial", 12, 'bold'),
@@ -220,9 +220,10 @@ class TideDisplay:
                     font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
                     width = 12).grid(row = 4,
                     column = 7, sticky = tk.NSEW)
-            tk.Label(proc_frame, bg = 'snow', text = '',
+            tk.Label(proc_frame, bg = 'snow', textvariable = 
+                    self.ndbc_wave_direction_tk_var,
                     font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                    width = 12).grid(row = 4, column = 8, sticky = tk.NSEW)
+                    width = 14).grid(row = 4, column = 8, sticky = tk.NSEW)
                     
         sel_frame = tk.Frame(self.master, bg = 'snow', borderwidth = 2,
                 highlightbackground='black', highlightthickness=1,
@@ -334,10 +335,26 @@ class TideDisplay:
             air_temp_display = ''
             water_temp_display = ''
             self.ndbc_time_tk_var.set(ndbc_data['DateTime'])
-            self.ndbc_wind_tk_var.set(ndbc_data['Wind Speed'])
-            self.ndbc_gust_tk_var.set(ndbc_data['Wind Gust'])
-            self.ndbc_wave_height_tk_var.set(ndbc_data['Wave Height'])
-            self.ndbc_wave_period_tk_var.set(ndbc_data['Wave Period'])
+            wind_display = ndbc_data['Wind Speed']
+            if wind_display != 0 and wind_display != '' and wind_display != None:
+                self.ndbc_wind_tk_var.set(wind_display+' kts')
+            else:
+                self.ndbc_wind_tk_var.set('')
+            wind_gust_display = ndbc_data['Wind Gust']
+            if wind_gust_display != 0 and wind_gust_display != '' and wind_gust_display != None:
+                self.ndbc_gust_tk_var.set(wind_gust_display+' kts')
+            else:
+                self.ndbc_gust_tk_var.set('')
+            wave_height_display = ndbc_data['Wave Height']
+            if wave_height_display != '':
+                self.ndbc_wave_height_tk_var.set(wave_height_display+' ft')
+            else:
+                self.ndbc_wave_height_tk_var.set('')
+            wave_period_display = ndbc_data['Wave Period']
+            if wave_period_display != '':
+                self.ndbc_wave_period_tk_var.set(wave_period_display+' secs')
+            else:
+                self.ndbc_wave_period_tk_var.set('')
             air_temp_display = ndbc_data['Air Temperature']
             water_temp_display = ndbc_data['Water Temperature']
             if air_temp_display != '':
