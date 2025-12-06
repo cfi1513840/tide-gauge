@@ -138,15 +138,15 @@ class CreateHTML:
         #
         if weather and not self.tide_only:
             #print (weather)
-            temperature = 0
-            humidity = 0
-            baro = 0
-            wind_speed = 0
-            wind_gust = 0
+            temperature = ''
+            humidity = ''
+            baro = ''
+            wind_speed = ''
+            wind_gust = ''
             baro_trend = 0
-            dewpoint = 0
-            rain_rate = 0
-            rain_today = 0
+            dewpoint = ''
+            rain_rate = ''
+            rain_today = ''
             obs_time  = ''
             wind_direction_symbol = ''
             if 'obs_time' in weather:
@@ -166,9 +166,9 @@ class CreateHTML:
             if 'dewpoint' in weather:
                 dewpoint = str(weather['dewpoint'])+'&deg; F'
             if 'rain_rate' in weather:
-                rain_rate = weather['rain_rate']
+                rain_rate = str(weather['rain_rate'])+' in/hr'
             if 'rain_today' in weather:
-                rain_today = weather['rain_today']
+                rain_today = str(weather['rain_today'])+' in'
             if 'wind_direction_symbol' in weather:
                 wind_direction_symbol = weather['wind_direction_symbol']+' '
             if wind_gust == 0 and wind_speed != 0:
@@ -180,9 +180,9 @@ class CreateHTML:
             #if wind_gust < wind_speed+4 and wind_gust > wind_speed-4:
             #    wind_gust = '--'
             #else:
-            if wind_gust != 0:
+            if wind_gust != 0 and wind_gust != '':
                 wind_gust = str(wind_gust)+" mph"
-            if wind_speed != 0:
+            if wind_speed != 0 and wind_speed != '':
                 wind_speed = wind_direction_symbol+str(wind_speed)+" mph"
             
         # Check for minimum and maximum tide levels and get

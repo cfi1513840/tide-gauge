@@ -27,7 +27,7 @@ class GetWeather:
         self.local_tz = pytz.timezone('America/New_york')
         self.NDBC_report_flag = 0
         self.NDBC_error_count = 0
-        self.rain_24h = ''
+        self.rain_24h = 0.0
         
     def weather_underground(self, tide_only):
         #print ('getting wx underground')
@@ -179,14 +179,13 @@ class GetWeather:
           'wind_speed': '',
           'wind_direction_degrees': '',
           'rain_rate': '',
-          'rain_today': '',
+          'rain_today': 0,
           'wind_gust': '',
           'wind_direction_symbol': '',
           'obs_time': ''
           }        
         try:
             result=response.json()
-            #print (str(result))
             dumpedic = json.dumps(result)
             loadedic = json.loads(dumpedic)
             main = loadedic['main']
@@ -204,12 +203,13 @@ class GetWeather:
             if 'rain' in loadedic:
                 rain = loadedic['rain']
                 if '1h' in rain:
-                    weather['rain_rate'] = rain['1h']
+                    rain_fld = round(float(rain['1h']) * 0.03937, 2)
+                    weather['rain_rate'] = rain_fld
                     if phase == 'hour' or phase == 'day':
-                        self.rain_24h += rain['1h']
-            weather['rain_today'] = self.rain_24h
+                        self.rain_24h += rain_fld
+            weather['rain_today'] = round(self.rain_24h, 2)
             if phase == 'day':
-                self.rain_24h = ''
+                self.rain_24h = 0.0
         except ValueError as errmsg:
             logging.warning('Error processing OpenWeatherMap response '+str(errmsg))
             return {}

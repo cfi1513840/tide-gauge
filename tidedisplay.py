@@ -296,14 +296,29 @@ class TideDisplay:
     def update(self, weather, ndbc_data):
         """Update tkinter display"""
         if weather:
-            self.wind_speed_tk_var.set(str(weather['wind_speed'])+ ' mph')
-            self.temperature_tk_var.set(str(weather['temperature'])+'\u00b0 F')       
-            self.wind_gust_tk_var.set(str(weather['wind_gust'])+ ' mph')
+            wind_speed = weather['wind_speed']
+            if wind_speed != 0 and wind_speed != '':
+                self.wind_speed_tk_var.set(str(wind_speed)+ ' mph')
+            else:
+                self.wind_speed_tk_var.set('')
+            self.temperature_tk_var.set(str(weather['temperature'])+'\u00b0 F')
+            wind_gust = weather['wind_gust']
+            if wind_gust != 0 and wind_gust != '':            
+                self.wind_gust_tk_var.set(str(wind_gust)+ ' mph')
+            else:
+                self.wind_gust_tk_var.set('')
             self.humidity_tk_var.set(str(weather['humidity'])+ '%')
             self.dew_point_tk_var.set(str(weather['dewpoint'])+'\u00b0 F')
-            #self.baro_tk_var.set(str(weather['baro']))
-            self.rain_rate_tk_var.set(str(weather['rain_rate']))
-            self.rain_today_tk_var.set(str(weather['rain_today']))
+            rain_rate = weather['rain_rate']
+            if rain_rate != 0 and rain_rate != '':
+                self.rain_rate_tk_var.set(str(rain_rate)+' in/hr')
+            else:
+                self.rain_rate_tk_var.set('')
+            rain_today = weather['rain_today']
+            if rain_today != 0 and rain_today != '':
+                self.rain_today_tk_var.set(str(rain_today)+' in')
+            else:
+                self.rain_today_tk_var.set('')
             baro = weather['baro']
             if self.last_baro != 0:
                 if float(baro) < self.last_baro - 0.01:
