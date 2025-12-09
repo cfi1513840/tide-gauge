@@ -171,6 +171,11 @@ def get_epochs(tide_list):
    new_tide_list = []
    index1 = 0
    index2 = 0
+   min_tide_time1 = ''
+   min_tide_time2 = ''
+   max_tide_time1 = ''
+   max_tide_time2 = ''
+
    for entry in tide_list:
       new_tide_list.append([entry[0], entry[1], entry[2], ''])
       if entry[1] == 1:
