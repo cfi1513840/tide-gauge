@@ -1527,7 +1527,7 @@ def proc_data():
    outfile.write (f'ctx.fillText("Predicted", {plot_width/4*3}, {tide_start_y-4});\n')
    if s1enable and station1:
       outfile.write ('ctx.fillStyle = "blue";\n')
-      outfile.write (f'ctx.fillText("Variation between Sensor 1 and tide in feet", {plot_width/2}, {vari_start_y-4});\n')
+      outfile.write (f'ctx.fillText("Variation between Sensor 1 and predicted tide in feet", {plot_width/2}, {vari_start_y-4});\n')
    if s2enable and station2:
       outfile.write ('ctx.fillStyle = "darkgreen";\n')
       outfile.write (f'ctx.fillText("Variation between Sensor 2 and predicted tide in feet", {plot_width/2}, {vari2_start_y-4});\n')
