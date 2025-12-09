@@ -262,6 +262,12 @@ if load_dotenv(envfile):
    station_latitude = os.getenv('STATION_LATITUDE')
    station_longitude = os.getenv('STATION_LONGITUDE')
    tide_station_url = os.getenv('TIDE_STATION_URL')
+   with open('/var/www/html/tideplot.log', 'a') as logfile:
+      logfile.write (msgtime+ 'station_location: '+station_location+'\n')                  
+else:
+   with open('/var/www/html/tideplot.log', 'a') as logfile:
+      logfile.write (msgtime+ 'environment file read failed\n')                  
+    
 #
 # Establish SQLite3 connection to the tides.db database
 #
@@ -527,7 +533,7 @@ try:
       #   logfile.write ('maxtide2: '+str(maxtide2)+'\n')
    if len(batvlist) != 0 and s1enable:
       for chkent in batvlist:
-         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 3.6:
+         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
             if chkent[1] > maxbatv:
                maxbatv = chkent[1]
             if chkent[1] < minbatv:
@@ -543,7 +549,7 @@ try:
       batv = False       
    if len(batv2list) != 0 and s2enable:
       for chkent in batv2list:
-         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 3.6:
+         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
             if chkent[1] > maxbatv2:
                maxbatv2 = chkent[1]
             if chkent[1] < minbatv2:
@@ -613,7 +619,7 @@ try:
       rain_height = rain_grid_nbr*grid_height
       rain_grid_y = round(rain_height/rain_grid_nbr,3)
    if temp:
-      temp_grid_nbr = 9
+      temp_grid_nbr = round((maxtemp-mintemp)/5+0.5)
       total_grids += temp_grid_nbr
       nbr_gaps += 1
       temp_height = temp_grid_nbr*grid_height
@@ -999,9 +1005,13 @@ def proc_data():
          print (f'ctx.lineTo({plot_width},{int(temp_start_y+gridy)});\n')
          print ('ctx.stroke();\n')
          print ('ctx.fillStyle = "black";\n')
-         print (f'ctx.fillText("{str((temp_grid_nbr-x)*10)}", {left_scale_x}, {int(temp_start_y+gridy+5)});\n')                          
-         print (f'ctx.fillText("{str((temp_grid_nbr-x)*10)}", {right_scale_x}, {int(temp_start_y+gridy+5)});\n')                          
+         print (f'ctx.fillText("{str((temp_grid_nbr-x)*5+(round(mintemp/5)*5))}", {left_scale_x}, {int(temp_start_y+gridy+5)});\n')                          
+         print (f'ctx.fillText("{str((temp_grid_nbr-x)*5+(round(mintemp/5)*5))}", {right_scale_x}, {int(temp_start_y+gridy+5)});\n')                          
          gridy += temp_grid_y         
+         #print (f'ctx.fillText("{str((temp_grid_nbr-x)*10)}", {left_scale_x},
+         #{int(temp_start_y+gridy+5)});\n')                          
+         # print (f'ctx.fillText("{str((temp_grid_nbr-x)*10)}", {right_scale_x},    #{int(temp_start_y+gridy+5)});\n')                          
+         #gridy += temp_grid_y         
       print ('ctx.beginPath();\n')
       print (f'ctx.moveTo({x_start},{temp_start_y});\n')
       print (f'ctx.lineTo({x_start},{temp_end_y});\n')
@@ -1443,7 +1453,7 @@ def proc_data():
                if temp and txinit:
                   if wxlist[widx][1] != '' and wxlist[widx][1] is not None:
                      txendx = int((plottime+offtime)*(plot_width-30)/86400/plotdays+30)
-                     txendy = temp_end_y-int((wxlist[widx][1])*grid_height/10)
+                     txendy = temp_end_y-int((wxlist[widx][1]-mintemp)/5*grid_height)
                      if widx % 10 == 0:
                         print (f'ctx.strokeStyle = "red";\n')
                         print (f'ctx.beginPath();\n')
@@ -1457,7 +1467,7 @@ def proc_data():
                elif temp:
                   if wxlist[widx][1] != '' and wxlist[widx][1] is not None:
                      txstartx = int((plottime+offtime)*(plot_width-30)/86400/plotdays+30)
-                     txstarty = temp_end_y-int((wxlist[widx][1])*grid_height/10)
+                     txstarty = temp_end_y-int((wxlist[widx][1]-mintemp)/5*grid_height)
                      txstarthx = txstartx
                      txstarthy = txstarty
                      txinit = True

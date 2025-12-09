@@ -428,7 +428,7 @@ if True:
          maxtide = maxtide2
    if len(batvlist) != 0 and s1enable:
       for chkent in batvlist:
-         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 3.3:
+         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
             if chkent[1] > maxbatv:
                maxbatv = chkent[1]
             if chkent[1] < minbatv:
@@ -445,7 +445,7 @@ if True:
       batv = False
    if len(batv2list) != 0 and s2enable:
       for chkent in batv2list:
-         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 3.3:
+         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
             if chkent[1] > maxbatv2:
                maxbatv2 = chkent[1]
             if chkent[1] < minbatv2:
@@ -518,7 +518,6 @@ if True:
       rain_height = rain_grid_nbr*grid_height
       rain_grid_y = round(rain_height/rain_grid_nbr,3)
    if temp:
-      #temp_grid_nbr = 9
       temp_grid_nbr = round((maxtemp-mintemp)/5+0.5)
       total_grids += temp_grid_nbr
       nbr_gaps += 1

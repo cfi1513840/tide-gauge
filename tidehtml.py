@@ -159,6 +159,8 @@ class CreateHTML:
                 baro = weather['baro']
             if 'wind_speed' in weather:
                 wind_speed = weather['wind_speed']
+                if wind_speed == 0:
+                    wind_speed = ''
             if 'wind_gust' in weather:
                 wind_gust = weather['wind_gust']
             if 'baro_trend' in weather:
@@ -166,11 +168,15 @@ class CreateHTML:
             if 'dewpoint' in weather:
                 dewpoint = str(weather['dewpoint'])+'&deg; F'
             if 'rain_rate' in weather:
-                rain_rate = str(weather['rain_rate'])+' in/hr'
+                rain_rate = weather['rain_rate']
+                if rain_rate != 0 and rain_rate != '':
+                    rain_rate = str(rain_rate)+' in/hr'
+                else:
+                    rain_rate = ''
             if 'rain_today' in weather:
                 rain_today = weather['rain_today']
-                if rain_today != 0:
-                    rain_today = str(weather['rain_today'])+' in'
+                if rain_today != 0 and rain_today != '':
+                    rain_today = str(rain_today)+' in'
                 else:
                     rain_today = ''
             if 'wind_direction_symbol' in weather:
@@ -376,11 +382,14 @@ class CreateHTML:
         outfile.write ('<td colspan="5" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         outfile.write (f'{self.cons.STATION_LOCATION} Tide & Weather - {dispdate}.&nbsp&nbspSunrise: {sunrise} - Sunset: {sunset}</span></p>\n')
         outfile.write ('</td>\n')
-        outfile.write ('<td colspan="4" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
+        outfile.write ('<td colspan="2" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         outfile.write (f'BatV: {round(float(batv)/1000, 3)}&nbsp&nbsp&nbsprssi: {rssi}</span></p>\n')
         outfile.write ('</td>\n')
         outfile.write ('<td colspan="2" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         outfile.write (f'<form action="/alertlogin.html"><button type="submit">Alerts</button></form></span></p>\n')
+        outfile.write ('</td>\n')
+        outfile.write ('<td colspan="2" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
+        outfile.write (f'<form action="/tideplot.html"><button type="submit">Plots</button></form></span></p>\n')
         outfile.write ('</td>\n')
         outfile.write ('</tr>\n')
         if not self.tide_only:

@@ -86,6 +86,7 @@ class Tide:
         self.weather_retry = False
         self.ndbc_retry = False
         self.save_the_day = datetime.strftime(self.current_time, "%d")
+        self.rain_day = datetime.strftime(self.current_time, "%d")
         self.iparams_dict = db.fetch_iparams()
         self.visit = False
         self.sensor_readings = []
@@ -262,7 +263,8 @@ class Tide:
             #
             # Local weather is updated on the hour and every five minutes
             #
-            if self.save_the_day != current_day:
+            if self.rain_day != current_day:
+                self.rain_day = current_day
                 phase = 'day'
             elif int(current_minute) == 0:
                 phase = 'hour'
