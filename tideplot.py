@@ -65,7 +65,9 @@ def tide_predict():
       if len(predicts) == 0:
          trytide += 1
          if trytide >= 3:
-            exit()
+            with open('/var/www/html/tideplot.log', 'a') as logfile:
+               logfile.write (msgtime+' tideplot: predicted tide unavailable\n')
+            return predicts
    lastime = ''
    for line in predicts:
       thistime = line[0]
@@ -278,8 +280,8 @@ except:
 #
 # Read initialization data from iparams table
 #
-#try:
-if True:
+try:
+#if True:
    sqlcur.execute("select * from iparams")
    iparams = sqlcur.fetchall()
    banflag = 0
@@ -606,8 +608,8 @@ if True:
    if batv2 and s2enable:
       batv2_start_y = next_y+gap_size
       batv2_end_y = int(batv2_height+batv2_start_y)
-else:
-#except Exception as errmsg:
+#else:
+except Exception as errmsg:
    pline = msgtime+' Error - '+str(errmsg)
    with open('/var/www/html/tideplot.log', 'a') as logfile:
       logfile.write (pline+'\n')

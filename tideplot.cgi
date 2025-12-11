@@ -65,7 +65,9 @@ def tide_predict():
       if len(predicts) == 0:
          trytide += 1
          if trytide >= 3:
-            exit()
+            with open('/var/www/html/tideplot.log', 'a') as logfile:
+               logfile.write (msgtime+' tideplot: predicted tide unavailable\n')
+            return predicts
    lastime = ''
    for line in predicts:
       thistime = line[0]
@@ -243,8 +245,8 @@ def get_epochs(tide_list):
 date = date.today()
 curtime = datetime.now()
 msgtime = str(curtime)[:-10]
-with open('/var/www/html/tideplot.log', 'a') as logfile:
-   logfile.write (msgtime+' tideplot: Starting Execution\n')
+#with open('/var/www/html/tideplot.log', 'a') as logfile:
+#   logfile.write (msgtime+' tideplot: Starting Execution\n')
 
 #filetag = "tide"+datetime.strftime(curtime, "%y%m%d%H%M%S")+".html"
 #outfile = open(filetag, "w")   
@@ -267,8 +269,8 @@ if load_dotenv(envfile):
    station_latitude = os.getenv('STATION_LATITUDE')
    station_longitude = os.getenv('STATION_LONGITUDE')
    tide_station_url = os.getenv('TIDE_STATION_URL')
-   with open('/var/www/html/tideplot.log', 'a') as logfile:
-      logfile.write (msgtime+ 'station_location: '+station_location+'\n')                  
+   #with open('/var/www/html/tideplot.log', 'a') as logfile:
+   #   logfile.write (msgtime+ 'station_location: '+station_location+'\n')                  
 else:
    with open('/var/www/html/tideplot.log', 'a') as logfile:
       logfile.write (msgtime+ 'environment file read failed\n')                  
