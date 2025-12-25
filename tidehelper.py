@@ -98,7 +98,7 @@ class Constants:
         lines = infile.readlines()
     for line in lines:
         line1 = line.replace(' ','')
-        line1 = line.replace('\n','')
+        line1 = line1.replace('\n','')
         if len(line1) == 0:
            continue
         if line1[0] == '#':
