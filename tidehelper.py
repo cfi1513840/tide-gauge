@@ -70,6 +70,7 @@ class Constants:
 
     EMAIL_USERNAME = secure_dict['EMAIL_USERNAME']
     EMAIL_PASSWORD = secure_dict['EMAIL_PASSWORD']
+    BREVO_ADDRESS = secure_dict['BREVO_EMAIL_ADDRESS']
     BREVO_USERNAME = secure_dict['BREVO_EMAIL_USERNAME']
     BREVO_PASSWORD = secure_dict['BREVO_EMAIL_PASSWORD']
     INFLUXDB_TOKEN = secure_dict['INFLUXDB_TOKEN']
@@ -253,7 +254,8 @@ class Notify:
                         sub = ent[9:]
                         break
                 msg = EmailMessage()
-                msg["From"] = "tidealert@bbitide.org"
+                #msg["From"] = "tidealert@bbitide.org"
+                msg["From"] = self.cons.BREVO_ADDRESS
                 msg["To"] = email_recipient
                 msg["Subject"] = sub
                 msg.set_content(email_message)
