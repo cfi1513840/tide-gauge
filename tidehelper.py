@@ -144,6 +144,9 @@ class Constants:
         INFLUXDB_NAMES = os.getenv('INFLUXDB_NAMES')
         TIME_ZONE = os.getenv('TIME_ZONE')
         NWS_RADAR = os.getenv('NWS_RADAR')
+        TK_CANVAS_WIDTH = os.getenv('TK_CANVAS_WIDTH')
+        TK_CANVAS_HEIGHT = os.getenv('TK_CANVAS_HEIGHT')
+        TK_FULLSCREEN = os.getenv('TK_FULLSCREEN')
 
     else:
         print ('Unable to load Environment file')
