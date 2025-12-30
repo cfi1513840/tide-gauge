@@ -1,30 +1,24 @@
-#import math
-#import smtplib
-#import socket
-#import sqlite3
-#import time
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import StringVar
 from datetime import datetime, timedelta, timezone
-#from influxdb_client import InfluxDBClient, Point, WritePrecision
-#from influxdb_client.client.write_api import SYNCHRONOUS
-#from cryptography.fernet import Fernet
-#from suntime import Sun, SunTimeException
-#from twilio.rest import Client
-#import feedparser
-#import serial
-#import requests
-#import tideutils
 import logging
 
 class TideDisplay:
 
-    def __init__(self, station, cons, tide_only):
+    def __init__(self, station, cons, tide_only, state):
         self.cons = cons
+        self.state = state
         self.tide_only = tide_only
         self.active_station = station
-        self.canvas_width = 1200
-        self.canvas_height = 680
+        if cons.TK_CANVAS_WIDTH != None:
+            self.canvas_width = int(cons.TK_CANVAS_WIDTH)
+        else:
+            self.canvas_width = 1000
+        if cons.TK_CANVAS_HEIGHT != None:
+            self.canvas_height = int(cons.TK_CANVAS_HEIGHT)
+        else:
+            self.canvas_height = 440
         self.y_start = 0
         self.y_plot_end = 30
         self.start_plot_x = 30
@@ -35,8 +29,12 @@ class TideDisplay:
         self.y_grid_size = (self.canvas_height-(self.y_plot_start+self.y_plot_end))/13
         self.master = tk.Tk()
         self.master.configure(background='LightBlue1')
-        self.master.geometry('+10+50')
+        self.master.geometry(f'{self.canvas_width}x{self.canvas_height+345}+10+40')
+        if int(cons.TK_FULLSCREEN) == 1:
+            self.master.attributes('-fullscreen', True)
+        self.master.bind("<Escape>", lambda event: exit())
         if not self.tide_only:
+            self.local_wx_time_tk_var = StringVar()
             self.wind_speed_tk_var = StringVar()
             self.temperature_tk_var = StringVar()
             self.wind_gust_tk_var = StringVar()
@@ -57,6 +55,8 @@ class TideDisplay:
             self.ndbc_wave_direction_tk_var = StringVar()
             self.ndbc_baro_tk_var = StringVar()
             self.ndbc_title_tk_var = StringVar()
+        self.title_bar_tk_var = StringVar()
+        self.title_bar_tk_var.set(state.title_bar)
         self.tk_display_width_tk_var = StringVar()
         self.display_predicted_tide_tk_var = StringVar()
         self.station_battery_voltage_tk_var = StringVar()
@@ -65,86 +65,114 @@ class TideDisplay:
         self.active_station_tk_var.set(str(self.active_station))
         self.tk_display_width_tk_var.set('1')
         self.display_predicted_tide_tk_var.set('1')
-        #
+        #        self.master = tk.Tk()
+        #self.master.configure(background='LightBlue1')
+        #self.master.geometry('+10+40')
+        #if int(cons.TK_FULLSCREEN) == 1:
+        #    self.master.attributes('-fullscreen', True)
+        #self.master.bind("<Escape>", lambda event: exit())
+
         # Create tkinter display format
         #
         proc_frame = tk.Frame(
-                self.master, borderwidth = 2, highlightbackground =
-                'black', highlightthickness=1, width = 500, pady=1)
-        proc_frame.pack(side='top', fill='both', anchor='center')
+          self.master,
+          borderwidth = 2,
+          highlightbackground = 'black',
+          highlightthickness = 1,
+          width = self.canvas_width,
+          height = self.canvas_height, pady=1)
+        proc_frame.pack(side='top', fill='x')
+        proc_frame.pack_propagate(False)
+        proc_frame.grid_columnconfigure(0, weight=2)
+        proc_frame.grid_columnconfigure(1, weight=1)
+        proc_frame.grid_columnconfigure(2, weight=1)
+        proc_frame.grid_columnconfigure(3, weight=1)
+        proc_frame.grid_columnconfigure(4, weight=1)
+        proc_frame.grid_columnconfigure(5, weight=1)
+        proc_frame.grid_columnconfigure(6, weight=1)
+        proc_frame.grid_columnconfigure(7, weight=1)
+        proc_frame.grid_columnconfigure(8, weight=2)
 
+        proc_frame.grid_rowconfigure(0, weight=1)
+        proc_frame.grid_rowconfigure(1, weight=1)
+        proc_frame.grid_rowconfigure(2, weight=1)
+        proc_frame.grid_rowconfigure(3, weight=1)
+        proc_frame.grid_rowconfigure(4, weight=1)
+        proc_frame.grid_rowconfigure(5, weight=1)
         if not self.tide_only:
             self.ndbc_title_tk_var.set(
               f'{self.cons.NDBC_TITLE}')
-              #f' - Location: {str(self.cons.NDBC_LATITUDE)} '+
-              #f'{str(self.cons.NDBC_LONGITUDE)}')
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Local Weather',
-                    wraplength = 75, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 22).grid(row = 0,
-                    column = 0, rowspan=2, sticky = tk.NSEW)
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 0,
+                    column = 0, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Air Temp',
-                    wraplength = 75, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 7).grid(row = 0,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 0,
                     column = 1, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Humidity',
-                    wraplength = 75, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 7).grid(row = 0,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 0,
                     column = 2, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Dew Pt',
-                    wraplength = 85, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 7).grid(row = 0,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 0,
                     column = 3, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Winds',
-                    wraplength = 90, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 11).grid(row = 0,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 0,
                     column = 4, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Gusts',
-                    wraplength = 75, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 12).grid(row = 0,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 0,
                     column = 5,sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Barometer',
-                    wraplength = 85, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 8).grid(row = 0,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 0,
                     column = 6, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Rain Rate',
-                    wraplength = 75, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 11).grid(row = 0,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 0,
                     column = 7, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Rain Today',
-                    wraplength = 100, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 14).grid(row = 0,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 0,
                     column = 8, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
+                    self.local_wx_time_tk_var, font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 1,
+                    column = 0, sticky = tk.NSEW)
+            tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.temperature_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 7).grid(row = 1,
+                    relief = tk.RIDGE).grid(row = 1,
                     column = 1, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.humidity_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 7).grid(row = 1,
+                    relief = tk.RIDGE).grid(row = 1,
                     column = 2, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.dew_point_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 7).grid(row = 1,
+                    relief = tk.RIDGE).grid(row = 1,
                     column = 3, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.wind_speed_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 11).grid(row = 1,
+                    relief = tk.RIDGE).grid(row = 1,
                     column = 4, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.wind_gust_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 12).grid(row = 1,
+                    relief = tk.RIDGE).grid(row = 1,
                     column = 5, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.baro_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 8).grid(row = 1,
+                    relief = tk.RIDGE).grid(row = 1,
                     column = 6, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.rain_rate_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 9).grid(row = 1,
+                    relief = tk.RIDGE).grid(row = 1,
                     column = 7, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.rain_today_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 14).grid(row = 1,
+                    relief = tk.RIDGE).grid(row = 1,
                     column = 8, sticky = tk.NSEW)
             tk.Label(proc_frame, fg='White', bg = 'DarkBlue',
                     textvariable = self.ndbc_title_tk_var,
@@ -152,152 +180,127 @@ class TideDisplay:
                     relief = tk.RIDGE).grid(row = 2, column = 0,
                     columnspan = 9, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1',
-                    text = 'Observation Time', wraplength = 150,
+                    text = 'Observation Time',
                     font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 22).grid(row = 3,
+                    relief = tk.RIDGE).grid(row = 3,
                     column = 0, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Air Temp',
-                    wraplength = 75, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 14).grid(row = 3,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 3,
                     column = 1, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Wave Hgt',
-                    wraplength = 75, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 13).grid(row = 3,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 3,
                     column = 2, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Wave Per',
-                    wraplength = 85, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 14).grid(row = 3,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 3,
                     column = 3, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Winds',
-                    wraplength = 80, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 16).grid(row = 3,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 3,
                     column = 4, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Gusts',
-                    wraplength = 85, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 12).grid(row = 3,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 3,
                     column = 5, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Barometer',
-                    wraplength = 100, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 14).grid(row = 3,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 3,
                     column = 6, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Water Temp',
-                    wraplength = 100, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 12).grid(row = 3,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 3,
                     column = 7, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'LightBlue1', text = 'Wave Direction',
-                    wraplength = 125, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 14).grid(row = 3,
+                    font = ("Arial", 12, 'bold'),
+                    relief = tk.RIDGE).grid(row = 3,
                     column = 8, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_time_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 22).grid(row = 4,
+                    relief = tk.RIDGE).grid(row = 4,
                     column = 0, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_air_temperature_tk_var, font = ("Arial", 12,
-                    'bold'), relief = tk.RIDGE, width = 14).grid(row = 4,
+                    'bold'), relief = tk.RIDGE).grid(row = 4,
                     column = 1, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_wave_height_tk_var, font = ("Arial", 12,
-                    'bold'), relief = tk.RIDGE, width = 13).grid(row = 4,
+                    'bold'), relief = tk.RIDGE).grid(row = 4,
                     column = 2, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_wave_period_tk_var, font = ("Arial", 12,
-                    'bold'), relief = tk.RIDGE, width = 14).grid(row = 4,
+                    'bold'), relief = tk.RIDGE).grid(row = 4,
                     column = 3, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_wind_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 16).grid(row = 4,
+                    relief = tk.RIDGE).grid(row = 4,
                     column = 4, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_gust_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 12).grid(row = 4,
+                    relief = tk.RIDGE).grid(row = 4,
                     column = 5, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_baro_tk_var, font = ("Arial", 12, 'bold'),
-                    relief = tk.RIDGE, width = 14).grid(row = 4,
+                    relief = tk.RIDGE).grid(row = 4,
                     column = 6, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable =
                     self.ndbc_water_temperature_tk_var,
-                    font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                    width = 12).grid(row = 4,
+                    font = ("Arial", 12, 'bold'), relief = tk.RIDGE).grid(
+                    row = 4,
                     column = 7, sticky = tk.NSEW)
             tk.Label(proc_frame, bg = 'snow', textvariable = 
                     self.ndbc_wave_direction_tk_var,
-                    font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                    width = 14).grid(row = 4, column = 8, sticky = tk.NSEW)
+                    font = ("Arial", 12, 'bold'), relief = tk.RIDGE).grid(
+                    row = 4, column = 8, sticky = tk.NSEW)
                     
-        sel_frame = tk.Frame(self.master, bg = 'snow', borderwidth = 2,
-                highlightbackground='black', highlightthickness=1,
-                width = 500, pady=1)
-        sel_frame.pack(side='top', fill='both', anchor='center')
-        tk.Label(sel_frame,bg = 'LightBlue1', text = 'Active Sensor',
+        sel_frame = tk.Frame(self.master,
+          bg = 'LightBlue1', borderwidth = 2,
+          highlightbackground='black', highlightthickness=1,
+          height=45, pady=1)
+        sel_frame.pack(side='top', fill='x')
+        sel_frame.pack_propagate(False)
+
+        tk.Label(sel_frame,bg = 'LightBlue1', textvariable =
+                self.title_bar_tk_var, font = ("Arial", 12, 'bold'),
+                relief = tk.RIDGE).grid(row = 1,
+                column = 0, sticky = tk.NSEW)
+        tk.Label(sel_frame,bg = 'LightBlue1', text = " "+chr(8211)+' Active Sensor: ',
                 font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                width = 12, borderwidth = 0, highlightthickness=0).grid(
-                row = 2, column = 0, sticky = tk.NSEW)
+                borderwidth = 0, highlightthickness=0).grid(
+                row = 1, column = 1, sticky = tk.NSEW)
         tk.Label(sel_frame,bg = 'snow', textvariable =
                 self.active_station_tk_var, font = ("Arial", 12,
-                'bold'), relief = tk.RIDGE, width = 2).grid(row = 2,
-                column = 1, sticky = tk.NSEW)
-        tk.Label(sel_frame,bg = 'LightBlue1', text = 'Battery Voltage',
+                'bold'), relief = tk.RIDGE).grid(row = 1,
+                column = 2, sticky = tk.NSEW)
+        tk.Label(sel_frame,bg = 'LightBlue1', text = " "+chr(8211)+' Battery Voltage: ',
             font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-            width = 14, borderwidth = 0, highlightthickness=0).grid(
-            row = 2, column = 2, sticky = tk.NSEW)
+            borderwidth = 0, highlightthickness=0).grid(
+            row = 1, column = 3, sticky = tk.NSEW)
         tk.Label(sel_frame,bg = 'snow', textvariable =
                 self.station_battery_voltage_tk_var,
-                font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                width = 5).grid(row = 2, column = 3,
+                font = ("Arial", 12, 'bold'), relief = tk.RIDGE
+                ).grid(row = 1, column = 4,
                 sticky = tk.NSEW)
-        tk.Label(sel_frame,bg = 'LightBlue1', text = 'Sig Strength',
-                font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                width = 12).grid(row = 2, column = 4, sticky = tk.NSEW)
+        tk.Label(sel_frame,bg = 'LightBlue1', text = " "+chr(8211)+' Sig Strength: ',
+                font = ("Arial", 12, 'bold'), relief = tk.RIDGE
+                ).grid(row = 1, column = 5, sticky = tk.NSEW)
         tk.Label(sel_frame,bg = 'snow', textvariable =
                 self.station_signal_strength_tk_var,
-                font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                width = 8).grid(row = 2, column = 5,
+                font = ("Arial", 12, 'bold'), relief = tk.RIDGE
+                ).grid(row = 1, column = 6,
                 sticky = tk.NSEW)
-        tk.Label(sel_frame,bg = 'LightBlue1', text = 'Plot Span',
-                font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
-                width = 12, borderwidth = 0, highlightthickness=0).grid(
-                row = 2, column = 6, sticky = tk.NSEW)
-        tk.Radiobutton(sel_frame, bg = 'snow', text = '48 Hr',
-                font = ("Arial", 12, 'bold'), value='1',
-                variable = self.tk_display_width_tk_var, width = 4).grid(
-                row = 2, column = 7, sticky = tk.NSEW)
-        tk.Radiobutton(sel_frame, bg = 'snow', text = '24 Hr',
-                font = ("Arial", 12, 'bold'), value='2',
-                variable = self.tk_display_width_tk_var, width = 4).grid(
-                row = 2, column = 8, sticky = tk.NSEW)
-        tk.Radiobutton(sel_frame, bg = 'snow', text = '12 Hr',
-                font = ("Arial", 12, 'bold'), value='3',
-                variable = self.tk_display_width_tk_var, width = 4).grid(
-                row = 2, column = 9, sticky = tk.NSEW)
-        tk.Radiobutton(sel_frame, bg = 'snow', text = '6 Hr',
-                font = ("Arial", 12, 'bold'), value='4',
-                variable = self.tk_display_width_tk_var, width = 4).grid(
-                row = 2, column = 10, sticky = tk.NSEW)
-        tk.Label(sel_frame,bg = 'LightBlue1', text =
-                'Predicted Tide Trace', font = ("Arial", 12, 'bold'),
-                relief = tk.RIDGE, width = 20, borderwidth = 0,
-                highlightthickness=0).grid(row = 2, column = 11,
-                sticky = tk.NSEW)
-        tk.Radiobutton(sel_frame, bg = 'snow', text = 'On',
-                font = ("Arial", 12, 'bold'), value='1',
-                variable = self.display_predicted_tide_tk_var,
-                width = 3).grid(row = 2, column = 12, sticky = tk.NSEW)
-        tk.Radiobutton(sel_frame, bg = 'snow', text = 'Off',
-                font = ("Arial", 12, 'bold'), value='0', variable =
-                self.display_predicted_tide_tk_var, width = 3).grid(
-                row = 2, column = 13, sticky = tk.NSEW)
         self.plot_window = tk.Canvas(self.master, bg = "#E0F8F1",
                 width = self.canvas_width, height=self.canvas_height)
         self.plot_window.pack(side='top', fill='both')
         
-        #import logging
         logging.info('Tkinter display initialized')
 
     def update(self, weather, ndbc_data):
         """Update tkinter display"""
+        self.title_bar_tk_var.set(self.state.title_bar)
         if weather:
+            self.local_wx_time_tk_var.set(weather['obs_time'])
             wind_speed = weather['wind_speed']
             if wind_speed != 0 and wind_speed != '':
                 self.wind_speed_tk_var.set(str(wind_speed)+ ' mph')
@@ -517,18 +520,23 @@ class TideDisplay:
         tide_text = format(tide, '.2f')+' Ft.'
         current_time = datetime.now()
         curhrmin = datetime.strftime(current_time, "%H:%M")
+        text_font = tkfont.Font(family="Arial", size=12, weight="bold")
+        start_text = self.x_plot_start
         self.plot_window.create_line(
-          60, 15, 110, 15, fill="RoyalBlue3", width=3)
-        self.plot_window.create_text(190,15,
-           fill="RoyalBlue3", text="Actual Tide Trace",
+          start_text, 15, start_text+30, 15, fill="RoyalBlue3", width=3)
+        text_field = "Actual Tide Trace"
+        text_size = text_font.measure(text_field)
+        self.plot_window.create_text(start_text+35,15,
+           anchor="w", fill="RoyalBlue3", text=text_field,
            font=("Arial", 12, 'bold'))
         self.plot_window.create_line(
-          270, 15, 320, 15, fill="RoyalBlue3", width=3)
+          start_text+40+text_size, 15, start_text+70+text_size,
+          15, fill="RoyalBlue3", width=3)
         cdbox = self.plot_window.create_text(
-           450, 17, fill="RoyalBlue3", text=" Current Tide "+
+           self.canvas_width/2-110, 18, fill="RoyalBlue3", text=" Current Tide "+
            tide_text+" ", font=("Arial", 14, 'bold'))
         tbox = self.plot_window.create_text(
-          615,17, fill="black", text=" Time "+curhrmin+" ",
+          self.canvas_width/2+10,18, fill="black", text=" Time "+curhrmin+" ",
           font=("Arial", 14, 'bold'))
         cdboxcors = self.plot_window.bbox(cdbox)
         cdboxwid = self.plot_window.create_rectangle(
@@ -538,10 +546,15 @@ class TideDisplay:
         tboxwid = self.plot_window.create_rectangle(
           tboxcors, outline="black", fill="white", width=2)
         self.plot_window.tag_lower(tboxwid,tbox)
-        self.plot_window.create_line(810, 15, 860, 15, fill="gray", width=3)
-        self.plot_window.create_text(950,15,
-          fill="gray", text="Predicted Tide Trace",
+        text_field = "Predicted Tide Trace"
+        text_size = text_font.measure(text_field)
+        start_text = self.canvas_width-(text_size+70)
+        self.plot_window.create_line(start_text, 15, start_text+30, 15,
+          fill="gray", width=3)
+        self.plot_window.create_text(start_text+35,15,
+          anchor="w", fill="gray", text=text_field,
           font=("Arial", 12, 'bold'))
-        self.plot_window.create_line(1040, 15, 1090, 15,
+        self.plot_window.create_line(start_text+40+text_size, 15,
+          start_text+70+text_size, 15,
           fill="gray", width=3)
 

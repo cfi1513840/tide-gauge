@@ -37,11 +37,7 @@ elif 'log' in sys.argv:
 logging.basicConfig(filename='newtide.log',
   level = level,
   format="%(asctime)s [%(levelname)s] %(message)s")
-#logging.basicConfig"filename='newtide.log',
-#  level = logging.INFO if 'log' in sys.argv else logging.WARNING,
-#  format="%(asctime)s [%(levelname)s] %(message)s")
 console = logging.StreamHandler()
-#console.setLevel(logging.INFO if 'print' in sys.argv else logging.WARNING)
 console.setLevel(level)
 logging.getLogger('').addHandler(console)
 logging.info('tide.py initializing')
@@ -118,11 +114,15 @@ class Tide:
             self.tk_mode = True
         if self.tk_mode:
             import tidedisplay
-            self.display = tidedisplay.TideDisplay(self.stationid, cons, self.tide_only)
+            self.display = tidedisplay.TideDisplay(self.stationid, cons, self.tide_only, state)
             self.display.master.title(
               f"{cons.STATION_LOCATION} Tide Monitor Panel "+
-              display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
-              " Sunset: "+display_date_and_time[2])
+              display_date_and_time[0]+" "+chr(8211)+" Sunrise: "+display_date_and_time[1]+
+              " "+chr(8211)+" Sunset: "+display_date_and_time[2])
+            state.title_bar = (
+              f"{cons.STATION_LOCATION} "+
+              display_date_and_time[0]+" "+chr(8211)+" Sunrise: "+display_date_and_time[1]+
+              " "+chr(8211)+" Sunset: "+display_date_and_time[2])
             self.main()
         text = f'{cons.HOSTNAME} Tide Station startup at {self.message_time}'
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
@@ -176,7 +176,8 @@ class Tide:
             self.display.tide(predict_list, tide_list)
         if self.display:
             self.display.master.mainloop()
-        self.main()
+        else:
+            self.notk_loop()
 
     def main(self):
         """The primary scheduling loop"""
@@ -324,8 +325,12 @@ class Tide:
             self.sunset = display_date_and_time[4]
             if self.display:
                 self.display.master.title(f"{cons.STATION_LOCATION} Tide Monitor Panel "+
-                  display_date_and_time[0]+" Sunrise: "+display_date_and_time[1]+
-              " Sunset: "+display_date_and_time[2])
+                  display_date_and_time[0]+" "+chr(8211)+" Sunrise: "+display_date_and_time[1]+
+                  " "+chr(8211)+" Sunset: "+display_date_and_time[2])
+            state.title_bar = (
+              f"{cons.STATION_LOCATION} "+
+              display_date_and_time[0]+" "+chr(8211)+" Sunrise: "+display_date_and_time[1]+
+              " "+chr(8211)+" Sunset: "+display_date_and_time[2])
             noaa_tide = getnoaa.noaa_tide()
             if noaa_tide:
                 db.insert_tide_predicts(noaa_tide)
@@ -395,9 +400,9 @@ class Tide:
             if self.tide_ft != 99:
                 alerts.check_alerts(self.tide_ft, self.weather,
                   self.ndbc_data, self.sunrise, self.sunset, state.debug)
-            #print (tide_list)
 
-        if not self.display:
+    def notk_loop(self):
+        while True:
             time.sleep (5)
             self.main()
 

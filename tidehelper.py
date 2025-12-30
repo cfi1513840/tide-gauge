@@ -189,6 +189,7 @@ class TideState:
         self.test_mode = 0
         self.last_baro = 0
         self.debug = 0
+        self.title_bar = ''
 
 class SunTime:
     """Obtain the current date, sunrise and sunset times"""
