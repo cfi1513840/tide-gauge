@@ -533,7 +533,7 @@ class TideDisplay:
           start_text+40+text_size, 15, start_text+70+text_size,
           15, fill="RoyalBlue3", width=3)
         cdbox = self.plot_window.create_text(
-           self.canvas_width/2-110, 18, fill="RoyalBlue3", text=" Current Tide "+
+           self.canvas_width/2-145, 18, fill="RoyalBlue3", text=" Current Tide "+
            tide_text+" ", font=("Arial", 14, 'bold'))
         tbox = self.plot_window.create_text(
           self.canvas_width/2+10,18, fill="black", text=" Time "+curhrmin+" ",
