@@ -28,7 +28,10 @@ class GetWeather:
         self.NDBC_report_flag = 0
         self.NDBC_error_count = 0
         self.rain_24h = 0.0
-        
+        current_time = datetime.now()
+        self.message_time = current_time.strftime(
+          self.cons.TIME_FORMAT)
+       
     def weather_underground(self, tide_only):
         #print ('getting wx underground')
         if tide_only: return {}
@@ -128,6 +131,9 @@ class GetWeather:
         #print ('getting open_weather_map')
         if tide_only: return {}
         """Method to get OpenWeatherMap observations for the local area"""
+        current_time = datetime.now()
+        self.message_time = current_time.strftime(
+          self.cons.TIME_FORMAT)
         try:
             wxurl = ('https://api.openweathermap.org/data/2.5/weather?'+
               f'lat={self.cons.LATITUDE}&lon={self.cons.LONGITUDE}&'+
@@ -230,6 +236,9 @@ class GetWeather:
     def weather_link(self, tide_only):
         #print ('getting weather link')
         if tide_only: return {}
+        current_time = datetime.now()
+        self.message_time = current_time.strftime(
+          self.cons.TIME_FORMAT)
         """Method to get WeatherLink observations for the local area"""
         #
         # Extract weather parameters from WeatherLink json response
