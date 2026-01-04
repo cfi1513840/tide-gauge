@@ -74,10 +74,14 @@ class Constants:
     BREVO_USERNAME = secure_dict['BREVO_EMAIL_USERNAME']
     BREVO_PASSWORD = secure_dict['BREVO_EMAIL_PASSWORD']
     INFLUXDB_TOKEN = secure_dict['INFLUXDB_TOKEN']
+    INFLUXDB_READ_TOKEN = secure_dict['INFLUXDB_READ_TOKEN']
+    INFLUXDB_WRITE_TOKEN = secure_dict['INFLUXDB_WRITE_TOKEN']
     INFLUXDB_ORG = secure_dict['INFLUXDB_ORG']
     INFLUXDB_BUCKET = secure_dict['INFLUXDB_BUCKET']
-    INFLUXDB_CLIENT = InfluxDBClient(url='http://localhost:8086',
-      token=INFLUXDB_TOKEN, org=INFLUXDB_ORG)
+    INFLUXDB_READ_CLIENT = InfluxDBClient(url='http://localhost:8086',
+      token=INFLUXDB_READ_TOKEN, org=INFLUXDB_ORG)
+    INFLUXDB_WRITE_CLIENT = InfluxDBClient(url='http://localhost:8086',
+      token=INFLUXDB_WRITE_TOKEN, org=INFLUXDB_ORG)
     INFLUXDB_QUERY_API = INFLUXDB_CLIENT.query_api()
     OBSCAPE_USER = secure_dict['OBSCAPE_USER']
     OBSCAPE_KEY = secure_dict['OBSCAPE_KEY']
