@@ -82,7 +82,7 @@ class Constants:
       token=INFLUXDB_READ_TOKEN, org=INFLUXDB_ORG)
     INFLUXDB_WRITE_CLIENT = InfluxDBClient(url='http://localhost:8086',
       token=INFLUXDB_WRITE_TOKEN, org=INFLUXDB_ORG)
-    INFLUXDB_QUERY_API = INFLUXDB_CLIENT.query_api()
+    INFLUXDB_QUERY_API = INFLUXDB_WRITE_CLIENT.query_api()
     OBSCAPE_USER = secure_dict['OBSCAPE_USER']
     OBSCAPE_KEY = secure_dict['OBSCAPE_KEY']
     SMTP_SERVER = secure_dict['SMTP_SERVER']

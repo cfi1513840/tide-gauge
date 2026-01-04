@@ -124,13 +124,13 @@ class DbManage:
                   solarv,
                   therm                  
                   )
+                self.sql_cursor.execute(
+                  f"INSERT INTO sensors VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                  database_values)
+                self.sql_connection.commit()
             except Exception as errmsg:
-                logging.warning('db insertion failed: '+str(errmsg))
-                return
-            self.sql_cursor.execute(
-              f"INSERT INTO sensors VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-              database_values)
-            self.sql_connection.commit()
+                logging.warning('sqlite3 db insertion failed: '+str(errmsg))
+                pass
             message_time = datetime.utcnow()
             point_tide_station = Point("tide_station") \
               .tag("location", f"{location}") \
