@@ -34,7 +34,7 @@ class TideMonitor:
             print (str(datetime.now()))
             next_time += interval
             for port in Constants.SERIAL_PORTS:
-                sensor_packet = ReadSensor().read_sensor(port)
+                sensor_packet = get.read_sensor(port)
                 if sensor_packet:
                     print (sensor_packet)
             delay = next_time - time.monotonic()
