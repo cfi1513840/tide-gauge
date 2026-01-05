@@ -236,7 +236,7 @@ class DbManage:
             logging.warning('fetch_ndbc: '+str(errmsg))
             return None
 
-    def fetch_tide_24h(self, stationid, station1cal ,station2cal):
+    def fetch_tide(self, stationid, station1cal ,station2cal, duration):
         """Fetch the last 24 hours of tide measurements for plotting"""
         location = self.cons.STATION_LOCATION
         self.influx_query = ('from(bucket:"TideData") '+
@@ -268,7 +268,7 @@ class DbManage:
             return tide_list
             
         except Exception as errmsg:
-            logging.warning('fetch_tide_24h: '+str(errmsg))
+            logging.warning('fetch_tide: '+str(errmsg))
 
     def update_stationid(self, stationid):
         self.sql_cursor.execute(f"update iparams set stationid = {stationid}")

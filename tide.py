@@ -167,7 +167,7 @@ class Tide:
                 for idx in range(0,20):
                     self.tide_average = self.tide_average[1:]+[tide_level]
                 self.sensor_readings = tide_readings
-        tide_list = db.fetch_tide_24h(
+        tide_list = db.fetch_tide(
           self.stationid, self.station1cal, self.station2cal,'-24h')
         self.process = tideprocess.ProcTide(tide_list)
         self.tide_list = self.process.get_tide_list()
