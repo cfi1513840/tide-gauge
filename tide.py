@@ -158,7 +158,7 @@ class Tide:
         predict_list = predict.tide_predict()
         tide_readings = []
         if 'sim' not in sys.argv:    
-            tide_readings = sensor.read_sensor()
+            tide_readings = sensor.read_sensor('USB0')
         if tide_readings:
             db.insert_tide(tide_readings)
             if int(tide_readings.get('S')) == self.stationid:
