@@ -21,13 +21,13 @@ class TideMonitor:
                     self.usb0_serial_input = serial.Serial(
                       '/dev/ttyUSB0',9600, 8, 'N', 1, timeout = 1000)
                     self.usb0_serial_input.reset_input_buffer()
-               elif port == 'USB1':
+                elif port == 'USB1':
                     self.usb1_serial_input = serial.Serial(
                       '/dev/ttyUSB1',9600, 8, 'N', 1, timeout = 1000)
                     self.usb1_serial_input.reset_input_buffer()
         self.tide_monitor()
         
-    def tide_monitor():
+    def tide_monitor(self):
         interval = 5.0
         next_time = time.monotonic()
         while True:
