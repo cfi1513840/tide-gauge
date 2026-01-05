@@ -239,13 +239,13 @@ class DbManage:
     def fetch_tide(self, stationid, station1cal ,station2cal, duration):
         """Fetch the last 24 hours of tide measurements for plotting"""
         location = self.cons.STATION_LOCATION
-        duration = '-24h'
         self.influx_query = ('from(bucket:"TideData") '+
           f'|> range(start: {duration}) '+
           '|> filter(fn:(r) => r._measurement == "tide_station") '+
           f'|> filter(fn: (r) => r.location == "{location}") '+
           f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") '+
-          '|> filter(fn: (r) => r._field == "sensor_measurement_mm")')
+          '|> filter(fn: (r) => r._field =~ /sensor_measurement_mm|battery_millivolts|solar_millivolts|signal_strength/)'+
+          '|> pivot(rowKey:["_time"], columnKey:["_field"], valueColumn:"_value")')
         tide_list = []
         try:
             query_result = self.influxdb_query_api.query(
@@ -258,7 +258,11 @@ class DbManage:
                     local_time = self.local_tz.normalize(local_time)
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
-                    tide_mm = record.get_value()
+                    print (str(record))
+                    tide_mm = record["sensor_measuremenet_mm"]
+                    batv = record["battery_millivolts"]
+                    solarv = record["solar_millivolts"]
+                    rssi = record["signal_strength"]
                     if tide_mm:
                         if stationid == 1:
                             tide = station1cal-tide_mm/304.8
