@@ -11,7 +11,7 @@ class TideMonitor:
         #import serial
         #self.cons = cons
         #self.val = ValType()
-        self.db = DBManage(Constants)
+        self.db = DbManage(Constants)
         #self.val = ValType()
         self.get = ReadSensor(Constants, ValType)
 
