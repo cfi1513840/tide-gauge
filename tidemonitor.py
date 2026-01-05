@@ -8,11 +8,7 @@ from tidedatabase import DbManage
 class TideMonitor:
     """Read sensor readings from serial ports and write to databases"""
     def __init__(self):
-        #import serial
-        #self.cons = cons
-        #self.val = ValType()
         self.db = DbManage(Constants)
-        #self.val = ValType()
         self.get = ReadSensor(Constants, ValType())
 
         if Constants.SERIAL_PORTS != None:
@@ -36,6 +32,7 @@ class TideMonitor:
             for port in Constants.SERIAL_PORTS:
                 sensor_packet = self.get.read_sensor(port)
                 if sensor_packet:
+                    self.db.insert_tide(sensor_packet)
                     print (sensor_packet)
             delay = next_time - time.monotonic()
             if delay > 0:
@@ -43,7 +40,7 @@ class TideMonitor:
             else:
                 pass
 #
-#Start the process
+#Start the ball rolling
 #
 tidemonitor = TideMonitor()
 
