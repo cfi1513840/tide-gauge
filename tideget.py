@@ -542,7 +542,7 @@ class ReadSensor:
                     self.usb0_serial_input = serial.Serial(
                       '/dev/ttyUSB0',9600, 8, 'N', 1, timeout = 10)
                     self.usb0_serial_input.reset_input_buffer()
-               elif port == 'USB1':
+                elif port == 'USB1':
                     self.usb1_serial_input = serial.Serial(
                       '/dev/ttyUSB1',9600, 8, 'N', 1, timeout = 10)
                     self.usb1_serial_input.reset_input_buffer()
