@@ -561,11 +561,13 @@ class ReadSensor:
             if port == 'USB0':
                 if self.usb0_serial_input.in_waiting > 0:
                     packet = self.usb0_serial_input.readline()
-                else return data_dict
+                else:
+                    return data_dict
             elif port == 'USB1':
                 if self.usb1_serial_input.in_waiting > 0:
                     packet = self.usb1_serial_input.readline()
-                else return data_dict
+                else:
+                    return data_dict
             #print (packet)
             try:
                 packet = packet.decode().split(',')
