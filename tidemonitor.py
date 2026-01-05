@@ -31,7 +31,7 @@ class TideMonitor:
         interval = 5.0
         next_time = time.monotonic()
         while True:
-            print (str(datetime.now())
+            print (str(datetime.now()))
             next_time += interval
             for port in Constants.SERIAL_PORTS:
                 sensor_packet = ReadSensor.read_sensor(port)
