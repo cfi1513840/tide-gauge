@@ -246,7 +246,7 @@ class DbManage:
           f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") ' +
           '|> filter(fn: (r) => r._field == "sensor_measurement_mm" or' +
           '                     r._field == "battery_millivolts" or' +
-          '                     r_field == "solar_millivolts" or' +
+          '                     r._field == "solar_millivolts" or' +
           '                     r._field == "signal_strength")' +
           '|> group(columns: ["_field"]) ' +
           '| last()'
