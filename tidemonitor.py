@@ -13,7 +13,7 @@ class TideMonitor:
         #self.val = ValType()
         self.db = DbManage(Constants)
         #self.val = ValType()
-        self.get = ReadSensor(Constants, ValType)
+        self.get = ReadSensor(Constants, ValType())
 
         if Constants.SERIAL_PORTS != None:
             for port in Constants.SERIAL_PORTS:
