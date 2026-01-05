@@ -168,7 +168,7 @@ class Tide:
                     self.tide_average = self.tide_average[1:]+[tide_level]
                 self.sensor_readings = tide_readings
         tide_list = db.fetch_tide_24h(
-          self.stationid, self.station1cal, self.station2cal)
+          self.stationid, self.station1cal, self.station2cal,'-24h')
         self.process = tideprocess.ProcTide(tide_list)
         self.tide_list = self.process.get_tide_list()
 
@@ -212,7 +212,7 @@ class Tide:
         #
         tide_readings = []
         if 'sim' not in sys.argv:    
-            tide_readings = sensor.read_sensor()
+            tide_readings = sensor.read_sensor('USB0')
         if tide_readings:
             tide_level = tide_readings.get('R')
             db.insert_tide(tide_readings)

@@ -546,18 +546,11 @@ class ReadSensor:
                     self.usb1_serial_input = serial.Serial(
                       '/dev/ttyUSB1',9600, 8, 'N', 1, timeout = 10)
                     self.usb1_serial_input.reset_input_buffer()
-
-
-
-        #self.usb_serial_input = serial.Serial(
-        #  '/dev/ttyUSB0',9600, 8, 'N', 1, timeout = 1000)
-        #self.usb_serial_input.reset_input_buffer()
         
     def read_sensor(self, port):
-        #print ('reading sensor')
+
         try:
             data_dict = {}
-            now = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
             if port == 'USB0':
                 if self.usb0_serial_input.in_waiting > 0:
                     packet = self.usb0_serial_input.readline()
@@ -568,7 +561,6 @@ class ReadSensor:
                     packet = self.usb1_serial_input.readline()
                 else:
                     return data_dict
-            #print (packet)
             try:
                 packet = packet.decode().split(',')
             except:
@@ -585,6 +577,7 @@ class ReadSensor:
                 else:
                     continue
             return data_dict
+
         except Exception as errmsg:
             logging.warning('Invalid sensor data '+str(errmsg))
             

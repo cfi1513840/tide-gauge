@@ -240,7 +240,7 @@ class DbManage:
         """Fetch the last 24 hours of tide measurements for plotting"""
         location = self.cons.STATION_LOCATION
         self.influx_query = ('from(bucket:"TideData") '+
-          '|> range(start: -24h) '+
+          '|> range(start: "-24h") '+
           '|> filter(fn:(r) => r._measurement == "tide_station") '+
           f'|> filter(fn: (r) => r.location == "{location}") '+
           f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") '+
