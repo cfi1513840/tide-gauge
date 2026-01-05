@@ -13,7 +13,7 @@ class DbManage:
         self.cons = cons
         self.sqlpath = cons.SQL_PATH
         self.influxdb_org = cons.INFLUXDB_ORG
-        self.influxdb_client = cons.INFLUXDB_CLIENT
+        self.influxdb_client = cons.INFLUXDB_WRITE_CLIENT
         self.influxdb_query_api = cons.INFLUXDB_QUERY_API
         self.sql_connection = sqlite3.connect(f'{self.sqlpath}')
         self.sql_cursor = self.sql_connection.cursor()
