@@ -157,10 +157,14 @@ class Tide:
                 db.insert_tide_predicts(noaa_tide)
         predict_list = predict.tide_predict()
         tide_readings = []
-        if 'sim' not in sys.argv:    
-            tide_readings = sensor.read_sensor('USB0')
+        if 'sim' not in sys.argv:
+            tide_readings = db.fetch_tide(
+              self.stationid, self.station1cal, self.station2cal,'-1m')
+            
+            #tide_readings = sensor.read_sensor('USB0')
         if tide_readings:
-            db.insert_tide(tide_readings)
+            print (tide_readings)
+            #db.insert_tide(tide_readings)
             if int(tide_readings.get('S')) == self.stationid:
                 tide_level = tide_readings.get('R')
                 self.tide_init = True
@@ -211,11 +215,15 @@ class Tide:
         # conflicts. NOAA tide predictions are updated daily.
         #
         tide_readings = []
-        if 'sim' not in sys.argv:    
-            tide_readings = sensor.read_sensor('USB0')
+        if 'sim' not in sys.argv: 
+            tide_readings = db.fetch_tide(
+              self.stationid, self.station1cal, self.station2cal,'-1m')
+            
+            #tide_readings = sensor.read_sensor('USB0')
         if tide_readings:
+            print (tide_readings)
             tide_level = tide_readings.get('R')
-            db.insert_tide(tide_readings)
+            #db.insert_tide(tide_readings)
             if int(tide_readings.get('S')) == self.stationid and tide_level != None:
                 self.sensor_readings = tide_readings
                 if not self.tide_init:
