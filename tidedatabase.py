@@ -259,7 +259,7 @@ class DbManage:
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
                     print (str(record))
-                    tide_mm = record["sensor_measuremenet_mm"]
+                    tide_mm = record["sensor_measurement_mm"]
                     batv = record["battery_millivolts"]
                     solarv = record["solar_millivolts"]
                     rssi = record["signal_strength"]
