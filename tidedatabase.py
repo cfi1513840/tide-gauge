@@ -241,11 +241,16 @@ class DbManage:
         location = self.cons.STATION_LOCATION
         self.influx_query = ('from(bucket:"TideData") '+
           f'|> range(start: {duration}) '+
-          '|> filter(fn:(r) => r._measurement == "tide_station") '+
-          f'|> filter(fn: (r) => r.location == "{location}") '+
-          f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") '+
-          '|> filter(fn: (r) => r._field =~ /sensor_measurement_mm|battery_millivolts|solar_millivolts|signal_strength/)'+
-          '|> pivot(rowKey:["_time"], columnKey:["_field"], valueColumn:"_value")')
+          '|> filter(fn:(r) => r._measurement == "tide_station") ' +
+          f'|> filter(fn: (r) => r.location == "{location}") ' +
+          f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") ' +
+          '|> filter(fn: (r) => r._field == "sensor_measurement_mm" or' +
+          '                     r._field == "battery_millivolts" or' +
+          '                     r_field == "solar_millivolts" or' +
+          '                     r._field == "signal_strength")' +
+          '|> group(columns: ["_field"]) ' +
+          '| last()'
+          )
         tide_list = []
         try:
             query_result = self.influxdb_query_api.query(
