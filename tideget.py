@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import json
 import requests
 import socket
+import serial
 import urllib3.util.connection
 import logging
 import math
@@ -534,34 +535,54 @@ class ReadSensor:
         import serial
         self.cons = cons
         self.val = val
-        self.usb_serial_input = serial.Serial(
-          '/dev/ttyUSB0',9600, 8, 'N', 1, timeout = 1000)
-        self.usb_serial_input.reset_input_buffer()
+
+        if self.cons.SERIAL_PORTS != None:
+            for port in self.cons.SERIAL_PORTS:
+                if port == 'USB0':
+                    self.usb0_serial_input = serial.Serial(
+                      '/dev/ttyUSB0',9600, 8, 'N', 1, timeout = 10)
+                    self.usb0_serial_input.reset_input_buffer()
+               elif port == 'USB1':
+                    self.usb1_serial_input = serial.Serial(
+                      '/dev/ttyUSB1',9600, 8, 'N', 1, timeout = 10)
+                    self.usb1_serial_input.reset_input_buffer()
+
+
+
+        #self.usb_serial_input = serial.Serial(
+        #  '/dev/ttyUSB0',9600, 8, 'N', 1, timeout = 1000)
+        #self.usb_serial_input.reset_input_buffer()
         
-    def read_sensor(self):
+    def read_sensor(self, port):
         #print ('reading sensor')
         try:
             data_dict = {}
-            if self.usb_serial_input.in_waiting > 0:
-                now = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
-                packet = self.usb_serial_input.readline()
-                #print (packet)
-                try:
-                    packet = packet.decode().split(',')
-                except:
-                    return data_dict
-                if packet[0][0] != 'S':
-                    return data_dict
-                for field in packet:
-                    if field != '' and field[0].isalpha():
-                        this_var = self.val.var_type(field[1:], int)
-                        if this_var == -99:
-                            data_dict = {}
-                            break
-                        data_dict[field[0]] = this_var
-                    else:
-                        continue
+            now = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
+            if port == 'USB0':
+                if self.usb0_serial_input.in_waiting > 0:
+                    packet = self.usb0_serial_input.readline()
+                else return data_dict
+            elif port == 'USB1':
+                if self.usb1_serial_input.in_waiting > 0:
+                    packet = self.usb1_serial_input.readline()
+                else return data_dict
+            #print (packet)
+            try:
+                packet = packet.decode().split(',')
+            except:
                 return data_dict
+            if packet[0][0] != 'S':
+                return data_dict
+            for field in packet:
+                if field != '' and field[0].isalpha():
+                    this_var = self.val.var_type(field[1:], int)
+                    if this_var == -99:
+                        data_dict = {}
+                        break
+                    data_dict[field[0]] = this_var
+                else:
+                    continue
+            return data_dict
         except Exception as errmsg:
             logging.warning('Invalid sensor data '+str(errmsg))
             
