@@ -18,6 +18,8 @@ class DbManage:
         self.sql_connection = sqlite3.connect(f'{self.sqlpath}')
         self.sql_cursor = self.sql_connection.cursor()
         self.local_tz = pytz.timezone('US/Eastern')
+        self.message_count = 100
+
    
     def insert_weather(self, weather):
         now = datetime.now()
@@ -247,7 +249,8 @@ class DbManage:
           f'|> range(start: {duration}) '+
           '|> filter(fn:(r) => r._measurement == "tide_station") ' +
           f'|> filter(fn: (r) => r.location == "{location}") ' +
-          f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") '
+          f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") ' +
+          '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value"'
           )
         tide_list = []
         field_list = {}
@@ -256,6 +259,8 @@ class DbManage:
             org=self.influxdb_org, query=self.influx_query)
             for table in query_result:
                 for record in table.records:
+                    vals = record.values
+                    print ('vals: '+vals)
                     utc_time = record.get_time()
                     local_time = utc_time.replace(
                       tzinfo=pytz.utc).astimezone(self.local_tz)
