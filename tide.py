@@ -85,7 +85,7 @@ class Tide:
         self.rain_day = datetime.strftime(self.current_time, "%d")
         self.iparams_dict = db.fetch_iparams()
         self.visit = False
-        self.sensor_readings = []
+        self.sensor_readings = {}
         self.station_oos = False # Station out of service
         self.iparams_dict = db.fetch_iparams()
         self.stationid = self.iparams_dict.get('stationid')
@@ -156,25 +156,21 @@ class Tide:
             if noaa_tide:
                 db.insert_tide_predicts(noaa_tide)
         predict_list = predict.tide_predict()
-        tide_readings = []
+        self.sensor_readings = {}
         if 'sim' not in sys.argv:
-            tide_readings = db.fetch_tide(
-              self.stationid, self.station1cal, self.station2cal,'-1m')
-            
-            #tide_readings = sensor.read_sensor('USB0')
-        if tide_readings:
-            print (tide_readings)
-            #db.insert_tide(tide_readings)
-            if int(tide_readings.get('S')) == self.stationid:
-                tide_level = tide_readings.get('R')
+            tide_readings, self.sensor_readings = db.fetch_tide(
+              self.stationid, self.station1cal, self.station2cal,'-1m')            
+        if self.sensor_readings:
+            if int(self.sensor_readings.get('S')) == self.stationid:
+                tide_level = self.sensor_readings.get('R')
                 self.tide_init = True
                 for idx in range(0,20):
                     self.tide_average = self.tide_average[1:]+[tide_level]
-                self.sensor_readings = tide_readings
-        tide_list = db.fetch_tide(
+        tide_list, self.sensor_readings = db.fetch_tide(
           self.stationid, self.station1cal, self.station2cal,'-24h')
-        self.process = tideprocess.ProcTide(tide_list)
-        self.tide_list = self.process.get_tide_list()
+        if tide_list:
+            self.process = tideprocess.ProcTide(tide_list)
+            self.tide_list = self.process.get_tide_list()
 
         if predict_list and self.tide_list and self.display:
             self.display.tide(predict_list, tide_list)
@@ -216,17 +212,13 @@ class Tide:
         #
         if self.main_loop_count == 12:
             tide_readings = []
+            self.sensor_readings = {}
             if 'sim' not in sys.argv: 
-                tide_readings = db.fetch_tide(
-                  self.stationid, self.station1cal, self.station2cal,'-1m')
-                
-                #tide_readings = sensor.read_sensor('USB0')
-            if tide_readings:
-                print (tide_readings)
-                tide_level = tide_readings.get('R')
-                #db.insert_tide(tide_readings)
-                if int(tide_readings.get('S')) == self.stationid and tide_level != None:
-                    self.sensor_readings = tide_readings
+                tide_readings, self.self.sensor_readings = db.fetch_tide(
+                  self.stationid, self.station1cal, self.station2cal,'-1m')                
+            if self.sensor_readings:
+                tide_level = self.sensor_readings.get('R')
+                if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
                     if not self.tide_init:
                         for idx in range(0,20):
                             self.tide_average = self.tide_average[1:]+[tide_level]
@@ -239,10 +231,10 @@ class Tide:
                 volts = 0
                 rssi = 0
                 try:
-                    tide_mm = tide_readings['R']
-                    station = tide_readings['S']
-                    volts = tide_readings['V']/1000
-                    rssi = tide_readings['P']
+                    tide_mm = self.sensor_readings['R']
+                    station = self.sensor_readings['S']
+                    volts = self.sensor_readings['V']/1000
+                    rssi = self.sensor_readings['P']
                     if station == 1:
                         self.last_station1_time = self.current_time
                         if self.stationid == 1:
