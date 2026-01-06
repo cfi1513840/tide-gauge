@@ -250,7 +250,7 @@ class DbManage:
           '|> filter(fn:(r) => r._measurement == "tide_station") ' +
           f'|> filter(fn: (r) => r.location == "{location}") ' +
           f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") ' +
-          '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value"'
+          '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
           )
         tide_list = []
         field_list = {}
