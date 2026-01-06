@@ -279,7 +279,7 @@ class DbManage:
                             tide = station1cal-tide_mm/304.8
                         else:
                             tide = station2cal-tide_mm/304.8                            
-                        tide_list.append([local_time, tide, '')
+                        tide_list.append([local_time, tide, ''])
                         field_dict = {
                           "S": stationid,
                           "V": batv,
