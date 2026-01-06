@@ -266,6 +266,7 @@ class DbManage:
                     local_time = self.local_tz.normalize(local_time)
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
+                    print (str(dbvalues))
                     tide_mm = dbvalues.get("sensor_measurement_mm")
                     batv = dbvalues.get("battery_millivolts")
                     solarv = dbvalues.get("solar_millivolts")
