@@ -250,6 +250,7 @@ class DbManage:
           f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") '
           )
         tide_list = []
+        field_list = {}
         try:
             query_result = self.influxdb_query_api.query(
             org=self.influxdb_org, query=self.influx_query)
@@ -261,15 +262,17 @@ class DbManage:
                     local_time = self.local_tz.normalize(local_time)
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
-                    if duration == '-1m': print (str(record))
-                    if "sensor_measurement_mm" in record:
-                        tide_mm = record["sensor_measurement_mm"]
-                    if "battery_millivolts" in record:
-                        batv = record["battery_millivolts"]
-                    if "solar_millivolts" in record:
-                        solarv = record["solar_millivolts"]
-                    if "signal_strength" in record:
-                        rssi = record["signal_strength"]
+                    field_list[record.get_field()] = record.get_value()
+            print (field_list)
+            if duration == '-1m': print (str(record))
+            if "sensor_measurement" in field_list:
+                tide_mm = field_list.get("sensor_measurement_mm")
+            if "battery_millivolts" in field_list:
+                batv = field_list.get("battery_millivolts")
+            if "solar_millivolts" in field_list:
+                solarv = field_list.get("solar_millivolts")
+            if "signal_strength" in field_list:
+                rssi = field_list.get("signal_strength")
             if tide_mm:
                 if stationid == 1:
                     tide = station1cal-tide_mm/304.8
