@@ -267,22 +267,22 @@ class DbManage:
                     local_time = self.local_tz.normalize(local_time)
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
-                    field_list[record.get_field()] = record.get_value()
-            print (field_list)
-            if "sensor_measurement" in field_list:
-                tide_mm = field_list.get("sensor_measurement_mm")
-            if "battery_millivolts" in field_list:
-                batv = field_list.get("battery_millivolts")
-            if "solar_millivolts" in field_list:
-                solarv = field_list.get("solar_millivolts")
-            if "signal_strength" in field_list:
-                rssi = field_list.get("signal_strength")
-            if tide_mm:
-                if stationid == 1:
-                    tide = station1cal-tide_mm/304.8
-                else:
-                    tide = station2cal-tide_mm/304.8                            
-                tide_list.append([local_time, tide, '',batv,solarv,rssi])
+                    #field_list[record.get_field()] = record.get_value()
+            #print (field_list)
+            #if "sensor_measurement" in field_list:
+            #    tide_mm = field_list.get("sensor_measurement_mm")
+            #if "battery_millivolts" in field_list:
+            #    batv = field_list.get("battery_millivolts")
+            #if "solar_millivolts" in field_list:
+            #    solarv = field_list.get("solar_millivolts")
+            #if "signal_strength" in field_list:
+            #    rssi = field_list.get("signal_strength")
+            #if tide_mm:
+            #    if stationid == 1:
+            #        tide = station1cal-tide_mm/304.8
+            #    else:
+            #        tide = station2cal-tide_mm/304.8                            
+            #    tide_list.append([local_time, tide, '',batv,solarv,rssi])
             #print (tide_list)       
             return tide_list
             
