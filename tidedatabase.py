@@ -264,7 +264,6 @@ class DbManage:
                       local_time,"%Y-%m-%d %H:%M:%S")
                     field_list[record.get_field()] = record.get_value()
             print (field_list)
-            if duration == '-1m': print (str(record))
             if "sensor_measurement" in field_list:
                 tide_mm = field_list.get("sensor_measurement_mm")
             if "battery_millivolts" in field_list:
@@ -279,7 +278,7 @@ class DbManage:
                 else:
                     tide = station2cal-tide_mm/304.8                            
                 tide_list.append([local_time, tide, '',batv,solarv,rssi])
-            print (tide_list)       
+            #print (tide_list)       
             return tide_list
             
         except Exception as errmsg:
