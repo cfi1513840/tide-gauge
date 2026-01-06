@@ -257,7 +257,7 @@ class DbManage:
                     local_time = self.local_tz.normalize(local_time)
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
-                    print (str(record))
+                    if duration == '-1m': print (str(record))
                     continue
                     tide_mm = record["sensor_measurement_mm"]
                     batv = record["battery_millivolts"]
