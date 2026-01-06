@@ -18,7 +18,7 @@ class DbManage:
         self.sql_connection = sqlite3.connect(f'{self.sqlpath}')
         self.sql_cursor = self.sql_connection.cursor()
         self.local_tz = pytz.timezone('US/Eastern')
-        self.message_count = 100
+        self.last_message_count = 100
 
    
     def insert_weather(self, weather):
@@ -253,38 +253,45 @@ class DbManage:
           '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
           )
         tide_list = []
-        field_list = {}
+        field_dict = {}
         try:
             query_result = self.influxdb_query_api.query(
             org=self.influxdb_org, query=self.influx_query)
             for table in query_result:
                 for record in table.records:
-                    vals = record.values
-                    print ('vals: '+str(vals))
+                    dbvalues = record.values
                     utc_time = record.get_time()
                     local_time = utc_time.replace(
                       tzinfo=pytz.utc).astimezone(self.local_tz)
                     local_time = self.local_tz.normalize(local_time)
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
-                    #field_list[record.get_field()] = record.get_value()
-            #print (field_list)
-            #if "sensor_measurement" in field_list:
-            #    tide_mm = field_list.get("sensor_measurement_mm")
-            #if "battery_millivolts" in field_list:
-            #    batv = field_list.get("battery_millivolts")
-            #if "solar_millivolts" in field_list:
-            #    solarv = field_list.get("solar_millivolts")
-            #if "signal_strength" in field_list:
-            #    rssi = field_list.get("signal_strength")
-            #if tide_mm:
-            #    if stationid == 1:
-            #        tide = station1cal-tide_mm/304.8
-            #    else:
-            #        tide = station2cal-tide_mm/304.8                            
-            #    tide_list.append([local_time, tide, '',batv,solarv,rssi])
-            #print (tide_list)       
-            return tide_list
+                    tide_mm = dbvalues.get("sensor_measurement_mm")
+                    batv = dbvalues.get("battery_millivolts")
+                    solarv = dbvalues.get("solar_millivolts")
+                    rssi = dbvalues.get("signal_strength")
+                    message_count = dbvalues.get("message_count")
+                    correlation_count = dbvalues.get("correlation_count")
+                    temperature = dbvalues.get("temperature")
+                    if tide_mm != None and message_count != self.last_message_count:
+                        self.last_message_count = message_count
+                        if stationid == 1:
+                            tide = station1cal-tide_mm/304.8
+                        else:
+                            tide = station2cal-tide_mm/304.8                            
+                        tide_list.append([local_time, tide, '')
+                        field_dict = {
+                          "S": stationid,
+                          "V": batv,
+                          "C": message_count,
+                          "R": tide_mm,
+                          "M": correlation_count,
+                          "s": solarv,
+                          "t": temperature
+                        }
+            print (str(field_dict))
+            print ('Length tide_list: '+str(len(tide_list)))       
+            return tide_list, field_dict
             
         except Exception as errmsg:
             logging.warning('fetch_tide: '+str(errmsg))
