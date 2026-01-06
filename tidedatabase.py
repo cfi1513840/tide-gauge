@@ -260,7 +260,7 @@ class DbManage:
             for table in query_result:
                 for record in table.records:
                     vals = record.values
-                    print ('vals: '+vals)
+                    print ('vals: '+str(vals))
                     utc_time = record.get_time()
                     local_time = utc_time.replace(
                       tzinfo=pytz.utc).astimezone(self.local_tz)
