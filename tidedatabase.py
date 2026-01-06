@@ -238,6 +238,10 @@ class DbManage:
 
     def fetch_tide(self, stationid, station1cal ,station2cal, duration):
         """Fetch the last 24 hours of tide measurements for plotting"""
+        tide_mm = ''
+        batv = ''
+        solarv = ''
+        rssi = ''
         location = self.cons.STATION_LOCATION
         self.influx_query = ('from(bucket:"TideData") '+
           f'|> range(start: {duration}) '+
@@ -258,18 +262,21 @@ class DbManage:
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
                     if duration == '-1m': print (str(record))
-                    continue
-                    tide_mm = record["sensor_measurement_mm"]
-                    batv = record["battery_millivolts"]
-                    solarv = record["solar_millivolts"]
-                    rssi = record["signal_strength"]
-                    if tide_mm:
-                        if stationid == 1:
-                            tide = station1cal-tide_mm/304.8
-                        else:
-                            tide = station2cal-tide_mm/304.8                            
-                        tide_list.append([local_time, tide, ''])
-                   
+                    if "sensor_measurement_mm" in record:
+                        tide_mm = record["sensor_measurement_mm"]
+                    if "battery_millivolts" in record:
+                        batv = record["battery_millivolts"]
+                    if "solar_millivolts" in record:
+                        solarv = record["solar_millivolts"]
+                    if "signal_strength" in record:
+                        rssi = record["signal_strength"]
+            if tide_mm:
+                if stationid == 1:
+                    tide = station1cal-tide_mm/304.8
+                else:
+                    tide = station2cal-tide_mm/304.8                            
+                tide_list.append([local_time, tide, '',batv,solarv,rssi])
+            print (tide_list)       
             return tide_list
             
         except Exception as errmsg:
