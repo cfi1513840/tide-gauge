@@ -214,7 +214,7 @@ class Tide:
             tide_readings = []
             self.sensor_readings = {}
             if 'sim' not in sys.argv: 
-                tide_readings, self.self.sensor_readings = db.fetch_tide(
+                tide_readings, self.sensor_readings = db.fetch_tide(
                   self.stationid, self.station1cal, self.station2cal,'-1m')                
             if self.sensor_readings:
                 tide_level = self.sensor_readings.get('R')
