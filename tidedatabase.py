@@ -289,7 +289,8 @@ class DbManage:
                           "R": tide_mm,
                           "M": correlation_count,
                           "s": solarv,
-                          "t": temperature
+                          "t": temperature,
+                          "P": rssi
                         }
             print (local_time+str(field_dict))
             return tide_list, field_dict
