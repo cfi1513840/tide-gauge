@@ -295,6 +295,7 @@ class Tide:
             os.system(f'cp {cons.SQL_PATH} {cons.SQL_COPY}')            
 
         if self.main_loop_count >= 12:
+            print (self.message_time+' One minute processing')
             self.main_loop_count = 0
             self.iparams_dict = db.fetch_iparams()
             self.stationid = self.iparams_dict.get('stationid')
