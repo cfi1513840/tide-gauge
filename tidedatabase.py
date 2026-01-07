@@ -245,6 +245,7 @@ class DbManage:
         solarv = ''
         rssi = ''
         location = self.cons.STATION_LOCATION
+        local_time  = ''
         self.influx_query = ('from(bucket:"TideData") '+
           f'|> range(start: {duration}) '+
           '|> filter(fn:(r) => r._measurement == "tide_station") ' +
@@ -266,7 +267,7 @@ class DbManage:
                     local_time = self.local_tz.normalize(local_time)
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
-                    print (str(dbvalues))
+                    #print (str(dbvalues))
                     tide_mm = dbvalues.get("sensor_measurement_mm")
                     batv = dbvalues.get("battery_milliVolts")
                     solarv = dbvalues.get("solar_milliVolts")
@@ -290,8 +291,7 @@ class DbManage:
                           "s": solarv,
                           "t": temperature
                         }
-            print (str(field_dict))
-            print ('Length tide_list: '+str(len(tide_list)))       
+            print (local_time+str(field_dict))
             return tide_list, field_dict
             
         except Exception as errmsg:

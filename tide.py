@@ -210,56 +210,6 @@ class Tide:
         # each minute to distribute CPU time and to avoid database access
         # conflicts. NOAA tide predictions are updated daily.
         #
-        if self.main_loop_count == 12:
-            tide_readings = []
-            self.sensor_readings = {}
-            if 'sim' not in sys.argv: 
-                tide_readings, self.sensor_readings = db.fetch_tide(
-                  self.stationid, self.station1cal, self.station2cal,'-1m')                
-            if self.sensor_readings:
-                tide_level = self.sensor_readings.get('R')
-                if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
-                    if not self.tide_init:
-                        for idx in range(0,20):
-                            self.tide_average = self.tide_average[1:]+[tide_level]
-                        self.tide_init = True                        
-                    self.tide_average = self.tide_average[1:]+[tide_level]             
-                    check_tide = sum(self.tide_average)/len(self.tide_average)
-                    if tide_level > check_tide+300 or tide_level < check_tide-300:
-                        logging.warning (self.message_time+' invalid tide: '+
-                          str(tide_level)+' versus 20 minute average: '+str(check_tide))               
-                volts = 0
-                rssi = 0
-                try:
-                    tide_mm = self.sensor_readings['R']
-                    station = self.sensor_readings['S']
-                    volts = self.sensor_readings['V']/1000
-                    rssi = self.sensor_readings['P']
-                    if station == 1:
-                        self.last_station1_time = self.current_time
-                        if self.stationid == 1:
-                            if self.display:
-                                self.display.station_battery_voltage_tk_var.set(
-                                  str(volts))
-                                self.display.station_signal_strength_tk_var.set(
-                                  str(rssi))
-                            self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
-                            self.station_oos = False
-                    elif station == 2:
-                        self.last_station2_time = self.current_time
-                        if self.stationid == 2:
-                            if self.display:
-                                self.display.station_battery_voltage_tk_var.set(
-                                  str(volts))
-                                self.display.station_signal_strength_tk_var.set(
-                                  str(rssi))
-                            self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
-                            self.station_oos = False
-                    if self.tide_ft != 99:
-                        self.tide_list = self.process.update_tide_list(
-                          self.tide_list, self.tide_ft)
-                except:
-                    pass
 
         if self.main_loop_count == 2 and int(current_minute) % 5 == 0: 
             #
@@ -355,6 +305,58 @@ class Tide:
             state.debug = self.iparams_dict.get('debug')
             self.tide_only = self.iparams_dict.get('tide_only')
             predict_list = predict.tide_predict()
+
+            tide_readings = []
+            self.sensor_readings = {}
+            if 'sim' not in sys.argv: 
+                tide_readings, self.sensor_readings = db.fetch_tide(
+                  self.stationid, self.station1cal, self.station2cal,'-1m')                
+            if self.sensor_readings:
+                tide_level = self.sensor_readings.get('R')
+                if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
+                    if not self.tide_init:
+                        for idx in range(0,20):
+                            self.tide_average = self.tide_average[1:]+[tide_level]
+                        self.tide_init = True                        
+                    self.tide_average = self.tide_average[1:]+[tide_level]             
+                    check_tide = sum(self.tide_average)/len(self.tide_average)
+                    if tide_level > check_tide+300 or tide_level < check_tide-300:
+                        logging.warning (self.message_time+' invalid tide: '+
+                          str(tide_level)+' versus 20 minute average: '+str(check_tide))               
+                volts = 0
+                rssi = 0
+                try:
+                    tide_mm = self.sensor_readings['R']
+                    station = self.sensor_readings['S']
+                    volts = self.sensor_readings['V']/1000
+                    rssi = self.sensor_readings['P']
+                    if station == 1:
+                        self.last_station1_time = self.current_time
+                        if self.stationid == 1:
+                            if self.display:
+                                self.display.station_battery_voltage_tk_var.set(
+                                  str(volts))
+                                self.display.station_signal_strength_tk_var.set(
+                                  str(rssi))
+                            self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
+                            self.station_oos = False
+                    elif station == 2:
+                        self.last_station2_time = self.current_time
+                        if self.stationid == 2:
+                            if self.display:
+                                self.display.station_battery_voltage_tk_var.set(
+                                  str(volts))
+                                self.display.station_signal_strength_tk_var.set(
+                                  str(rssi))
+                            self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
+                            self.station_oos = False
+                    if self.tide_ft != 99:
+                        self.tide_list = self.process.update_tide_list(
+                          self.tide_list, self.tide_ft)
+                except Exception as errmsg:
+                    print (str(errmsg))
+                    logging.warning(str(errmsg))
+
             if self.display:
                 self.display.active_station_tk_var.set(str(self.stationid))
                 self.display.tide(predict_list, self.tide_list)
