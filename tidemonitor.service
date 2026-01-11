@@ -1,12 +1,12 @@
 [Unit]
-Description=Tide Station
+Description=Tide Monitor
 After=network.target
 
 [Service]
 TimeoutSec=5min
-ExecStartPre=/bin/sleep 180
+ExecStartPre=/bin/sleep 60
 Environment=DISPLAY=:0
-ExecStart=/home/tide/bin/.tidenv/bin/python3  /home/tide/bin/tidegauge/tide.py
+ExecStart=/home/tide/bin/.tidenv/bin/python3  /home/tide/bin/tidegauge/tidemonitor.py
 WorkingDirectory=/home/tide/bin/tidegauge
 StandardOutput=inherit
 StandardError=inherit
