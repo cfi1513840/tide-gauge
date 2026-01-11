@@ -295,7 +295,7 @@ class Tide:
             os.system(f'cp {cons.SQL_PATH} {cons.SQL_COPY}')            
 
         if self.main_loop_count >= 12:
-            print (self.message_time+' One minute processing')
+            #print (self.message_time+' One minute processing')
             self.main_loop_count = 0
             self.iparams_dict = db.fetch_iparams()
             self.stationid = self.iparams_dict.get('stationid')
@@ -406,10 +406,16 @@ class Tide:
                   self.ndbc_data, self.sunrise, self.sunset, state.debug)
 
     def notk_loop(self):
+        interval = 5.0
+        next_time = time.monotonic()
         while True:
-            time.sleep (5)
+            next_time += interval
             self.main()
-
+            delay = next_time - time.monotonic()
+            if delay > 0:
+                time.sleep(delay)
+            else:
+                pass
 
     def send_visit_report(self):
 
