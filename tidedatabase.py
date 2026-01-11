@@ -292,7 +292,7 @@ class DbManage:
                           "t": temperature,
                           "P": rssi
                         }
-            print (local_time+str(field_dict))
+            #print (local_time+str(field_dict))
             return tide_list, field_dict
             
         except Exception as errmsg:
