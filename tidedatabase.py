@@ -98,7 +98,9 @@ class DbManage:
         try:
             now = datetime.now()
             database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
-            location = self.cons.STATION_LOCATION
+            location = self.cons.INFLUXDB_LOCATION
+            measurement = self.cons.INFLUXDB_MEASUREMENT
+            sensor = self.cons.INFLUXDB_SENSOR
             try:
                 station = data_dict.get('S')
                 distance = data_dict['R']
@@ -134,11 +136,11 @@ class DbManage:
                 logging.warning('sqlite3 db insertion failed: '+str(errmsg))
                 pass
             message_time = datetime.utcnow()
-            point_tide_station = Point("tide_station") \
+            point_tide_station = Point("{measurement}") \
               .tag("location", f"{location}") \
               .tag(self.cons.INFLUXDB_COLUMN_NAMES["S"],
                 data_dict["S"]) \
-              .tag("sensor_type", "ultrasonic MB7389") \
+              .tag("sensor_type", f"{sensor}") \
               .field(self.cons.INFLUXDB_COLUMN_NAMES["V"],
                 data_dict["V"]) \
               .field(self.cons.INFLUXDB_COLUMN_NAMES["C"],

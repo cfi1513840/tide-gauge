@@ -78,6 +78,9 @@ class Constants:
     INFLUXDB_WRITE_TOKEN = secure_dict['INFLUXDB_WRITE_TOKEN']
     INFLUXDB_ORG = secure_dict['INFLUXDB_ORG']
     INFLUXDB_BUCKET = secure_dict['INFLUXDB_BUCKET']
+    INFLUXDB_MEASUREMENT = secure_dict['INFLUXDB_MEASUREMENT']
+    INFLUXDB_LOCATION = secure_dict['INFLUXDB_LOCATION']
+    INFLUXDB_SENSOR = secure_dict['INFLUXDB_SENSOR']
     INFLUXDB_READ_CLIENT = InfluxDBClient(url='http://localhost:8086',
       token=INFLUXDB_READ_TOKEN, org=INFLUXDB_ORG)
     INFLUXDB_WRITE_CLIENT = InfluxDBClient(url='http://localhost:8086',
