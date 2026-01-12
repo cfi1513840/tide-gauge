@@ -136,7 +136,7 @@ class DbManage:
                 logging.warning('sqlite3 db insertion failed: '+str(errmsg))
                 pass
             message_time = datetime.utcnow()
-            point_tide_station = Point("{measurement}") \
+            point_tide_station = Point(f"{measurement}") \
               .tag("location", f"{location}") \
               .tag(self.cons.INFLUXDB_COLUMN_NAMES["S"],
                 data_dict["S"]) \
