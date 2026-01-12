@@ -252,7 +252,7 @@ class DbManage:
         local_time  = ''
         self.influx_query = (f'from(bucket:"{bucket}") '+
           f'|> range(start: {duration}) '+
-          '|> filter(fn:(r) => r._measurement == f"{measurement}") ' +
+          f'|> filter(fn:(r) => r._measurement == "{measurement}") ' +
           f'|> filter(fn: (r) => r.location == "{location}") ' +
           f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") ' +
           '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
