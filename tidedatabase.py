@@ -257,7 +257,6 @@ class DbManage:
           f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") ' +
           '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
           )
-        print (self.influx_query)
         tide_list = []
         field_dict = {}
         try:
