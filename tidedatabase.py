@@ -246,11 +246,13 @@ class DbManage:
         batv = ''
         solarv = ''
         rssi = ''
-        location = self.cons.STATION_LOCATION
+        location = self.cons.INFLUXDB_LOCATION
+        measurement = self.cons.INFLUXDB_MEASUREMENT
+        bucket = self.cons.INFLUXDB_BUCKET
         local_time  = ''
-        self.influx_query = ('from(bucket:"TideData") '+
+        self.influx_query = (f'from(bucket:"{bucket}") '+
           f'|> range(start: {duration}) '+
-          '|> filter(fn:(r) => r._measurement == "tide_station") ' +
+          '|> filter(fn:(r) => r._measurement == f"{measurement}") ' +
           f'|> filter(fn: (r) => r.location == "{location}") ' +
           f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") ' +
           '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
