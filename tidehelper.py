@@ -67,59 +67,63 @@ class Constants:
 
     if secure_dict['ADMINBRS2'] != 'None':
         ADMIN_TEL_NBRS.append(secure_dict['ADMINBRS2'])
+    if secure_dict.get('ADMIN') != None:
+        ADMIN_EMAIL = secure_dict.get('ADMIN')
+    if secure_dict.get('ADMINBRS') != None:
+        ADMIN_TEL_NBRS = secure_dict.get('ADMINBRS')   
 
-    EMAIL_USERNAME = secure_dict['EMAIL_USERNAME']
-    EMAIL_PASSWORD = secure_dict['EMAIL_PASSWORD']
-    BREVO_ADDRESS = secure_dict['BREVO_EMAIL_ADDRESS']
-    BREVO_USERNAME = secure_dict['BREVO_EMAIL_USERNAME']
-    BREVO_PASSWORD = secure_dict['BREVO_EMAIL_PASSWORD']
-    INFLUXDB_TOKEN = secure_dict['INFLUXDB_TOKEN']
-    INFLUXDB_READ_TOKEN = secure_dict['INFLUXDB_READ_TOKEN']
-    INFLUXDB_WRITE_TOKEN = secure_dict['INFLUXDB_WRITE_TOKEN']
-    INFLUXDB_ORG = secure_dict['INFLUXDB_ORG']
-    INFLUXDB_BUCKET = secure_dict['INFLUXDB_BUCKET']
-    INFLUXDB_MEASUREMENT = secure_dict['INFLUXDB_MEASUREMENT']
-    INFLUXDB_LOCATION = secure_dict['INFLUXDB_LOCATION']
-    INFLUXDB_SENSOR = secure_dict['INFLUXDB_SENSOR']
+    EMAIL_USERNAME = secure_dict.get('EMAIL_USERNAME')
+    EMAIL_PASSWORD = secure_dict.get('EMAIL_PASSWORD')
+    BREVO_ADDRESS = secure_dict.get('BREVO_EMAIL_ADDRESS')
+    BREVO_USERNAME = secure_dict.get('BREVO_EMAIL_USERNAME')
+    BREVO_PASSWORD = secure_dict.get('BREVO_EMAIL_PASSWORD')
+    INFLUXDB_TOKEN = secure_dict.get('INFLUXDB_TOKEN')
+    INFLUXDB_READ_TOKEN = secure_dict.get('INFLUXDB_READ_TOKEN')
+    INFLUXDB_WRITE_TOKEN = secure_dict.get('INFLUXDB_WRITE_TOKEN')
+    INFLUXDB_ORG = secure_dict.get('INFLUXDB_ORG')
+    INFLUXDB_BUCKET = secure_dict.get('INFLUXDB_BUCKET')
+    INFLUXDB_MEASUREMENT = secure_dict.get('INFLUXDB_MEASUREMENT')
+    INFLUXDB_LOCATION = secure_dict.get('INFLUXDB_LOCATION')
+    INFLUXDB_SENSOR = secure_dict.get('INFLUXDB_SENSOR')
     INFLUXDB_READ_CLIENT = InfluxDBClient(url='http://localhost:8086',
       token=INFLUXDB_READ_TOKEN, org=INFLUXDB_ORG)
     INFLUXDB_WRITE_CLIENT = InfluxDBClient(url='http://localhost:8086',
       token=INFLUXDB_WRITE_TOKEN, org=INFLUXDB_ORG)
     INFLUXDB_QUERY_API = INFLUXDB_WRITE_CLIENT.query_api()
-    OBSCAPE_USER = secure_dict['OBSCAPE_USER']
-    OBSCAPE_KEY = secure_dict['OBSCAPE_KEY']
-    SMTP_SERVER = secure_dict['SMTP_SERVER']
-    BREVO_SMTP_SERVER = secure_dict['BREVO_SMTP_SERVER']
-    SMTP_PORT = secure_dict['SMTP_PORT']
-    TWILIO_ACCOUNT_SID = secure_dict['TWILIO_ACCOUNT_SID']
-    TWILIO_AUTH_TOKEN = secure_dict['TWILIO_AUTH_TOKEN']
+    OBSCAPE_USER = secure_dict.get('OBSCAPE_USER')
+    OBSCAPE_KEY = secure_dict.get('OBSCAPE_KEY')
+    SMTP_SERVER = secure_dict.get('SMTP_SERVER')
+    BREVO_SMTP_SERVER = secure_dict.get('BREVO_SMTP_SERVER')
+    SMTP_PORT = secure_dict.get('SMTP_PORT')
+    TWILIO_ACCOUNT_SID = secure_dict.get('TWILIO_ACCOUNT_SID')
+    TWILIO_AUTH_TOKEN = secure_dict.get('TWILIO_AUTH_TOKEN')
     TWILIO_CLIENT = Client(TWILIO_ACCOUNT_SID,
             TWILIO_AUTH_TOKEN)
-    TWILIO_PHONE_SENDER = secure_dict['TWILIO_PHONE_SENDER']
-    TWILIO_PHONE_RECIPIENT = secure_dict['TWILIO_PHONE_RECIPIENT']
-    OPEN_WEATHERMAP_API = secure_dict['WXOPENAPI']
-    WEATHER_UNDERGROUND_API = secure_dict['WXUNDAPI']
-    WEATHER_LINK_API = secure_dict['WXLINKAPI']
-    WEATHER_LINK_API_SECRET = secure_dict['WXLINKAPI_SECRET']
+    TWILIO_PHONE_SENDER = secure_dict.get('TWILIO_PHONE_SENDER')
+    TWILIO_PHONE_RECIPIENT = secure_dict.get('TWILIO_PHONE_RECIPIENT')
+    OPEN_WEATHERMAP_API = secure_dict.get('WXOPENAPI')
+    WEATHER_UNDERGROUND_API = secure_dict.get('WXUNDAPI')
+    WEATHER_LINK_API = secure_dict.get('WXLINKAPI')
+    WEATHER_LINK_API_SECRET = secure_dict.get('WXLINKAPI_SECRET')
 
-    with open('tide.env', 'r') as infile:
-        lines = infile.readlines()
-    for line in lines:
-        line1 = line.replace(' ','')
-        line1 = line1.replace('\n','')
-        if len(line1) == 0:
-           continue
-        if line1[0] == '#':
-           continue
-        com = line1.find('#')
-        if com != -1:
-            line1 = line1[:com]
-        line2 = line1.split('=')
-        key = line2[0].replace(' ','')
-        value = line2[1]
-        value = value.replace("'","")
-        value = value.strip()
-        tide_dictionary[key] = value
+#    with open('tide.env', 'r') as infile:
+#        lines = infile.readlines()
+#    for line in lines:
+#        line1 = line.replace(' ','')
+#        line1 = line1.replace('\n','')
+#        if len(line1) == 0:
+#           continue
+#        if line1[0] == '#':
+#           continue
+#        com = line1.find('#')
+#        if com != -1:
+#            line1 = line1[:com]
+#        line2 = line1.split('=')
+#        key = line2[0].replace(' ','')
+#        value = line2[1]
+#        value = value.replace("'","")
+#        value = value.strip()
+#        tide_dictionary[key] = value
         
     envfile = find_dotenv('tide.env')
     if load_dotenv(envfile):
@@ -175,20 +179,20 @@ class Constants:
     RADIANS_PER_SECOND = math.pi*2/91080
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     
-    tide_dictionary['FULL_TIDE'] = str(math.pi)
-    tide_dictionary['HALF_TIDE'] = str(math.pi/2)
-    tide_dictionary['HOSTNAME'] = socket.gethostname()
-    tide_dictionary['INFLUXDB_COLUMN_NAMES'] = {
-        "S": "sensor_num",
-        "C": "message_count",
-        "R": "sensor_measurement_mm",
-        "M": "correlation_count",
-        "V": "battery_milliVolts",
-        "P": "signal_strength",
-        "s": "solar_milliVolts"
-        }
-    tide_dictionary['RADIANS_PER_SECOND'] = str(math.pi*2/91080)
-    tide_dictionary['TIME_FORMAT'] = "%Y-%m-%d %H:%M:%S"
+#    tide_dictionary['FULL_TIDE'] = str(math.pi)
+#    tide_dictionary['HALF_TIDE'] = str(math.pi/2)
+#    tide_dictionary['HOSTNAME'] = socket.gethostname()
+#    tide_dictionary['INFLUXDB_COLUMN_NAMES'] = {
+#        "S": "sensor_num",
+#        "C": "message_count",
+#        "R": "sensor_measurement_mm",
+#        "M": "correlation_count",
+#        "V": "battery_milliVolts",
+#        "P": "signal_strength",
+#        "s": "solar_milliVolts"
+#        }
+#    tide_dictionary['RADIANS_PER_SECOND'] = str(math.pi*2/91080)
+#    tide_dictionary['TIME_FORMAT'] = "%Y-%m-%d %H:%M:%S"
 
 class TideState:
     """Store state variables"""
