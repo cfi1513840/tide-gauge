@@ -31,14 +31,10 @@ class TideDisplay:
         self.master.configure(background='LightBlue1')
         if int(cons.TK_FULLSCREEN) == 1:
             self.master.geometry(f"{int(cons.TK_SCREEN_WIDTH)}x{int(cons.TK_SCREEN_HEIGHT)}+0+0")
-            #self.master.geometry("1024x600+0+0")   # your fixed panel size
-            #self.master.update_idletasks()
-            #self.master.overrideredirect(True)
-            #self.master.attributes("-topmost", True)    
+            self.master.attributes('-fullscreen', True)
         else:
             self.master.geometry(f'{int(
               cons.TK_SCREEN_WIDTH)-20}x{int(cons.TK_SCREEN_HEIGHT)-40}+10+40')
-
         self.master.bind("<Escape>", lambda event: exit())
         if not self.tide_only:
             self.local_wx_time_tk_var = StringVar()
