@@ -171,7 +171,6 @@ class Constants:
             screen_res = line.split()[0].split('x')
             TK_SCREEN_WIDTH = screen_res[0]
             TK_SCREEN_HEIGHT = screen_res[1]
-            print (TK_SCREEN_WIDTH, TK_SCREEN_HEIGHT)
 
     FULL_TIDE = math.pi
     HALF_TIDE = math.pi/2
