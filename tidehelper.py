@@ -11,6 +11,7 @@ acquiring sunrise and sunset times and declaring system constants,
 and checking variable field types.
 """
 import os
+import subprocess
 import math
 import smtplib
 import json
@@ -162,6 +163,15 @@ class Constants:
 
     else:
         print ('Unable to load Environment file')
+
+    cmd = ["xrandr"]
+    outres = subprocess.check_output(cmd, text=True)
+    for line in outres.splitlines():
+        if "*" in line:
+            screen_res = line.split()[0].split('x')
+            TK_SCREEN_WIDTH = screen_res[0]
+            TK_SCREEN_HEIGHT = screen_res[1]
+            print (TK_SCREEN_WIDTH, TK_SCREEN_HEIGHT)
 
     FULL_TIDE = math.pi
     HALF_TIDE = math.pi/2
