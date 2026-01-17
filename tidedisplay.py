@@ -29,9 +29,17 @@ class TideDisplay:
         self.y_grid_size = (self.canvas_height-(self.y_plot_start+self.y_plot_end))/13
         self.master = tk.Tk()
         self.master.configure(background='LightBlue1')
-        self.master.geometry(f'{int(cons.TK_SCREEN_WIDTH)-20}x{int(cons.TK_SCREEN_HEIGHT)-40}+10+40')
         if int(cons.TK_FULLSCREEN) == 1:
-            self.master.attributes('-fullscreen', True)
+            self.master.update_idletasks()
+            w = self.master.winfo_screenwidth()
+            h = self.master.winfo_screenheight()
+            self.master.overrideredirect(True)
+            self.master.attributes("-topmost", True)    
+            self.master.geometry(f"{w}x{h}+0+0") # force full physical screen
+        else:
+            self.master.geometry(f'{int(
+              cons.TK_SCREEN_WIDTH)-20}x{int(cons.TK_SCREEN_HEIGHT)-40}+10+40')
+
         self.master.bind("<Escape>", lambda event: exit())
         if not self.tide_only:
             self.local_wx_time_tk_var = StringVar()
