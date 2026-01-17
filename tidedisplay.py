@@ -272,7 +272,7 @@ class TideDisplay:
                 self.active_station_tk_var, font = ("Arial", 12,
                 'bold'), relief = tk.RIDGE).grid(row = 1,
                 column = 2, sticky = tk.NSEW)
-        tk.Label(sel_frame,bg = 'LightBlue1', text = " "+chr(8211)+' Battery Voltage: ',
+        tk.Label(sel_frame,bg = 'LightBlue1', text = " "+chr(8211)+' Bat Voltage: ',
             font = ("Arial", 12, 'bold'), relief = tk.RIDGE,
             borderwidth = 0, highlightthickness=0).grid(
             row = 1, column = 3, sticky = tk.NSEW)
