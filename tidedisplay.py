@@ -11,14 +11,8 @@ class TideDisplay:
         self.state = state
         self.tide_only = tide_only
         self.active_station = station
-        if cons.TK_SCREEN_WIDTH != None:
-            self.canvas_width = int(cons.TK_SCREEN_WIDTH)-25
-        else:
-            self.canvas_width = 1000
-        if cons.TK_SCREEN_HEIGHT != None:
-            self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-175
-        else:
-            self.canvas_height = 375
+        self.canvas_width = int(cons.TK_SCREEN_WIDTH)-25
+        self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-225
         self.y_start = 0
         self.y_plot_end = 30
         self.start_plot_x = 30
@@ -32,6 +26,7 @@ class TideDisplay:
         if int(cons.TK_FULLSCREEN) == 1:
             self.master.geometry(f"{int(cons.TK_SCREEN_WIDTH)}x{int(cons.TK_SCREEN_HEIGHT)}+0+0")
             self.master.attributes('-fullscreen', True)
+            self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-155
         else:
             self.master.geometry(f'{int(
               cons.TK_SCREEN_WIDTH)-20}x{int(cons.TK_SCREEN_HEIGHT)-40}+10+40')
