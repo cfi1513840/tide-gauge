@@ -29,7 +29,7 @@ class TideDisplay:
         self.y_grid_size = (self.canvas_height-(self.y_plot_start+self.y_plot_end))/13
         self.master = tk.Tk()
         self.master.configure(background='LightBlue1')
-        self.master.geometry(f'{cons.TK_SCREEN_WIDTH-20}x{cons.TK_SCREEN_HEIGHT-40}+10+40')
+        self.master.geometry(f'{int(cons.TK_SCREEN_WIDTH)-20}x{int(cons.TK_SCREEN_HEIGHT)-40}+10+40')
         if int(cons.TK_FULLSCREEN) == 1:
             self.master.attributes('-fullscreen', True)
         self.master.bind("<Escape>", lambda event: exit())
