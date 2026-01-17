@@ -16,7 +16,7 @@ class TideDisplay:
         else:
             self.canvas_width = 1000
         if cons.TK_SCREEN_HEIGHT != None:
-            self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-125
+            self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-225
         else:
             self.canvas_height = 375
         self.y_start = 0
