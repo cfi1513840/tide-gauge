@@ -16,7 +16,7 @@ class TideDisplay:
         else:
             self.canvas_width = 1000
         if cons.TK_SCREEN_HEIGHT != None:
-            self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-225
+            self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-175
         else:
             self.canvas_height = 375
         self.y_start = 0
@@ -30,7 +30,7 @@ class TideDisplay:
         self.master = tk.Tk()
         self.master.configure(background='LightBlue1')
         if int(cons.TK_FULLSCREEN) == 1:
-            self.master.geometry(f"{int(cons.TK_SCREEN_WIDTH)}x{int(cons.TK_SCREEN_HEIGHT)-100}+0+0")
+            self.master.geometry(f"{int(cons.TK_SCREEN_WIDTH)}x{int(cons.TK_SCREEN_HEIGHT)}+0+0")
             self.master.attributes('-fullscreen', True)
         else:
             self.master.geometry(f'{int(
