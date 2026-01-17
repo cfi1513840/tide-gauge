@@ -80,7 +80,8 @@ class TideDisplay:
           highlightbackground = 'black',
           highlightthickness = 1,
           width = self.canvas_width,
-          height = self.canvas_height, pady=1)
+          #height = self.canvas_height, pady=1)
+          pady=1)
         proc_frame.pack(side='top', fill='x')
         proc_frame.pack_propagate(False)
         proc_frame.grid_columnconfigure(0, weight=2)
