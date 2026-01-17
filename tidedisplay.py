@@ -31,11 +31,9 @@ class TideDisplay:
         self.master.configure(background='LightBlue1')
         if int(cons.TK_FULLSCREEN) == 1:
             self.master.update_idletasks()
-            w = self.master.winfo_screenwidth()
-            h = self.master.winfo_screenheight()
             self.master.overrideredirect(True)
             self.master.attributes("-topmost", True)    
-            self.master.geometry(f"{w}x{h}+0+0") # force full physical screen
+            self.master.geometry(f"{int(cons.TK_SCREEN_WIDTH)}x{int(cons.TK_SCREEN_HEIGHT)}+0+0")
         else:
             self.master.geometry(f'{int(
               cons.TK_SCREEN_WIDTH)-20}x{int(cons.TK_SCREEN_HEIGHT)-40}+10+40')
