@@ -30,14 +30,8 @@ class TideDisplay:
         self.master = tk.Tk()
         self.master.configure(background='LightBlue1')
         if int(cons.TK_FULLSCREEN) == 1:
-            self.master.withdraw()                 # hide while changing attributes
-            self.master.overrideredirect(True)     # removes title/menu bar/decorations
-            self.master.attributes("-topmost", True)
             self.master.geometry(f"{int(cons.TK_SCREEN_WIDTH)}x{int(cons.TK_SCREEN_HEIGHT)}+0+0")
             #self.master.geometry("1024x600+0+0")   # your fixed panel size
-            self.master.deiconify()               # show again
-            self.master.lift()
-            self.master.focus_force()
             #self.master.update_idletasks()
             #self.master.overrideredirect(True)
             #self.master.attributes("-topmost", True)    
