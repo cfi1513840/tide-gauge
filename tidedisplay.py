@@ -30,9 +30,9 @@ class TideDisplay:
         self.master = tk.Tk()
         self.master.configure(background='LightBlue1')
         if int(cons.TK_FULLSCREEN) == 1:
-            self.master.update_idletasks()
-            self.master.overrideredirect(True)
-            self.master.attributes("-topmost", True)    
+            #self.master.update_idletasks()
+            #self.master.overrideredirect(True)
+            #self.master.attributes("-topmost", True)    
             self.master.geometry(f"{int(cons.TK_SCREEN_WIDTH)}x{int(cons.TK_SCREEN_HEIGHT)}+0+0")
         else:
             self.master.geometry(f'{int(
