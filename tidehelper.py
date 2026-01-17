@@ -164,13 +164,11 @@ class Constants:
     else:
         print ('Unable to load Environment file')
 
-    cmd = ["xrandr"]
-    outres = subprocess.check_output(cmd, text=True)
-    for line in outres.splitlines():
-        if "*" in line:
-            screen_res = line.split()[0].split('x')
-            TK_SCREEN_WIDTH = screen_res[0]
-            TK_SCREEN_HEIGHT = screen_res[1]
+    with open("/sys/class/graphics/fb0/virtual_size", "r") as f:
+        screen_res = f.read().strip().split(',')
+
+    TK_SCREEN_WIDTH = screen_res[0]
+    TK_SCREEN_HEIGHT = screen_res[1]
 
     FULL_TIDE = math.pi
     HALF_TIDE = math.pi/2
