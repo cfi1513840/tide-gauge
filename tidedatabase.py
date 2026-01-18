@@ -146,29 +146,27 @@ class DbManage:
                     else:
                         point_command.tag(value[1], data_dict.get(name))
             point_command.time(message_time, WritePrecision.MS)
-            print (str(point_command)+'\n')
-            point_tide_station = Point(f"{measurement}") \
-              .tag("location", f"{location}") \
-              .tag(self.cons.INFLUXDB_COLUMN_NAMES["S"],
-                data_dict.get("S")) \
-              .tag("sensor_type", f"{sensor}") \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["V"],
-                data_dict.get("V")) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["C"],
-                data_dict.get("C")) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["R"],
-                data_dict.get("R")) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["M"],
-                data_dict.get("M")) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["P"],
-                data_dict.get("P")) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["s"],
-                solar) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["t"],
-                therm) \
-              .time(message_time, WritePrecision.MS)
-            print ('point_tide_station: '+str(point_tide_station)+'\n'
-)
+#            point_tide_station = Point(f"{measurement}") \
+#              .tag("location", f"{location}") \
+#              .tag(self.cons.INFLUXDB_COLUMN_NAMES["S"],
+#                data_dict.get("S")) \
+#              .tag("sensor_type", f"{sensor}") \
+#              .field(self.cons.INFLUXDB_COLUMN_NAMES["V"],
+#                data_dict.get("V")) \
+#              .field(self.cons.INFLUXDB_COLUMN_NAMES["C"],
+#                data_dict.get("C")) \
+#              .field(self.cons.INFLUXDB_COLUMN_NAMES["R"],
+#                data_dict.get("R")) \
+#              .field(self.cons.INFLUXDB_COLUMN_NAMES["M"],
+#                data_dict.get("M")) \
+#              .field(self.cons.INFLUXDB_COLUMN_NAMES["P"],
+#                data_dict.get("P")) \
+#              .field(self.cons.INFLUXDB_COLUMN_NAMES["s"],
+#                solar) \
+#              .field(self.cons.INFLUXDB_COLUMN_NAMES["t"],
+#                therm) \
+#              .time(message_time, WritePrecision.MS)
+#)
             write_api = self.influxdb_client.write_api(
               write_options=SYNCHRONOUS)
             result = write_api.write(self.cons.INFLUXDB_BUCKET,
