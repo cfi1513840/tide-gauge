@@ -185,7 +185,6 @@ class Constants:
         }
     with open('sensor_fields.json', 'r') as infile:
         INFLUXDB_NAMES = json.load(infile)
-    print (INFLUXDB_NAMES)
     RADIANS_PER_SECOND = math.pi*2/91080
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     

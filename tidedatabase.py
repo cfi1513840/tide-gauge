@@ -171,7 +171,7 @@ class DbManage:
             write_api = self.influxdb_client.write_api(
               write_options=SYNCHRONOUS)
             result = write_api.write(self.cons.INFLUXDB_BUCKET,
-              self.cons.INFLUXDB_ORG, point_tide_station)
+              self.cons.INFLUXDB_ORG, point_command)
 
         except Exception as errmsg:
             logging.warning('insert_tide: '+str(errmsg))            
