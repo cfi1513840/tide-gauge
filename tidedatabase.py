@@ -157,7 +157,7 @@ class DbManage:
               .field(self.cons.INFLUXDB_COLUMN_NAMES["t"],
                 therm) \
               .time(message_time, WritePrecision.MS)
-            print (str(point_tide_station))
+            print ('point_tide_station: '+str(point_tide_station))
             write_api = self.influxdb_client.write_api(
               write_options=SYNCHRONOUS)
             result = write_api.write(self.cons.INFLUXDB_BUCKET,
