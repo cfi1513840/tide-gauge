@@ -96,7 +96,6 @@ class DbManage:
 
     def insert_tide(self, data_dict):
         try:
-            print ('Executing insert_time')
             now = datetime.now()
             database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
             location = self.cons.INFLUXDB_LOCATION
@@ -138,6 +137,9 @@ class DbManage:
                 pass
             message_time = datetime.utcnow()
             point_command = Point(f'{measurement})')
+            for name, value in self.cons.INFLUXDB_COLUMN_NAMES.items():
+                point_command.field(value, data_dict.get(name))
+            print (str(point_command))
             point_tide_station = Point(f"{measurement}") \
               .tag("location", f"{location}") \
               .tag(self.cons.INFLUXDB_COLUMN_NAMES["S"],
