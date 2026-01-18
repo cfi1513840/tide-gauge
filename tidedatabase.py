@@ -96,6 +96,7 @@ class DbManage:
 
     def insert_tide(self, data_dict):
         try:
+            print ('Executing insert_time')
             now = datetime.now()
             database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
             location = self.cons.INFLUXDB_LOCATION
