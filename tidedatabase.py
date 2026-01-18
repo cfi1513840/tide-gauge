@@ -136,10 +136,16 @@ class DbManage:
                 logging.warning('sqlite3 db insertion failed: '+str(errmsg))
                 pass
             message_time = datetime.utcnow()
-            point_command = Point(f'{measurement})')
-            for name, value in self.cons.INFLUXDB_COLUMN_NAMES.items():
-                point_command.field(value, data_dict.get(name))
-            print (str(point_command))
+            point_command = Point(f'{measurement}')
+            point_command.tag("location", f"{location}")
+            point_command.tag("sensor_type", f"{sensor}")
+            for name, value in self.cons.INFLUXDB_NAMES.items():
+                if data_dict.get(name) != None:
+                    if value[0] == 'fld':
+                        point_command.field(value[1], data_dict.get(name))
+                    else:
+                        point_command.tag(value[1], data_dict.get(name))
+            print (str(point_command)+'\n')
             point_tide_station = Point(f"{measurement}") \
               .tag("location", f"{location}") \
               .tag(self.cons.INFLUXDB_COLUMN_NAMES["S"],
@@ -160,7 +166,8 @@ class DbManage:
               .field(self.cons.INFLUXDB_COLUMN_NAMES["t"],
                 therm) \
               .time(message_time, WritePrecision.MS)
-            print ('point_tide_station: '+str(point_tide_station))
+            print ('point_tide_station: '+str(point_tide_station)+'\n'
+)
             write_api = self.influxdb_client.write_api(
               write_options=SYNCHRONOUS)
             result = write_api.write(self.cons.INFLUXDB_BUCKET,
