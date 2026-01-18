@@ -1,0 +1,42 @@
+{
+  "S": [
+    "tag",
+    "sensor_num"
+  ],
+  "C": [
+    "fld",
+    "message_count"
+  ],
+  "U": [
+    "fld",
+    "sensor_measurement_mm"
+  ],
+  "R": [
+    "fld",
+    "sensor_measurement_mm"
+  ],
+  "M": [
+    "fld",
+    "correlation_count"
+  ],
+  "V": [
+    "fld",
+    "battery_milliVolts"
+  ],
+  "P": [
+    "fld",
+    "signal_strength"
+  ],
+  "r": [
+    "fld",
+    "signal_strength"
+  ],
+  "s": [
+    "fld",
+    "solar_milliVolts"
+  ],
+  "t": [
+    "fld",
+    "temperature"
+  ]
+}
