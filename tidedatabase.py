@@ -145,6 +145,7 @@ class DbManage:
                         point_command.field(value[1], data_dict.get(name))
                     else:
                         point_command.tag(value[1], data_dict.get(name))
+            point_command.time(message_time, WritePrecision.MS)
             print (str(point_command)+'\n')
             point_tide_station = Point(f"{measurement}") \
               .tag("location", f"{location}") \
