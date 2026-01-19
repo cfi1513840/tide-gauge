@@ -103,7 +103,7 @@ class DbManage:
             sensor = self.cons.INFLUXDB_SENSOR
             try:
                 station = data_dict.get('S')
-                distance = data_dict['R']
+                distance = data_dict.get('R')
                 distance_feet = round(distance*0.03937007874,2)
                 if 's' in data_dict:
                     solar = data_dict.get('s')
@@ -136,30 +136,20 @@ class DbManage:
                 logging.warning('sqlite3 db insertion failed: '+str(errmsg))
                 pass
             message_time = datetime.utcnow()
-            point_tide_station = Point(f"{measurement}") \
-              .tag("location", f"{location}") \
-              .tag(self.cons.INFLUXDB_COLUMN_NAMES["S"],
-                data_dict["S"]) \
-              .tag("sensor_type", f"{sensor}") \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["V"],
-                data_dict["V"]) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["C"],
-                data_dict["C"]) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["R"],
-                data_dict["R"]) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["M"],
-                data_dict["M"]) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["P"],
-                data_dict["P"]) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["s"],
-                solar) \
-              .field(self.cons.INFLUXDB_COLUMN_NAMES["t"],
-                therm) \
-              .time(message_time, WritePrecision.MS)
+            point_command = Point(f'{measurement}')
+            point_command.tag("location", f"{location}")
+            point_command.tag("sensor_type", f"{sensor}")
+            for name, value in self.cons.INFLUXDB_NAMES.items():
+                if data_dict.get(name) != None:
+                    if value[0] == 'fld':
+                        point_command.field(value[1], data_dict.get(name))
+                    else:
+                        point_command.tag(value[1], data_dict.get(name))
+            point_command.time(message_time, WritePrecision.MS)
             write_api = self.influxdb_client.write_api(
               write_options=SYNCHRONOUS)
             result = write_api.write(self.cons.INFLUXDB_BUCKET,
-              self.cons.INFLUXDB_ORG, point_tide_station)
+              self.cons.INFLUXDB_ORG, point_command)
 
         except Exception as errmsg:
             logging.warning('insert_tide: '+str(errmsg))            
@@ -271,14 +261,13 @@ class DbManage:
                     local_time = self.local_tz.normalize(local_time)
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
-                    #print (str(dbvalues))
-                    tide_mm = dbvalues.get("sensor_measurement_mm")
-                    batv = dbvalues.get("battery_milliVolts")
-                    solarv = dbvalues.get("solar_milliVolts")
-                    rssi = dbvalues.get("signal_strength")
-                    message_count = dbvalues.get("message_count")
-                    correlation_count = dbvalues.get("correlation_count")
-                    temperature = dbvalues.get("temperature")
+                    tide_mm = dbvalues.get(self.cons.INFLUXDB_NAMES.get('R')[1])
+                    batv = dbvalues.get(self.cons.INFLUXDB_NAMES.get('V')[1])
+                    solarv = dbvalues.get(self.cons.INFLUXDB_NAMES.get('s')[1])
+                    message_count = dbvalues.get(self.cons.INFLUXDB_NAMES.get('C')[1])
+                    correlation_count = dbvalues.get(self.cons.INFLUXDB_NAMES.get('M')[1])
+                    temperature = dbvalues.get(self.cons.INFLUXDB_NAMES.get('t')[1])
+                    rssi = dbvalues.get(self.cons.INFLUXDB_NAMES.get('P')[1])
                     if tide_mm != None and message_count != self.last_message_count:
                         self.last_message_count = message_count
                         if stationid == 1:
