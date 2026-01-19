@@ -283,13 +283,19 @@ class DbManage:
                     local_time = datetime.strftime(
                       local_time,"%Y-%m-%d %H:%M:%S")
                     #print (str(dbvalues))
-                    tide_mm = dbvalues.get("sensor_measurement_mm")
-                    batv = dbvalues.get("battery_milliVolts")
-                    solarv = dbvalues.get("solar_milliVolts")
-                    rssi = dbvalues.get("signal_strength")
-                    message_count = dbvalues.get("message_count")
-                    correlation_count = dbvalues.get("correlation_count")
-                    temperature = dbvalues.get("temperature")
+                    #tide_mm = dbvalues.get("sensor_measurement_mm")
+                    #batv = dbvalues.get("battery_milliVolts")
+                    #solarv = dbvalues.get("solar_milliVolts")
+                    #rssi = dbvalues.get("signal_strength")
+                    #message_count = dbvalues.get("message_count")
+                    #correlation_count = dbvalues.get("correlation_count")
+                    #temperature = dbvalues.get("temperature")
+                    tide_mm = dbvalues.get(self.cons.INFLUXDB_NAMES.get('R')[1])
+                    batv = dbvalues.get(self.cons.INFLUXDB_NAMES.get('V')[1])
+                    solarv = dbvalues.get(self.cons.INFLUXDB_NAMES.get('s')[1])
+                    message_count = dbvalues.get(self.cons.INFLUXDB_NAMES.get('C')[1])
+                    correlation_count = dbvalues.get(self.cons.INFLUXDB_NAMES.get('M')[1])
+                    temperature = dbvalues.get(self.cons.INFLUXDB_NAMES.get('t')[1])
                     if tide_mm != None and message_count != self.last_message_count:
                         self.last_message_count = message_count
                         if stationid == 1:

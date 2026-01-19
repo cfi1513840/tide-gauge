@@ -173,16 +173,16 @@ class Constants:
     FULL_TIDE = math.pi
     HALF_TIDE = math.pi/2
     HOSTNAME = socket.gethostname()
-    INFLUXDB_COLUMN_NAMES = {
-        "S": "sensor_num",
-        "C": "message_count",
-        "R": "sensor_measurement_mm",
-        "M": "correlation_count",
-        "V": "battery_milliVolts",
-        "P": "signal_strength",
-        "s": "solar_milliVolts",
-        "t": "temperature"
-        }
+#    INFLUXDB_COLUMN_NAMES = {
+#        "S": "sensor_num",
+#        "C": "message_count",
+#        "R": "sensor_measurement_mm",
+#        "M": "correlation_count",
+#        "V": "battery_milliVolts",
+#        "P": "signal_strength",
+#        "s": "solar_milliVolts",
+#        "t": "temperature"
+#        }
     with open('sensor_fields.json', 'r') as infile:
         INFLUXDB_NAMES = json.load(infile)
     RADIANS_PER_SECOND = math.pi*2/91080
