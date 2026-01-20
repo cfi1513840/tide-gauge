@@ -136,8 +136,8 @@ class GetWeather:
         self.message_time = current_time.strftime(
           self.cons.TIME_FORMAT)
         try:
-            wxurl = ('https://api.openweathermap.org/data/2.5/weather?'+
-              f'lat={self.cons.LATITUDE}&lon={self.cons.LONGITUDE}&'+
+            wxurl = (f'{self.cons.WX_OPEN_URL}'+
+              f'lat={self.cons.STATION_LATITUDE}&lon={self.cons.STATION_LONGITUDE}&'+
               f'units=imperial&appid={self.cons.OPEN_WEATHERMAP_API}')
             response = requests.get(wxurl)
             #print (str(response))

@@ -160,6 +160,7 @@ class Constants:
         TK_CANVAS_HEIGHT = os.getenv('TK_CANVAS_HEIGHT')
         TK_FULLSCREEN = os.getenv('TK_FULLSCREEN')
         SERIAL_PORTS = os.getenv('SERIAL_PORTS').split(",")
+        WX_OPEN_URL = os.getenv('WX_OPEN_URL')
 
     else:
         print ('Unable to load Environment file')
