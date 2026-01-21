@@ -103,8 +103,12 @@ class DbManage:
             sensor = self.cons.INFLUXDB_SENSOR
             try:
                 station = data_dict.get('S')
-                distance = data_dict.get('R')
-                distance_feet = round(distance*0.03937007874,2)
+                if 'R' in data_dict:
+                    distance = data_dict.get('R')
+                    distance_feet = round(distance*0.03937007874,2)
+                elif 'U' in data_dict:
+                    distance = data_dict.get('U')
+                    distance_feet = round(distance*0.03937007874,2)
                 if 's' in data_dict:
                     solar = data_dict.get('s')
                     solarv = round(solar/1000,3)
@@ -139,10 +143,10 @@ class DbManage:
                   therm                  
                   )
                 print (str(database_values))
-                #self.sql_cursor.execute(
-                #  f"INSERT INTO sensors VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                #  database_values)
-                #self.sql_connection.commit()
+                self.sql_cursor.execute(
+                  f"INSERT INTO sensors VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                  database_values)
+                self.sql_connection.commit()
             except Exception as errmsg:
                 logging.warning('sqlite3 db insertion failed: '+str(errmsg))
                 pass
