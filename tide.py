@@ -50,8 +50,8 @@ val = tidehelper.ValType()
 getwx = tideget.GetWeather(cons, val, notify)
 db = tidedatabase.DbManage(cons)
 getnoaa = tideget.GetNOAA(cons, val)
-if 'sim' not in sys.argv:    
-    sensor = tideget.ReadSensor(cons, val)
+#if 'sim' not in sys.argv:    
+#    sensor = tideget.ReadSensor(cons, val)
 predict = tidepredict.TidePredict(cons, db)
 alerts = tidealerts.TideAlerts(cons, db, notify)
 wxhtml = tidewxhtml.CreateWxHTML(cons)

@@ -10,17 +10,6 @@ class TideMonitor:
     def __init__(self):
         self.db = DbManage(Constants)
         self.get = ReadSensor(Constants, ValType())
-
-        if Constants.SERIAL_PORTS != None:
-            for port in Constants.SERIAL_PORTS:
-                if port == 'USB0':
-                    self.usb0_serial_input = serial.Serial(
-                      '/dev/ttyUSB0',9600, 8, 'N', 1, timeout = 1000)
-                    self.usb0_serial_input.reset_input_buffer()
-                elif port == 'USB1':
-                    self.usb1_serial_input = serial.Serial(
-                      '/dev/ttyUSB1',9600, 8, 'N', 1, timeout = 1000)
-                    self.usb1_serial_input.reset_input_buffer()
         self.tide_monitor()
         
     def tide_monitor(self):
