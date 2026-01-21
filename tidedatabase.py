@@ -115,16 +115,26 @@ class DbManage:
                     therm = data_dict.get('t')
                 else:
                     therm = 0
+                if 'M' in data_dict:
+                    corr = data_dict.get('M')
+                else:
+                    corr = 0
+                if 'P' in data_dict:
+                    rssi = data_dict.get('P')
+                elif 'r' in data_dict:
+                    rssi = data_dict.get('r')
+                else:
+                    rssi = 0
                 database_values = (
                   database_time,
                   station,
                   location,                    
-                  data_dict.get('P'), 
+                  rssi, 
                   round(data_dict.get('V')/1000,3),'', 
                   data_dict.get('C'),
                   distance_feet,
                   distance,
-                  data_dict.get('M'),
+                  corr,
                   solarv,
                   therm                  
                   )
