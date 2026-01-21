@@ -142,7 +142,6 @@ class DbManage:
                   solarv,
                   therm                  
                   )
-                print (str(database_values))
                 self.sql_cursor.execute(
                   f"INSERT INTO sensors VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                   database_values)
