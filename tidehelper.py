@@ -153,7 +153,7 @@ class Constants:
         TIDE_URL = os.getenv('TIDE_URL')
         NWS_LOCAL_GRIDPOINTS = os.getenv('NWS_LOCAL_GRIDPOINTS')
         NWS_MARINE_GRIDPOINTS = os.getenv('NWS_MARINE_GRIDPOINTS')
-        INFLUXDB_NAMES = os.getenv('INFLUXDB_NAMES')
+        #INFLUXDB_NAMES = os.getenv('INFLUXDB_NAMES')
         TIME_ZONE = os.getenv('TIME_ZONE')
         NWS_RADAR = os.getenv('NWS_RADAR')
         TK_CANVAS_WIDTH = os.getenv('TK_CANVAS_WIDTH')
