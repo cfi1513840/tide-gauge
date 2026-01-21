@@ -136,6 +136,14 @@ class DbManage:
                 logging.warning('sqlite3 db insertion failed: '+str(errmsg))
                 pass
             message_time = datetime.utcnow()
+            if data_dict.get('V') != None:
+                data_dict['V'] = float(data_dict.get('V'))
+            if data_dict.get('R') != None:
+                data_dict['R'] = float(data_dict.get('R'))
+            if data_dict.get('U') != None:
+                data_dict['U'] = float(data_dict.get('U'))
+            if data_dict.get('P') != None:
+                data_dict['P'] = float(data_dict.get('P'))
             point_command = Point(f'{measurement}')
             point_command.tag("location", f"{location}")
             point_command.tag("sensor_type", f"{sensor}")
