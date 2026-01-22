@@ -161,6 +161,8 @@ class Constants:
         TK_FULLSCREEN = os.getenv('TK_FULLSCREEN')
         SERIAL_PORTS = os.getenv('SERIAL_PORTS').split(",")
         WX_OPEN_URL = os.getenv('WX_OPEN_URL')
+        USB0_BAUDRATE = os.getenv('USB0_BAUDRATE')
+        USB1_BAUDRATE = os.getenv('USB1_BAUDRATE')
 
     else:
         print ('Unable to load Environment file')
