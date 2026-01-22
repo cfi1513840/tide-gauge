@@ -99,6 +99,7 @@ class Tide:
         self.sunrise = display_date_and_time[3]
         self.sunset = display_date_and_time[4]
         self.html = tidehtml.CreateHTML(cons, self.tide_only)
+        self.tide_list = []
         #
         # Extract the value of the test argument, if specified. This will be
         # used to determine the test cases to be run on various modules.
