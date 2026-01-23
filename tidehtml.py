@@ -74,21 +74,21 @@ class CreateHTML:
         #
         # Extract NDBC dictionary data
         #
-        ndbc_wind_f = 0
-        ndbc_gust_f = 0
-        ndbc_wave_f = 0
-        timecheck = 0
+        ndbc_wind_f = ''
+        ndbc_gust_f = ''
+        ndbc_wave_f = ''
+        timecheck = ''
         ndbc_time = 'Not Reporting'
-        ndbc_location = 0
-        ndbc_wind = 0
-        ndbc_wind_direction = 0
-        ndbc_gust = 0
-        ndbc_wave_height = 0
-        ndbc_wave_period = 0
-        ndbc_air_temp = 0
-        ndbc_water_temp = 0
-        ndbc_wave_direction = 0
-        ndbc_baro = 0
+        ndbc_location = ''
+        ndbc_wind = ''
+        ndbc_wind_direction = ''
+        ndbc_gust = ''
+        ndbc_wave_height = ''
+        ndbc_wave_period = ''
+        ndbc_air_temp = ''
+        ndbc_water_temp = ''
+        ndbc_wave_direction = ''
+        ndbc_baro = ''
         if current_time > datetime.strptime(ndbcdata.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
             ndbcdata = {}
         #print (ndbcdata)
