@@ -296,6 +296,16 @@ class TideDisplay:
 
     def update(self, weather, ndbc_data):
         """Update tkinter display"""
+        self.ndbc_time_tk_var.set(ndbc_data['Not Reporting'])
+        self.ndbc_wind_tk_var.set('')
+        self.ndbc_gust_tk_var.set('')
+        self.ndbc_wave_height_tk_var.set('')
+        self.ndbc_wave_period_tk_var.set('')
+        self.ndbc_air_temperature_tk_var.set('')
+        self.ndbc_water_temperature_tk_var.set('')
+        self.ndbc_wave_direction_tk_var.set('')
+        self.ndbc_baro_tk_var.set('')
+
         self.title_bar_tk_var.set(self.state.title_bar)
         if weather:
             self.local_wx_time_tk_var.set(weather['obs_time'])
@@ -334,6 +344,9 @@ class TideDisplay:
                 self.baro_tk_var.set(str(baro))
             self.last_baro = float(baro)
         if ndbc_data:
+            curtime = datetime.now()
+            if curtime > datetime.strptime(ndbc_data.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
+                return
             air_temp_display = ''
             water_temp_display = ''
             self.ndbc_time_tk_var.set(ndbc_data['DateTime'])

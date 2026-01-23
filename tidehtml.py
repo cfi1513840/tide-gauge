@@ -78,7 +78,7 @@ class CreateHTML:
         ndbc_gust_f = 0
         ndbc_wave_f = 0
         timecheck = 0
-        ndbc_time = 0
+        ndbc_time = 'Not Reporting'
         ndbc_location = 0
         ndbc_wind = 0
         ndbc_wind_direction = 0
@@ -89,6 +89,8 @@ class CreateHTML:
         ndbc_water_temp = 0
         ndbc_wave_direction = 0
         ndbc_baro = 0
+        if current_time > datetime.strptime(ndbc_data.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
+            ndbcdata = {}
         #print (ndbcdata)
         if ndbcdata and not self.tide_only:
             if 'DateTime' in ndbcdata:
