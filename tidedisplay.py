@@ -296,7 +296,7 @@ class TideDisplay:
 
     def update(self, weather, ndbc_data):
         """Update tkinter display"""
-        self.ndbc_time_tk_var.set(ndbc_data['Not Reporting'])
+        self.ndbc_time_tk_var.set('Not Reporting')
         self.ndbc_wind_tk_var.set('')
         self.ndbc_gust_tk_var.set('')
         self.ndbc_wave_height_tk_var.set('')
