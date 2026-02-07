@@ -1,5 +1,6 @@
 import serial
 import time
+import os
 from datetime import datetime, timedelta
 from tidehelper import Constants, ValType
 from tideget import ReadSensor
@@ -10,6 +11,18 @@ class TideMonitor:
     def __init__(self):
         self.db = DbManage(Constants)
         self.get = ReadSensor(Constants, ValType())
+
+        for pid in os.listdir('/proc'):
+            if not pid.isdigit():
+                continue
+
+            with open(f'/proc/{pid}/cmdline', 'r') as f:
+                cmdline = f.read()
+
+            if 'tide.py' in cmdline:
+                print ('tidemonitor.py cannot be run concurrently with tide.py'
+                exit()
+        
         self.tide_monitor()
         
     def tide_monitor(self):
@@ -28,6 +41,7 @@ class TideMonitor:
                 time.sleep(delay)
             else:
                 pass
+
 #
 #Start the ball rolling
 #
