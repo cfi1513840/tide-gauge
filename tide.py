@@ -66,7 +66,7 @@ class Tide:
                 cmdline = f.read()
 
             if 'tidemonitor.py' in cmdline:
-                print ('tide.py cannot be run concurrently with tidemonitor.py'
+                print ('tide.py cannot be run concurrently with tidemonitor.py')
                 exit()
 
         self.current_time = datetime.now()
