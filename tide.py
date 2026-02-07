@@ -50,8 +50,7 @@ val = tidehelper.ValType()
 getwx = tideget.GetWeather(cons, val, notify)
 db = tidedatabase.DbManage(cons)
 getnoaa = tideget.GetNOAA(cons, val)
-#if 'sim' not in sys.argv:    
-#    sensor = tideget.ReadSensor(cons, val)
+sensor = tideget.ReadSensor(cons, val)
 predict = tidepredict.TidePredict(cons, db)
 alerts = tidealerts.TideAlerts(cons, db, notify)
 wxhtml = tidewxhtml.CreateWxHTML(cons)
@@ -59,6 +58,17 @@ wxhtml = tidewxhtml.CreateWxHTML(cons)
 class Tide:
     """The Tide class is the primary tide station processor and scheduler"""
     def __init__(self):
+        for pid in os.listdir('/proc'):
+            if not pid.isdigit():
+                continue
+
+            with open(f'/proc/{pid}/cmdline', 'r') as f:
+                cmdline = f.read()
+
+            if 'tidemonitor.py' in cmdline:
+                print ('tide.py cannot be run concurrently with tidemonitor.py'
+                exit()
+
         self.current_time = datetime.now()
         self.message_time = datetime.strftime(
           self.current_time, cons.TIME_FORMAT)
@@ -158,9 +168,8 @@ class Tide:
                 db.insert_tide_predicts(noaa_tide)
         predict_list = predict.tide_predict()
         self.sensor_readings = {}
-        if 'sim' not in sys.argv:
-            tide_readings, self.sensor_readings = db.fetch_tide(
-              self.stationid, self.station1cal, self.station2cal,'-1m')            
+        tide_readings, self.sensor_readings = db.fetch_tide(
+          self.stationid, self.station1cal, self.station2cal,'-1m')            
         if self.sensor_readings:
             if int(self.sensor_readings.get('S')) == self.stationid:
                 tide_level = self.sensor_readings.get('R')
@@ -211,6 +220,12 @@ class Tide:
         # each minute to distribute CPU time and to avoid database access
         # conflicts. NOAA tide predictions are updated daily.
         #
+        # Read sensor data on serial ports and write to databases
+        #
+        for port in cons.SERIAL_PORTS:
+            sensor_packet = sensor.read_sensor(port)
+            if sensor_packet:
+                db.insert_tide(sensor_packet)
 
         if self.main_loop_count == 2 and int(current_minute) % 5 == 0: 
             #
@@ -310,9 +325,8 @@ class Tide:
 
             tide_readings = []
             self.sensor_readings = {}
-            if 'sim' not in sys.argv: 
-                tide_readings, self.sensor_readings = db.fetch_tide(
-                  self.stationid, self.station1cal, self.station2cal,'-1m')                
+            tide_readings, self.sensor_readings = db.fetch_tide(
+              self.stationid, self.station1cal, self.station2cal,'-1m')                
             if self.sensor_readings:
                 tide_level = self.sensor_readings.get('R')
                 if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
