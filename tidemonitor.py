@@ -20,7 +20,7 @@ class TideMonitor:
                 cmdline = f.read()
 
             if 'tide.py' in cmdline:
-                print ('tidemonitor.py cannot be run concurrently with tide.py'
+                print ('tidemonitor.py cannot be run concurrently with tide.py')
                 exit()
         
         self.tide_monitor()
