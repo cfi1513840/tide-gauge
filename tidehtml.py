@@ -71,28 +71,28 @@ class CreateHTML:
             if 'V' in sensor: batv = sensor['V']
             if 's' in sensor: solarv = sensor['s']
             if 'P' in sensor: rssi = sensor['P']
-        #
-        # Extract NDBC dictionary data
-        #
-        ndbc_wind_f = ''
-        ndbc_gust_f = ''
-        ndbc_wave_f = ''
-        timecheck = ''
-        ndbc_time = 'Not Reporting'
-        ndbc_location = ''
-        ndbc_wind = ''
-        ndbc_wind_direction = ''
-        ndbc_gust = ''
-        ndbc_wave_height = ''
-        ndbc_wave_period = ''
-        ndbc_air_temp = ''
-        ndbc_water_temp = ''
-        ndbc_wave_direction = ''
-        ndbc_baro = ''
-        if current_time > datetime.strptime(ndbcdata.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
-            ndbcdata = {}
-        #print (ndbcdata)
         if ndbcdata and not self.tide_only:
+            #
+            # Extract NDBC dictionary data
+            #
+            ndbc_wind_f = ''
+            ndbc_gust_f = ''
+            ndbc_wave_f = ''
+            timecheck = ''
+            ndbc_time = 'Not Reporting'
+            ndbc_location = ''
+            ndbc_wind = ''
+            ndbc_wind_direction = ''
+            ndbc_gust = ''
+            ndbc_wave_height = ''
+            ndbc_wave_period = ''
+            ndbc_air_temp = ''
+            ndbc_water_temp = ''
+            ndbc_wave_direction = ''
+            ndbc_baro = ''
+            if current_time > datetime.strptime(ndbcdata.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
+                ndbcdata = {}
+            #print (ndbcdata)
             if 'DateTime' in ndbcdata:
                 ndbc_time = ndbcdata['DateTime']
                 timecheck = datetime.strptime(ndbc_time,'%b %d, %Y %H:%M')
