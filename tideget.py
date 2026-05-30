@@ -573,6 +573,9 @@ class ReadSensor:
                     if this_var == -99:
                         data_dict = {}
                         break
+                    if (field[0] == 'R' or field[0] == 'U') and this_var == 0:
+                        data_dict = {}
+                        break
                     data_dict[field[0]] = this_var
                 else:
                     continue
