@@ -98,14 +98,22 @@ class CreateHTML:
                 timecheck = datetime.strptime(ndbc_time,'%b %d, %Y %H:%M')
             if 'Location' in ndbcdata:
                 ndbc_location = ndbcdata['Location']
-            if 'Wind Speed' in ndbcdata:
-                ndbc_wind = ndbcdata['Wind Speed']
             if 'Wind Direction' in ndbcdata:
                 ndbc_wind_direction = ndbcdata['Wind Direction']
+            if 'Wind Speed' in ndbcdata:
+                ndbc_wind = ndbcdata['Wind Speed']
+                if ndbc_wind != 0:
+                    ndbc_wind_f = float(ndbc_wind)               
+                    ndbc_wind = ndbc_wind_direction+' '+ndbc_wind               
             if 'Wind Gust' in ndbcdata:
                 ndbc_gust = ndbcdata['Wind Gust']
+                if ndbc_gust != 0:
+                    ndbc_gust_f = float(ndbc_gust)
             if 'Wave Height' in ndbcdata:
-                ndbc_wave_height = ndbcdata['Wave Height']+ ' ft'
+                ndbc_wave_height = ndbcdata['Wave Height']
+                if ndbc_wave_height != 0:
+                    ndbc_wave_f = float(ndbc_wave_height)
+                    ndbc_wave_height = ndbcdata['Wave Height']+ ' ft'
             if 'Wave Period' in ndbcdata:
                 ndbc_wave_period = ndbcdata['Wave Period']+ ' secs'
             if 'Air Temperature' in ndbcdata:
@@ -124,15 +132,8 @@ class CreateHTML:
                     ndbc_currency = 0
                 try:
                     ndbc_time = datetime.strftime(timecheck,'%b %d, %Y %H:%M')
-                    if ndbc_wind != 0:
-                        ndbc_wind_f = float(ndbc_wind)
-                        ndbc_wind = ndbc_wind_direction+' '+ndbc_wind
-                    if ndbc_gust != 0:
-                        ndbc_gust_f = float(ndbc_gust)
-                    if ndbc_wave_height != 0:
-                        ndbc_wave_f = float(ndbc_wave_height)
                 except:
-                    logging.info('Error processing NDBC wind parameters')
+                    logging.info('Error processing NDBC time parameter')
             ndbc_wind = ndbc_wind+' kts'
             ndbc_gust = ndbc_gust+' kts'
         #
