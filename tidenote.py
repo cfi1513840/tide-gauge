@@ -3,7 +3,6 @@
 import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-# your existing modules
 from tidehelper import Constants         
 from tidedatabase import DbManage   
 
@@ -23,28 +22,33 @@ class NotehubHandler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers.get("Content-Length", 0))
             event = json.loads(self.rfile.read(length))
-            record = self._normalize(event)
+            records = self._normalize(event)
         except (ValueError, KeyError, TypeError):
             self._reply(400, b"bad request")
             return
-        #db.insert_tide(record)              
+        for record in records:
+            print (record)
+            db.insert_tide(record)
         self._reply(200, b"ok")
-
     def _normalize(self, event):
-        body = event.get("body", {})
-        print(str(body))
-        """
-        return {                         # match what db.write() expects
-            "measurement": "sensor",
-            "tags": {"station": event.get("device", "unknown")},
-            "timestamp": int(event["when"]),
-            "fields": {
-                "distance": float(body["distance"]),
-                "raw_distance": float(body["raw_distance"]),
-            },
-        }
-        """
-
+        status = event.get("status", {})
+        rssi = status.get("P")
+        voltage = status.get("V")
+        temp = status.get("t")
+        station = 3
+        records = []
+        for m in event.get("measurements", []):
+            records.append({
+                "T": m["T"],          
+                "R": m["D"],
+                "M": m["M"],
+                "P": rssi,
+                "S": 3,
+                "V": voltage,
+                "t": temp
+            })
+        return records
+        
     def _reply(self, code, body):
         self.send_response(code)
         self.send_header("Content-Length", str(len(body)))

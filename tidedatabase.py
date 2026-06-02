@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 import logging
@@ -98,6 +98,8 @@ class DbManage:
         try:
             now = datetime.now()
             database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
+            if "T" in data_dict:
+                database_time = datetime.fromtimestamp(data_dict["T"]).strftime(self.cons.TIME_FORMAT)  
             location = self.cons.INFLUXDB_LOCATION
             measurement = self.cons.INFLUXDB_MEASUREMENT
             sensor = self.cons.INFLUXDB_SENSOR
@@ -133,8 +135,11 @@ class DbManage:
                   database_time,
                   station,
                   location,                    
-                  rssi, 
-                  round(data_dict.get('V')/1000,3),'', 
+                  rssi,
+                  if "T" in data_dict:
+                      data_dict.get('V")
+                  else:                      
+                      round(data_dict.get('V')/1000,3),'', 
                   data_dict.get('C'),
                   distance_feet,
                   distance,
@@ -149,7 +154,9 @@ class DbManage:
             except Exception as errmsg:
                 logging.warning('sqlite3 db insertion failed: '+str(errmsg))
                 pass
-            message_time = datetime.utcnow()
+            message_time = datetime.now(timezone.utc)
+            if "T" in data_dict:
+                message_time = data_dict["T"]*1000
             point_command = Point(f'{measurement}')
             point_command.tag("location", f"{location}")
             point_command.tag("sensor_type", f"{sensor}")
