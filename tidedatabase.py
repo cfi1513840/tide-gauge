@@ -140,7 +140,7 @@ class DbManage:
                   station,
                   location,                    
                   rssi,
-                  voltage,
+                  voltage,'',
                   data_dict.get('C'),
                   distance_feet,
                   distance,
