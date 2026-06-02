@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Standalone Notehub receiver — writes to InfluxDB via existing modules."""
+"""Standalone Notehub receiver — writes to sqlite3 and InfluxDB via existing modules."""
 import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
@@ -27,7 +27,7 @@ class NotehubHandler(BaseHTTPRequestHandler):
             self._reply(400, b"bad request")
             return
         for record in records:
-            print (record)
+            #print (record)
             db.insert_tide(record)
         self._reply(200, b"ok")
     def _normalize(self, event):
