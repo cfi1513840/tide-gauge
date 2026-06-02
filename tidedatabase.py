@@ -131,15 +131,16 @@ class DbManage:
                     rssi = data_dict.get('r')
                 else:
                     rssi = 0
+                if "T" in data_dict:
+                    voltage = data_dict.get('V')
+                else:                      
+                    voltage = round(data_dict.get('V')/1000,3) 
                 database_values = (
                   database_time,
                   station,
                   location,                    
                   rssi,
-                  if "T" in data_dict:
-                      data_dict.get('V")
-                  else:                      
-                      round(data_dict.get('V')/1000,3),'', 
+                  voltage,
                   data_dict.get('C'),
                   distance_feet,
                   distance,
