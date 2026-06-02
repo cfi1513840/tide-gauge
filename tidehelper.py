@@ -93,6 +93,7 @@ class Constants:
     INFLUXDB_QUERY_API = INFLUXDB_WRITE_CLIENT.query_api()
     OBSCAPE_USER = secure_dict.get('OBSCAPE_USER')
     OBSCAPE_KEY = secure_dict.get('OBSCAPE_KEY')
+    NOTEHUB_SECRET = secure_dict.get('NOTEHUB_SECRET')
     SMTP_SERVER = secure_dict.get('SMTP_SERVER')
     BREVO_SMTP_SERVER = secure_dict.get('BREVO_SMTP_SERVER')
     SMTP_PORT = secure_dict.get('SMTP_PORT')
@@ -163,6 +164,7 @@ class Constants:
         WX_OPEN_URL = os.getenv('WX_OPEN_URL')
         USB0_BAUDRATE = os.getenv('USB0_BAUDRATE')
         USB1_BAUDRATE = os.getenv('USB1_BAUDRATE')
+        SENSOR_SOURCE = os.getenv('SENSOR_SOURCE')
 
     else:
         print ('Unable to load Environment file')
