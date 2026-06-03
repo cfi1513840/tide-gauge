@@ -202,6 +202,14 @@ class DbManage:
             self.sql_cursor.execute(f"select {colname} from iparams")
             colval = self.sql_cursor.fetchone()
             iparams_dict[f"{colname}"] = colval[0]
+            
+        self.sql_cursor.execute("SELECT name FROM PRAGMA_table_info('banner')")
+        colnames = [row[0] for row in self.sql_cursor.fetchall()]
+        for colname in colnames:
+            self.sql_cursor.execute(f"select {colname} from banner")
+            colval = self.sql_cursor.fetchone()
+            iparams_dict[f"{colname}"] = colval[0]
+                        
         return iparams_dict
 
     def fetch_ndbc(self):
