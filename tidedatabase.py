@@ -164,7 +164,7 @@ class DbManage:
             for name, value in self.cons.INFLUXDB_NAMES.items():
                 if data_dict.get(name) != None:
                     if value[2] == 'int':
-                        if name == 'V':
+                        if name == 'V' and 'T' in data_dict:
                             data_dict[name] = int(data_dict.get(name)*1000)
                         else:
                             data_dict[name] = int(data_dict.get(name))
