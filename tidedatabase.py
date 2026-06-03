@@ -239,7 +239,7 @@ class DbManage:
             logging.warning('fetch_iparams: '+str(errmsg))
             return None
         print ('old dict: '+iparams_dict)
-        print ('new dict: "+new_iparams_list)
+        print ('new dict: '+new_iparams_list)
 
     def fetch_ndbc(self):
         ndbc_list = (
