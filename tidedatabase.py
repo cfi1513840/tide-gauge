@@ -195,14 +195,16 @@ class DbManage:
             return None            
  
     def fetch_iparams(self):
-        new_iparams_dict = {}
+        iparams_dict = {}
         self.sql_cursor.execute("SELECT name FROM PRAGMA_table_info('iparams')")
         colnames = [row[0] for row in self.sql_cursor.fetchall()]
         for colname in colnames:
             self.sql_cursor.execute(f"select {colname} from iparams")
             colval = self.sql_cursor.fetchone()
             print (colval[0])
-            new_iparams_dict[f"{colname}"] = colval[0]
+            iparams_dict[f"{colname}"] = colval[0]
+        return iparams_dict
+        """
         iparams_list = (
           'stationid',
           'noalert',
@@ -238,8 +240,7 @@ class DbManage:
         except Exception as errmsg:
             logging.warning('fetch_iparams: '+str(errmsg))
             return None
-        print ('old dict: '+iparams_dict)
-        print ('new dict: '+new_iparams_list)
+        """
 
     def fetch_ndbc(self):
         ndbc_list = (
