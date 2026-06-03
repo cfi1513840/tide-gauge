@@ -201,7 +201,6 @@ class DbManage:
         for colname in colnames:
             self.sql_cursor.execute(f"select {colname} from iparams")
             colval = self.sql_cursor.fetchone()
-            print (colval[0])
             iparams_dict[f"{colname}"] = colval[0]
         return iparams_dict
 
