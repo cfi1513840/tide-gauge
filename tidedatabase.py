@@ -204,43 +204,6 @@ class DbManage:
             print (colval[0])
             iparams_dict[f"{colname}"] = colval[0]
         return iparams_dict
-        """
-        iparams_list = (
-          'stationid',
-          'noalert',
-          'wxavail',
-          'wxsource',
-          'wxtime',
-          'station1cal',
-          'station2cal',
-          's1enable',
-          's2enable',
-          'debug',
-          'tide_only'
-        )
-        banner_list = (
-          'alertmsg',
-          'sunrise',
-          'sunset',
-          'dispdate',
-          'banflag'
-        )
-        iparams_dict = {}
-        try:        
-            self.sql_cursor.execute("select * from iparams")
-            params = self.sql_cursor.fetchone()
-            for index, entry in enumerate(params):
-                iparams_dict[iparams_list[index]] = entry
-            self.sql_cursor.execute("select * from banner")
-            params = self.sql_cursor.fetchone()
-            for index, entry in enumerate(params):
-                iparams_dict[banner_list[index]] = entry
-            return iparams_dict                
-
-        except Exception as errmsg:
-            logging.warning('fetch_iparams: '+str(errmsg))
-            return None
-        """
 
     def fetch_ndbc(self):
         ndbc_list = (
