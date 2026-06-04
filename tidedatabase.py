@@ -242,7 +242,7 @@ class DbManage:
             logging.warning('fetch_ndbc: '+str(errmsg))
             return None
 
-    def fetch_tide(self, stationcal, duration):
+    def fetch_tide(self, stationid, stationcal, duration):
         """Fetch the last 24 hours of tide measurements for plotting"""
         tide_mm = ''
         batv = ''

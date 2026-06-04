@@ -182,7 +182,7 @@ class Tide:
         predict_list = predict.tide_predict()
         self.sensor_readings = {}
         tide_readings, self.sensor_readings = db.fetch_tide(
-          self.stationcal, '-1hr')            
+          self.stationid, self.stationcal, '-1hr')            
         if self.sensor_readings:
             if int(self.sensor_readings.get('S')) == self.stationid:
                 tide_level = self.sensor_readings.get('R')
@@ -190,7 +190,7 @@ class Tide:
                 for idx in range(0,20):
                     self.tide_average = self.tide_average[1:]+[tide_level]
         tide_list, self.sensor_readings = db.fetch_tide(
-          self.stationcal, '-24h')
+          self.stationid, self.stationcal, '-24h')
         if tide_list:
             self.process = tideprocess.ProcTide(tide_list)
             self.tide_list = self.process.get_tide_list()
@@ -353,7 +353,7 @@ class Tide:
             tide_readings = []
             self.sensor_readings = {}
             tide_readings, self.sensor_readings = db.fetch_tide(
-              self.stationcal, '-45m')                
+              self.stationid, self.stationcal, '-45m')                
             if self.sensor_readings:
                 tide_level = self.sensor_readings.get('R')
                 if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
