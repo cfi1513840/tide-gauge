@@ -242,7 +242,7 @@ class DbManage:
             logging.warning('fetch_ndbc: '+str(errmsg))
             return None
 
-    def fetch_tide(self, stationid, station1cal ,station2cal, duration):
+    def fetch_tide(self, stationcal, duration):
         """Fetch the last 24 hours of tide measurements for plotting"""
         tide_mm = ''
         batv = ''
@@ -297,7 +297,7 @@ class DbManage:
                     rssi = dbvalues.get(self.cons.INFLUXDB_NAMES.get('P')[1])
                     if tide_mm != None:
                         #self.last_message_count = message_count
-\                       tide = stationcal-tide_mm/304.8
+\                       tide = self.stationcal-tide_mm/304.8
                         tide_list.append([local_time, tide, ''])
                         field_dict = {
                           "S": stationid,
