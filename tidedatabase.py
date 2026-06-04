@@ -297,7 +297,7 @@ class DbManage:
                     rssi = dbvalues.get(self.cons.INFLUXDB_NAMES.get('P')[1])
                     if tide_mm != None:
                         #self.last_message_count = message_count
-\                       tide = self.stationcal-tide_mm/304.8
+                        tide = self.stationcal-tide_mm/304.8
                         tide_list.append([local_time, tide, ''])
                         field_dict = {
                           "S": stationid,
