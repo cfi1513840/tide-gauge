@@ -101,9 +101,9 @@ class Tide:
         self.station1cal = self.iparams_dict.get('station1cal')
         self.station2cal = self.iparams_dict.get('station2cal')
         self.station3cal = self.iparams_dict.get('station3cal')
-        self.s1type = self.iparams.get('s1type')
-        self.s2type = self.iparams.get('s2type')
-        self.s3type = self.iparams.get('s3type')
+        self.s1type = self.iparams_dict.get('s1type')
+        self.s2type = self.iparams_dict.get('s2type')
+        self.s3type = self.iparams_dict.get('s3type')
         if self.stationid == 1:
             self.stationcal = self.station1cal
             self.stype = self.s1type
