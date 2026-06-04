@@ -19,6 +19,8 @@ class DbManage:
         self.sql_cursor = self.sql_connection.cursor()
         self.local_tz = pytz.timezone('US/Eastern')
         self.last_message_count = 100
+        self.initial_start = "-24h"
+        self.last_time = None
 
    
     def insert_weather(self, weather):
@@ -250,20 +252,35 @@ class DbManage:
         measurement = self.cons.INFLUXDB_MEASUREMENT
         bucket = self.cons.INFLUXDB_BUCKET
         local_time  = ''
-        self.influx_query = (f'from(bucket:"{bucket}") '+
-          f'|> range(start: {duration}) '+
-          f'|> filter(fn:(r) => r._measurement == "{measurement}") ' +
-          f'|> filter(fn: (r) => r.location == "{location}") ' +
-          f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") ' +
-          '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
-          )
+        if self.last_time is not None and duration == '-45m':
+            self.last_time = (self.last_time + datetime.timedelta(microseconds=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        else:
+            self.last_time = duration
+        self.influx_query = (f'from(bucket:"{bucket}") '
+            f'|> range(start: {self.last_time}, stop: now()) '
+            f'|> filter(fn:(r) => r._measurement == "{measurement}") '
+            f'|> filter(fn: (r) => r.location == "{location}") '
+            f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") '
+            '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
+        )
+        #self.influx_query = (f'from(bucket:"{bucket}") '+
+        #  f'|> range(start: {duration}) '+
+        #  f'|> filter(fn:(r) => r._measurement == "{measurement}") ' +
+        #  f'|> filter(fn: (r) => r.location == "{location}") ' +
+        #  f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") ' +
+        #  '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
+        #  )
         tide_list = []
         field_dict = {}
+        newest_time = None
         try:
             query_result = self.influxdb_query_api.query(
             org=self.influxdb_org, query=self.influx_query)
             for table in query_result:
                 for record in table.records:
+                    timetag = record.get_time()             
+                    if newest_time is None or timetag > newest_time:
+                        newest_time = timetag                   
                     dbvalues = record.values
                     utc_time = record.get_time()
                     local_time = utc_time.replace(
@@ -278,12 +295,9 @@ class DbManage:
                     correlation_count = dbvalues.get(self.cons.INFLUXDB_NAMES.get('M')[1])
                     temperature = dbvalues.get(self.cons.INFLUXDB_NAMES.get('t')[1])
                     rssi = dbvalues.get(self.cons.INFLUXDB_NAMES.get('P')[1])
-                    if tide_mm != None and message_count != self.last_message_count:
-                        self.last_message_count = message_count
-                        if stationid == 1:
-                            tide = station1cal-tide_mm/304.8
-                        else:
-                            tide = station2cal-tide_mm/304.8                            
+                    if tide_mm != None:
+                        #self.last_message_count = message_count
+\                       tide = stationcal-tide_mm/304.8
                         tide_list.append([local_time, tide, ''])
                         field_dict = {
                           "S": stationid,
@@ -295,6 +309,8 @@ class DbManage:
                           "t": temperature,
                           "P": rssi
                         }
+            if newest is not None:
+                self.last_time = newest
             #print (local_time+str(field_dict))
             return tide_list, field_dict
             

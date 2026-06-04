@@ -97,12 +97,25 @@ class Tide:
         self.visit = False
         self.sensor_readings = {}
         self.station_oos = False # Station out of service
-        self.iparams_dict = db.fetch_iparams()
         self.stationid = self.iparams_dict.get('stationid')
         self.station1cal = self.iparams_dict.get('station1cal')
         self.station2cal = self.iparams_dict.get('station2cal')
+        self.station3cal = self.iparams_dict.get('station3cal')
+        self.s1type = self.iparams.get('s1type')
+        self.s2type = self.iparams.get('s2type')
+        self.s3type = self.iparams.get('s3type')
+        if self.stationid == 1:
+            self.stationcal = self.station1cal
+            self.stype = self.s1type
+        elif self.stationid == 2:
+            self.stationcal = self.station2cal
+            self.stype = self.s2type
+        elif self.stationid == 3:
+            self.stationcal = self.station3cal
+            self.stype = self.s3type
         self.s1enable = self.iparams_dict.get('s1enable')
         self.s2enable = self.iparams_dict.get('s2enable')
+        self.s3enable = self.iparams_dict.get('s3enable') 
         state.debug = self.iparams_dict.get('debug')
         self.tide_only = self.iparams_dict.get('tide_only')
         display_date_and_time = sunny.get_suntimes(cons, db)
@@ -169,7 +182,7 @@ class Tide:
         predict_list = predict.tide_predict()
         self.sensor_readings = {}
         tide_readings, self.sensor_readings = db.fetch_tide(
-          self.stationid, self.station1cal, self.station2cal,'-1m')            
+          self.stationid, self.station1cal, self.station2cal,'-1hr')            
         if self.sensor_readings:
             if int(self.sensor_readings.get('S')) == self.stationid:
                 tide_level = self.sensor_readings.get('R')
@@ -317,6 +330,20 @@ class Tide:
             self.stationid = self.iparams_dict.get('stationid')
             self.station1cal = self.iparams_dict.get('station1cal')
             self.station2cal = self.iparams_dict.get('station2cal')
+            self.station3cal = self.iparams_dict.get('station3cal')
+            self.s1type = self.iparams.get('s1type')
+            self.s2type = self.iparams.get('s2type')
+            self.s3type = self.iparams.get('s3type')
+            if self.stationid == 1:
+                self.stationcal = self.station1cal
+                self.stype = self.s1type
+            elif self.stationid == 2:
+                self.stationcal = self.station2cal
+                self.stype = self.s2type
+            elif self.stationid == 3:
+                self.stationcal = self.station3cal
+                self.stype = self.s3type
+            self.s3enable = self.iparams_dict.get('s3enable')
             self.s1enable = self.iparams_dict.get('s1enable')
             self.s2enable = self.iparams_dict.get('s2enable')
             state.debug = self.iparams_dict.get('debug')
@@ -326,7 +353,7 @@ class Tide:
             tide_readings = []
             self.sensor_readings = {}
             tide_readings, self.sensor_readings = db.fetch_tide(
-              self.stationid, self.station1cal, self.station2cal,'-1m')                
+              self.stationid, self.station1cal, self.station2cal,'-45m')                
             if self.sensor_readings:
                 tide_level = self.sensor_readings.get('R')
                 if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
