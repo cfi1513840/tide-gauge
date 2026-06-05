@@ -113,6 +113,12 @@ class Tide:
         elif self.stationid == 3:
             self.stationcal = self.station3cal
             self.stype = self.s3type
+        if self.stype == 'lora':
+            self.influx_duration = '-1m'
+        elif self.stype == 'note':
+            self.influx_duration = '-35m'
+        else:
+            self.influx_duration = '-1m'
         self.s1enable = self.iparams_dict.get('s1enable')
         self.s2enable = self.iparams_dict.get('s2enable')
         self.s3enable = self.iparams_dict.get('s3enable') 
@@ -181,8 +187,9 @@ class Tide:
                 db.insert_tide_predicts(noaa_tide)
         predict_list = predict.tide_predict()
         self.sensor_readings = {}
+        tide_readings = []
         tide_readings, self.sensor_readings = db.fetch_tide(
-          self.stationid, self.stationcal, '-1hr')            
+          self.stationid, self.stationcal, self.influx_duration)            
         if self.sensor_readings:
             if int(self.sensor_readings.get('S')) == self.stationid:
                 tide_level = self.sensor_readings.get('R')
@@ -318,7 +325,7 @@ class Tide:
         if (self.main_loop_count == 7 and self.current_time.minute % 20 == 0 and 
           self.current_time > self.last_db_copy_time):
             #
-            # SQLite3 database is copied every 20 minutes for further processing 
+            # SQLite3 database is copied every 20 minutes for post processing 
             #
             self.last_db_copy_time = self.current_time
             os.system(f'cp {cons.SQL_PATH} {cons.SQL_COPY}')            
@@ -331,9 +338,9 @@ class Tide:
             self.station1cal = self.iparams_dict.get('station1cal')
             self.station2cal = self.iparams_dict.get('station2cal')
             self.station3cal = self.iparams_dict.get('station3cal')
-            self.s1type = self.iparams.get('s1type')
-            self.s2type = self.iparams.get('s2type')
-            self.s3type = self.iparams.get('s3type')
+            self.s1type = self.iparams_dict.get('s1type')
+            self.s2type = self.iparams_dict.get('s2type')
+            self.s3type = self.iparams_dict.get('s3type')
             if self.stationid == 1:
                 self.stationcal = self.station1cal
                 self.stype = self.s1type
@@ -353,7 +360,7 @@ class Tide:
             tide_readings = []
             self.sensor_readings = {}
             tide_readings, self.sensor_readings = db.fetch_tide(
-              self.stationid, self.stationcal, '-45m')                
+              self.stationid, self.stationcal, self.influx_duration)                
             if self.sensor_readings:
                 tide_level = self.sensor_readings.get('R')
                 if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:

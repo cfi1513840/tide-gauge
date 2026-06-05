@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 import logging
@@ -252,24 +252,17 @@ class DbManage:
         measurement = self.cons.INFLUXDB_MEASUREMENT
         bucket = self.cons.INFLUXDB_BUCKET
         local_time  = ''
-        if self.last_time is not None and duration == '-45m':
-            self.last_time = (self.last_time + datetime.timedelta(microseconds=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        if self.last_time is not None and duration != '-24h':
+            last_time_flux = f'time(v: "{(self.last_time + timedelta(microseconds=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")}")'
         else:
-            self.last_time = duration
+            last_time_flux = duration
         self.influx_query = (f'from(bucket:"{bucket}") '
-            f'|> range(start: {self.last_time}, stop: now()) '
+            f'|> range(start: {last_time_flux}, stop: now()) '
             f'|> filter(fn:(r) => r._measurement == "{measurement}") '
             f'|> filter(fn: (r) => r.location == "{location}") '
             f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") '
             '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
         )
-        #self.influx_query = (f'from(bucket:"{bucket}") '+
-        #  f'|> range(start: {duration}) '+
-        #  f'|> filter(fn:(r) => r._measurement == "{measurement}") ' +
-        #  f'|> filter(fn: (r) => r.location == "{location}") ' +
-        #  f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") ' +
-        #  '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
-        #  )
         tide_list = []
         field_dict = {}
         newest_time = None
@@ -297,7 +290,7 @@ class DbManage:
                     rssi = dbvalues.get(self.cons.INFLUXDB_NAMES.get('P')[1])
                     if tide_mm != None:
                         #self.last_message_count = message_count
-                        tide = self.stationcal-tide_mm/304.8
+                        tide = stationcal-tide_mm/304.8
                         tide_list.append([local_time, tide, ''])
                         field_dict = {
                           "S": stationid,
@@ -309,13 +302,14 @@ class DbManage:
                           "t": temperature,
                           "P": rssi
                         }
-            if newest is not None:
-                self.last_time = newest
+            if newest_time is not None:
+                self.last_time = newest_time
             #print (local_time+str(field_dict))
             return tide_list, field_dict
             
         except Exception as errmsg:
             logging.warning('fetch_tide: '+str(errmsg))
+            return tide_list, field_dict
 
     def update_stationid(self, stationid):
         self.sql_cursor.execute(f"update iparams set stationid = {stationid}")
