@@ -417,8 +417,12 @@ class Tide:
                     self.display.update(self.weather, self.ndbc_data)
             if current_minute == '00':
                 wxhtml.wxproc(self.iparams_dict)
+            if self.sensor_read_list:
+                last_sensor_read = self.sensor_read_list[len(self.sensor_read_list)-1]
+            else:
+                last_sensor_read = None
             self.html.create(self.weather, self.ndbc_data, predict_list,
-              self.tide_list, self.iparams_dict, self.sensor_read_list[len(self.sensor_read_list)-1])
+              self.tide_list, self.iparams_dict, last_sensor_read)
             cur_station = self.stationid
             alt_station = 2 if self.stationid == 1 else 1
             if (not self.station_oos and ((self.stationid == 1 and self.current_time >
