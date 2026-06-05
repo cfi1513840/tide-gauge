@@ -401,6 +401,16 @@ class Tide:
                                   str(rssi))
                             self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
                             self.station_oos = False
+                    elif station == 3:
+                        self.last_station1_time = self.current_time
+                        if self.stationid == 3:
+                            if self.display:
+                                self.display.station_battery_voltage_tk_var.set(
+                                  str(volts))
+                                self.display.station_signal_strength_tk_var.set(
+                                  str(rssi))
+                            self.tide_ft = round(self.station3cal-tide_mm/304.8, 2)
+                            self.station_oos = False
                     if self.tide_ft != 99:
                         self.tide_list = self.process.update_tide_list(
                           self.tide_list, self.tide_ft)
