@@ -377,6 +377,7 @@ class Tide:
                 volts = 0
                 rssi = 0
                 try:
+                    tide_time = self.sensor_readings.get("T")
                     tide_mm = self.sensor_readings['R']
                     station = self.sensor_readings['S']
                     volts = self.sensor_readings['V']/1000
@@ -413,7 +414,7 @@ class Tide:
                             self.station_oos = False
                     if self.tide_ft != 99:
                         self.tide_list = self.process.update_tide_list(
-                          self.tide_list, self.tide_ft)
+                          self.tide_list, self.tide_ft, tide_time)
                 except Exception as errmsg:
                     print (str(errmsg))
                     logging.warning(str(errmsg))

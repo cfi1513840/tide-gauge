@@ -49,7 +49,7 @@ class ProcTide:
     def get_tide_list(self):
         return self.tide_list
         
-    def update_tide_list(self, tide_list, tide):
+    def update_tide_list(self, tide_list, tide, tide_time):
         """
          Insert new tide measurement into the tide list and
          check for the occurrence of high or low tide.
@@ -62,7 +62,7 @@ class ProcTide:
                 break
         for findex in range(0,index):
             tide_list.pop(0)
-        tide_time = datetime.strftime(current_time, "%Y-%m-%d %H:%M:%S")            
+        #tide_time = datetime.strftime(current_time, "%Y-%m-%d %H:%M:%S")            
         tide_list.append([tide_time, tide, ''])
         self.index += 1
         if tide > self.max_tide:
