@@ -96,6 +96,7 @@ class Tide:
         self.iparams_dict = db.fetch_iparams()
         self.visit = False
         self.sensor_readings = {}
+        self.sensor_read_list = []
         self.station_oos = False # Station out of service
         self.stationid = self.iparams_dict.get('stationid')
         self.station1cal = self.iparams_dict.get('station1cal')
@@ -186,17 +187,17 @@ class Tide:
             if noaa_tide:
                 db.insert_tide_predicts(noaa_tide)
         predict_list = predict.tide_predict()
-        self.sensor_readings = {}
+        self.sensor_read_list = []
         tide_readings = []
-        tide_readings, self.sensor_readings = db.fetch_tide(
+        tide_readings, self.sensor_read_list = db.fetch_tide(
           self.stationid, self.stationcal, self.influx_duration)            
-        if self.sensor_readings:
-            if int(self.sensor_readings.get('S')) == self.stationid:
-                tide_level = self.sensor_readings.get('R')
+        if self.sensor_read_list:
+            if int(self.sensor_read_list[len(self.sensor_read_list)-1].get('S')) == self.stationid:
+                tide_level = self.sensor_read_list[len(self.sensor_read_list)-1].get('R')
                 self.tide_init = True
                 for idx in range(0,20):
                     self.tide_average = self.tide_average[1:]+[tide_level]
-        tide_list, self.sensor_readings = db.fetch_tide(
+        tide_list, self.sensor_read_list = db.fetch_tide(
           self.stationid, self.stationcal, '-24h')
         if tide_list:
             self.process = tideprocess.ProcTide(tide_list)
@@ -358,10 +359,10 @@ class Tide:
             predict_list = predict.tide_predict()
 
             tide_readings = []
-            self.sensor_readings = {}
-            tide_readings, self.sensor_readings = db.fetch_tide(
+            self.sensor_read_list = []
+            tide_readings, self.sensor_read_list = db.fetch_tide(
               self.stationid, self.stationcal, self.influx_duration)                
-            if self.sensor_readings:
+            for self.sensor_readings in self.sensor_read_list:
                 tide_level = self.sensor_readings.get('R')
                 if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
                     if not self.tide_init:
@@ -417,7 +418,7 @@ class Tide:
             if current_minute == '00':
                 wxhtml.wxproc(self.iparams_dict)
             self.html.create(self.weather, self.ndbc_data, predict_list,
-              self.tide_list, self.iparams_dict, self.sensor_readings)
+              self.tide_list, self.iparams_dict, self.sensor_read_list[len(self.sensor_read_list)-1])
             cur_station = self.stationid
             alt_station = 2 if self.stationid == 1 else 1
             if (not self.station_oos and ((self.stationid == 1 and self.current_time >

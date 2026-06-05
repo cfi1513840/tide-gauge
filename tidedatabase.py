@@ -264,6 +264,7 @@ class DbManage:
             '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")'
         )
         tide_list = []
+        field_list = []
         field_dict = {}
         newest_time = None
         try:
@@ -293,6 +294,7 @@ class DbManage:
                         tide = stationcal-tide_mm/304.8
                         tide_list.append([local_time, tide, ''])
                         field_dict = {
+                          "T": local_time,
                           "S": stationid,
                           "V": batv,
                           "C": message_count,
@@ -302,14 +304,15 @@ class DbManage:
                           "t": temperature,
                           "P": rssi
                         }
+                        field_list.append(field_dict)
             if newest_time is not None:
                 self.last_time = newest_time
             #print (local_time+str(field_dict))
-            return tide_list, field_dict
+            return tide_list, field_list
             
         except Exception as errmsg:
             logging.warning('fetch_tide: '+str(errmsg))
-            return tide_list, field_dict
+            return tide_list, field_list
 
     def update_stationid(self, stationid):
         self.sql_cursor.execute(f"update iparams set stationid = {stationid}")
