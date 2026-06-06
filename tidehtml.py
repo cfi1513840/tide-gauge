@@ -774,7 +774,7 @@ class CreateHTML:
         outfile.write (f'ctx.fillRect({canvas_width/2-265}, 4, 210, 23);\n')
         outfile.write (f'ctx.strokeRect({canvas_width/2-265}, 4, 210, 23);\n')
         outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
-        outfile.write (f'ctx.fillText("Current Tide {tide} Ft ", {canvas_width/2-160},22);\n')
+        outfile.write (f'ctx.fillText("Measured Tide {tide} Ft ", {canvas_width/2-160},22);\n')
         outfile.write (f'ctx.font = "bold 14px Arial";\n')
         outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
         #outfile.write (f'ctx.fillText("Actual Tide Trace", {canvas_width/2-400},20);\n')    
