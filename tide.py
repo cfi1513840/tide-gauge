@@ -249,6 +249,13 @@ class Tide:
             sensor_packet = sensor.read_sensor(port)
             if sensor_packet:
                 db.insert_tide(sensor_packet)
+                
+        if self.s1type == 'note':                
+            note_receiver.poll(1)
+        elif self.s2type == 'note':
+            note_receiver.poll(2)
+        elif self.s3type == 'note':
+            note_receiver.poll(3)
 
         if self.main_loop_count == 2 and int(current_minute) % 5 == 0: 
             #
@@ -359,12 +366,6 @@ class Tide:
             state.debug = self.iparams_dict.get('debug')
             self.tide_only = self.iparams_dict.get('tide_only')
             predict_list = predict.tide_predict()
-            if self.s1type == 'note':
-                note_receiver.poll(1)
-            elif self.s2type == 'note':
-                note_receiver.poll(2)
-            elif self.s3type == 'note':
-                note_receiver.poll(3)
             tide_readings = []
             self.sensor_read_list = []
             tide_readings, self.sensor_read_list = db.fetch_tide(
