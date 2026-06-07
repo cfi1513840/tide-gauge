@@ -24,6 +24,7 @@ import tideprocess
 import tidealerts
 import tidehtml
 import tidewxhtml
+from tidenote import NotehubReceiver
 #
 # Setup Logging to console and file
 #
@@ -49,6 +50,7 @@ notify = tidehelper.Notify(cons)
 val = tidehelper.ValType()
 getwx = tideget.GetWeather(cons, val, notify)
 db = tidedatabase.DbManage(cons)
+note_receiver = NotehubReceiver(cons, db)
 getnoaa = tideget.GetNOAA(cons, val)
 sensor = tideget.ReadSensor(cons, val)
 predict = tidepredict.TidePredict(cons, db)
@@ -357,7 +359,12 @@ class Tide:
             state.debug = self.iparams_dict.get('debug')
             self.tide_only = self.iparams_dict.get('tide_only')
             predict_list = predict.tide_predict()
-
+            if self.s1type == 'note':
+                note_receiver.poll(1)
+            elif self.s2type == 'note':
+                note_receiver.poll(2)
+            elif self.s3type == 'note':
+                note_receiver.poll(3)
             tide_readings = []
             self.sensor_read_list = []
             tide_readings, self.sensor_read_list = db.fetch_tide(
