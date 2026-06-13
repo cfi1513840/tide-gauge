@@ -10,7 +10,7 @@ class ProcTide:
     def reinitialize(self, tide_list):
         self._initialize(tide_list)
         
-    def _initialize(self, tide_list)
+    def _initialize(self, tide_list):
         self.tide_list = tide_list
         self.trend = ''
         epochs = []
