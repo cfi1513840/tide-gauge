@@ -5,6 +5,12 @@ class ProcTide:
     tide measurements to detect the high and low tide events.
     """
     def __init__(self, tide_list):
+        self._initialize(tide_list)
+        
+    def reinitialize(self, tide_list):
+        self._initialize(tide_list)
+        
+    def _initialize(self, tide_list)
         self.tide_list = tide_list
         self.trend = ''
         epochs = []
