@@ -67,10 +67,13 @@ class NotehubHandler(BaseHTTPRequestHandler):
         return records
 
     def _reply(self, code, body):
-        self.send_response(code)
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(code)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except BrokenPipeError:
+            pass        # client (Notehub) already hung up; data was still written
 
     def log_message(self, *args):
         pass  # silence per-request stderr logging
