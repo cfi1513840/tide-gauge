@@ -5,12 +5,14 @@ class ProcTide:
     tide measurements to detect the high and low tide events.
     """
     def __init__(self, tide_list):
-        self._initialize(tide_list)
+        self._find_epochs(tide_list)
+        return self.tide_list
         
-    def reinitialize(self, tide_list):
-        self._initialize(tide_list)
+    def update_tide_list(self, tide_list):
+        self._find_epochs(tide_list)
+        return self.tide_list
         
-    def _initialize(self, tide_list):
+    def _find_epochs(self, tide_list):
         self.tide_list = tide_list
         self.trend = ''
         epochs = []
@@ -55,7 +57,7 @@ class ProcTide:
     def get_tide_list(self):
         return self.tide_list
         
-    def update_tide_list(self, tide_list, tide, tide_time):
+    def update_tide_list_old(self, tide_list, tide, tide_time):
         """
          Insert new tide measurement into the tide list and
          check for the occurrence of high or low tide.
