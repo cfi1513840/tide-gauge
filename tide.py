@@ -189,18 +189,13 @@ class Tide:
             if noaa_tide:
                 db.insert_tide_predicts(noaa_tide)
         predict_list = predict.tide_predict()
-        self.sensor_read_list = []
+        self.sensor_read_list = []        tide_average = [0 for x in range(0,20)]
         tide_list = []
         tide_list, self.sensor_read_list = db.fetch_tide(
           self.stationid, self.stationcal, '-24h')            
-        if self.sensor_read_list:
-            if int(self.sensor_read_list[len(self.sensor_read_list)-1].get('S')) == self.stationid:
-                tide_level = self.sensor_read_list[len(self.sensor_read_list)-1].get('R')
-                self.tide_init = True
-                for idx in range(0,20):
-                    self.tide_average = self.tide_average[1:]+[tide_level]
-        #tide_list, self.sensor_read_list = db.fetch_tide(
-        #  self.stationid, self.stationcal, '-24h')
+#        if self.sensor_read_list:
+#            if int(self.sensor_read_list[len(self.sensor_read_list)-1].get('S')) == self.stationid:
+#                tide_level = self.sensor_read_list[len(self.sensor_read_list)-1].get('R')
         if tide_list:
             self.process = tideprocess.ProcTide(tide_list)
             self.tide_list = self.process.get_tide_list()
