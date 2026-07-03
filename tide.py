@@ -194,9 +194,6 @@ class Tide:
         tide_list = []
         tide_list, self.sensor_read_list = db.fetch_tide(
           self.stationid, self.stationcal, '-24h')            
-#        if self.sensor_read_list:
-#            if int(self.sensor_read_list[len(self.sensor_read_list)-1].get('S')) == self.stationid:
-#                tide_level = self.sensor_read_list[len(self.sensor_read_list)-1].get('R')
         if tide_list:
             self.process = tideprocess.ProcTide(tide_list)
             self.tide_list = self.process.get_tide_list()
@@ -373,7 +370,7 @@ class Tide:
                 if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
                     tide_count += 1
                     tide_average = tide_average[1:]+[tide_level]             
-                    if tide_count == 20:                    
+                    if tide_count >= 20:                    
                         check_tide = sum(tide_average)/len(tide_average)
                         if tide_level > check_tide+300 or tide_level < check_tide-300:
                             logging.warning (self.message_time+' invalid tide: '+
