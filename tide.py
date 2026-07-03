@@ -190,7 +190,6 @@ class Tide:
                 db.insert_tide_predicts(noaa_tide)
         predict_list = predict.tide_predict()
         self.sensor_read_list = []
-        tide_average = [0 for x in range(0,20)]
         tide_list = []
         tide_list, self.sensor_read_list = db.fetch_tide(
           self.stationid, self.stationcal, '-24h')            
@@ -363,20 +362,9 @@ class Tide:
             self.sensor_read_list = []
             tide_list, self.sensor_read_list = db.fetch_tide(
               self.stationid, self.stationcal, '-24h')
-            tide_count = 0
-            tide_average = [0 for x in range(0,20)]
-            for self.sensor_readings in self.sensor_read_list:
-                tide_level = self.sensor_readings.get('R')
-                if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
-                    tide_count += 1
-                    tide_average = tide_average[1:]+[tide_level]             
-                    if tide_count > 20:                    
-                        check_tide = sum(tide_average)/len(tide_average)
-                        if tide_level > check_tide+300 or tide_level < check_tide-300:
-                            logging.warning (self.message_time+' invalid tide: '+
-                              str(tide_level)+' versus 20 minute average: '+str(check_tide))               
             volts = 0
             rssi = 0
+            self.sensor_readings = self.sensor_read_list[len(self.sensor_read_list)-1]
             try:
                 tide_time = self.sensor_readings.get("T")
                 tide_mm = self.sensor_readings['R']
