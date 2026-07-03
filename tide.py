@@ -375,7 +375,7 @@ class Tide:
             for self.sensor_readings in self.sensor_read_list:
                 tide_level = self.sensor_readings.get('R')
                 if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
-                    tide_count++
+                    tide_count += 1
                     tide_average = tide_average[1:]+[tide_level]             
                     if tide_count == 20:                    
                         check_tide = sum(self.tide_average)/len(self.tide_average)
