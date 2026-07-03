@@ -378,7 +378,7 @@ class Tide:
                     tide_count += 1
                     tide_average = tide_average[1:]+[tide_level]             
                     if tide_count == 20:                    
-                        check_tide = sum(self.tide_average)/len(self.tide_average)
+                        check_tide = sum(tide_average)/len(tide_average)
                         if tide_level > check_tide+300 or tide_level < check_tide-300:
                             logging.warning (self.message_time+' invalid tide: '+
                               str(tide_level)+' versus 20 minute average: '+str(check_tide))               
