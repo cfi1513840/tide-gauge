@@ -6,7 +6,6 @@ class ProcTide:
     """
     def __init__(self, tide_list):
         self._find_epochs(tide_list)
-        return self.tide_list
         
     def update_tide_list(self, tide_list):
         self._find_epochs(tide_list)
