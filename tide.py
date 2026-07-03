@@ -88,7 +88,6 @@ class Tide:
         self.tide1 = 0
         self.tide2 = 0
         self.tide_ft = 99
-        self.tide_average = [0 for x in range(0,20)]
         self.tide_init = False
         self.weather = {}
         self.ndbc_data = {}
@@ -370,19 +369,19 @@ class Tide:
             tide_list = []
             self.sensor_read_list = []
             tide_list, self.sensor_read_list = db.fetch_tide(
-              self.stationid, self.stationcal, '-24h')                
+              self.stationid, self.stationcal, '-24h')
+            tide_count = 0
+            tide_average = [0 for x in range(0,20)]
             for self.sensor_readings in self.sensor_read_list:
                 tide_level = self.sensor_readings.get('R')
                 if int(self.sensor_readings.get('S')) == self.stationid and tide_level != None:
-                    if not self.tide_init:
-                        for idx in range(0,20):
-                            self.tide_average = self.tide_average[1:]+[tide_level]
-                        self.tide_init = True                        
-                    self.tide_average = self.tide_average[1:]+[tide_level]             
-                    check_tide = sum(self.tide_average)/len(self.tide_average)
-                    if tide_level > check_tide+300 or tide_level < check_tide-300:
-                        logging.warning (self.message_time+' invalid tide: '+
-                          str(tide_level)+' versus 20 minute average: '+str(check_tide))               
+                    tide_count++
+                    tide_average = tide_average[1:]+[tide_level]             
+                    if tide_count == 20:                    
+                        check_tide = sum(self.tide_average)/len(self.tide_average)
+                        if tide_level > check_tide+300 or tide_level < check_tide-300:
+                            logging.warning (self.message_time+' invalid tide: '+
+                              str(tide_level)+' versus 20 minute average: '+str(check_tide))               
             volts = 0
             rssi = 0
             try:
