@@ -189,7 +189,8 @@ class Tide:
             if noaa_tide:
                 db.insert_tide_predicts(noaa_tide)
         predict_list = predict.tide_predict()
-        self.sensor_read_list = []        tide_average = [0 for x in range(0,20)]
+        self.sensor_read_list = []
+        tide_average = [0 for x in range(0,20)]
         tide_list = []
         tide_list, self.sensor_read_list = db.fetch_tide(
           self.stationid, self.stationcal, '-24h')            
