@@ -259,6 +259,7 @@ station2 = False
 wind = False
 rain = False
 temp = False
+default_station_id = 1
 debugit = 3
 #
 # Get station name for webpage title
@@ -269,6 +270,7 @@ if load_dotenv(envfile):
    station_latitude = os.getenv('STATION_LATITUDE')
    station_longitude = os.getenv('STATION_LONGITUDE')
    tide_station_url = os.getenv('TIDE_STATION_URL')
+   default_station_id = int(os.getenv('DEFAULT_STATION_ID', '1'))
    #with open('/var/www/html/tideplot.log', 'a') as logfile:
    #   logfile.write (msgtime+ 'station_location: '+station_location+'\n')                  
 else:
@@ -317,20 +319,20 @@ try:
       plotdays = 3
       tags =  True
       tagchk = 'checked'
-      station1 =  True
-      station1chk = 'checked'
-      station2 =  False
-      station2chk = ''
+      station1 = (default_station_id == 1)
+      station1chk = 'checked' if station1 else ''
+      station2 = (default_station_id == 2)
+      station2chk = 'checked' if station2 else ''
       wind = True
       windchk = 'checked'
       rain = True
       rainchk = 'checked'
       temp = True
       tempchk = 'checked'
-      batv = True
-      batvchk = 'checked'
-      batv2 = True
-      batv2chk = 'checked'
+      batv = (default_station_id == 1)
+      batvchk = 'checked' if batv else ''
+      batv2 = (default_station_id == 2)
+      batv2chk = 'checked' if batv2 else ''
    else:
       init = False
       tags = form.getvalue('tags')
@@ -1655,7 +1657,7 @@ def proc_data():
       print (f'ctx.fillText("Variation between Sensor 2 and predicted in feet", {plot_width/2}, {vari2_start_y-4});\n')
    if wind:   
       print ('ctx.fillStyle = "purple";\n')
-      print (f'ctx.fillText("Wind speed (mpf) and direction (arrow indicates wind direction relative to north)", {plot_width/2}, {windir_start_y-4});\n')
+      print (f'ctx.fillText("Wind speed (mph) and direction (arrow indicates wind direction relative to north)", {plot_width/2}, {windir_start_y-4});\n')
    if rain:      
       print ('ctx.fillStyle = "black";\n')
       print (f'ctx.fillText("Daily rainfall in inches", {plot_width/2}, {rain_start_y-4});\n')                          

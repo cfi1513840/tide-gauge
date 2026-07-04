@@ -256,6 +256,7 @@ station2 = False
 wind = False
 rain = False
 temp = False
+default_station_id = 1
 debugit = 30
 #
 # Get station name for webpage title
@@ -266,6 +267,7 @@ if load_dotenv(envfile):
    station_latitude = os.getenv('STATION_LATITUDE')
    station_longitude = os.getenv('STATION_LONGITUDE')
    tide_station_url = os.getenv('TIDE_STATION_URL')
+   default_station_id = int(os.getenv('DEFAULT_STATION_ID', '1'))
 #
 # Establish SQLite3 connection to the tides.db database
 #
@@ -306,20 +308,20 @@ try:
       plotdays = 3
       tags =  True
       tagchk = 'checked'
-      station1 =  True
-      station1chk = 'checked'
-      station2 =  False
-      station2chk = ''
+      station1 = (default_station_id == 1)
+      station1chk = 'checked' if station1 else ''
+      station2 = (default_station_id == 2)
+      station2chk = 'checked' if station2 else ''
       wind = True
       windchk = 'checked'
       rain = True
       rainchk = 'checked'
       temp = True
       tempchk = 'checked'
-      batv = True
-      batvchk = 'checked'
-      batv2 = False
-      batv2chk = ''
+      batv = (default_station_id == 1)
+      batvchk = 'checked' if batv else ''
+      batv2 = (default_station_id == 2)
+      batv2chk = 'checked' if batv2 else ''
    plotdays = 3
    canvas_width = 1200
    default_height = 750
