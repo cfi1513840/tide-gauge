@@ -257,495 +257,6 @@ def get_epochs(tide_list):
             new_tide_list[index][3] = epoch_entry[2]
    return new_tide_list
 
-date = date.today()
-curtime = datetime.now()
-msgtime = str(curtime)[:-10]
-
-# Mode detection: Apache sets REQUEST_METHOD for every CGI invocation; it is
-# absent when this script is run directly (e.g. from cron).
-is_cgi_request = "REQUEST_METHOD" in os.environ
-
-if is_cgi_request:
-   filetag = None
-   outfile = sys.stdout
-else:
-   filetag = "tide"+datetime.strftime(curtime, "%y%m%d%H%M%S")+".html"
-   outfile = open(filetag, "w")
-
-log = False
-prout = False
-tags = False
-station1 = False
-station2 = False
-wind = False
-rain = False
-temp = False
-default_station_id = 1
-debugit = 3
-#
-# Get station name for webpage title
-#
-envfile = find_dotenv('tide.env')
-if load_dotenv(envfile):
-   station_location = os.getenv('STATION_LOCATION')
-   station_latitude = os.getenv('STATION_LATITUDE')
-   station_longitude = os.getenv('STATION_LONGITUDE')
-   tide_station_url = os.getenv('TIDE_STATION_URL')
-   default_station_id = int(os.getenv('DEFAULT_STATION_ID', '1'))
-   #with open('/var/www/html/tideplot.log', 'a') as logfile:
-   #   logfile.write (msgtime+ 'station_location: '+station_location+'\n')                  
-else:
-   with open('/var/www/html/tideplot.log', 'a') as logfile:
-      logfile.write (msgtime+ 'environment file read failed\n')                  
-    
-#
-# Establish SQLite3 connection to the tides.db database
-#
-
-try:
-   sqlcon = sqlite3.connect(f'/home/tide/Uploads/tides.db')
-   sqlcur = sqlcon.cursor()
-except:
-   with open('/var/www/html/tideplot.log', 'a') as logfile:
-      logfile.write (msgtime+ 'tideplot sqlite3 connection failed\n')                  
-   exit()
-#
-# Read initialization data from iparams table
-#
-try:
-#if True:
-   sqlcur.execute("select * from iparams")
-   iparams = sqlcur.fetchall()
-   banflag = 0
-   banner  = ''
-   #banflag = iparams[0][2]
-   #banner = iparams[0][3]
-   station1cal = iparams[0][5]
-   station2cal = iparams[0][6]
-   s1enable = iparams[0][7]
-   s2enable = iparams[0][8]
-   #
-   # Get the lastest time entry in the tides.db database
-   # 
-   sqltimeformat = "%Y-%m-%d %H:%M:%S"
-   mintimeformat = "%Y-%m-%d %H:%M"
-   formdate = curtime.strftime("%Y-%m-%d")
-   #
-   # Process form parameters
-   #
-   if is_cgi_request:
-      form = cgi.FieldStorage()
-      init = form.getvalue('init')
-   else:
-      # Cron/file mode never had a real request to parse; always render the
-      # default (DEFAULT_STATION_ID-driven) view, matching prior tideplot.py behavior.
-      form = None
-      init = "1"
-   if init != None:
-      init = True
-      plotdays = 3
-      tags =  True
-      tagchk = 'checked'
-      station1 = (default_station_id == 1)
-      station1chk = 'checked' if station1 else ''
-      station2 = (default_station_id == 2)
-      station2chk = 'checked' if station2 else ''
-      wind = True
-      windchk = 'checked'
-      rain = True
-      rainchk = 'checked'
-      temp = True
-      tempchk = 'checked'
-      batv = (default_station_id == 1)
-      batvchk = 'checked' if batv else ''
-      batv2 = (default_station_id == 2)
-      batv2chk = 'checked' if batv2 else ''
-   else:
-      init = False
-      tags = form.getvalue('tags')
-      if tags == None:
-         tags = False
-         tagchk = ''
-      else:
-         tags = True
-         tagchk = 'checked'
-      station1 = form.getvalue('station1')
-      if station1 == None:
-         station1 = False
-         station1chk = ''
-      else:
-         station1 = True
-         station1chk = 'checked'
-      station2 = form.getvalue('station2')
-      if station2 == None:
-         station2 = False
-         station2chk = ''
-      else:
-         station2 = True
-         station2chk = 'checked'
-      wind = form.getvalue('wind')
-      if wind == None:
-         wind = False
-         windchk = ''
-      else:
-         wind = True
-         windchk = 'checked'
-      rain = form.getvalue('rain')
-      if rain == None:
-         rain = False
-         rainchk = ''
-      else:
-         rain = True
-         rainchk = 'checked'
-      temp = form.getvalue('temp')
-      if temp == None:
-         temp = False
-         tempchk = ''
-      else:
-         temp = True
-         tempchk = 'checked'
-      batv = form.getvalue('batv')
-      if batv == None:
-         batv = False
-         batvchk = ''
-      else:
-         batv = True
-         batvchk = 'checked'
-      batv2 = form.getvalue('batv2')
-      if batv2 == None:
-         batv2 = False
-         batv2chk = ''
-      else:
-         batv2 = True
-         batv2chk = 'checked'
-      plotdays = form.getvalue('dayspan')
-      if plotdays == None:
-         plotdays = 3
-      else:
-         plotdays = int(plotdays)
-      if plotdays > 20:
-         tags = False
-         tagchk = ''
-      getdate = form.getvalue('endate')
-      if getdate != None:
-         chktime = datetime.now()
-         chktime = datetime.strptime(str(chktime)[:10], '%Y-%m-%d')
-         curtime = datetime.strptime(getdate,"%Y-%m-%d")
-         if curtime == chktime:
-            curtime = datetime.now()
-         formdate = curtime.strftime("%Y-%m-%d")
-   canvas_width = form.getvalue('screenwidth')
-   if canvas_width ==  None:
-      canvas_width = 1200
-   else:
-      canvas_width = int(canvas_width)-100
-   default_height = form.getvalue('screenheight')
-   if default_height == None:
-      default_height = 750
-   else:
-      default_height = int(default_height)
-      if default_height < 750:
-         default_height = 750
-   selectedtide = 'predicts'
-   radinc = math.pi*2/91080
-   prestate = ''
-   prestate2 = ''
-   halftide = math.pi/2
-   fulltide = math.pi
-   sam_int = 60
-   predicts = []
-   turntime = ''
-   turntime2 = ''
-   tide_predict()
-   tidelist = []
-   batvlist= []
-   batv2list = []
-   windlist = []
-   localsunrise = 0
-   localsunset = 0
-   listDate = 0
-
-   dbquerytime = curtime - timedelta(days=plotdays)
-   sqlcur.execute("select dtime, stationid, distance from sensors where dtime "+ \
-                 "between ? and ? order by dtime", (str(dbquerytime),str(curtime)))
-   tidelist = sqlcur.fetchall()
-
-   tidelist = get_epochs(tidelist)
-
-   if len(tidelist) == 0:
-      station1 = False
-      station2 = False
-      canvas_height = 400
-      proc_data()
-   
-   if s1enable:
-      sqlcur.execute("select dtime, batv from sensors where stationid = 1 and dtime "+ \
-                    "between ? and ? order by dtime", (str(dbquerytime),str(curtime)))
-      batvlist = sqlcur.fetchall()
-   if s2enable:   
-      sqlcur.execute("select dtime, batv from sensors where stationid = 2 and dtime "+ \
-                    "between ? and ? order by dtime", (str(dbquerytime),str(curtime)))
-      batv2list = sqlcur.fetchall()
-   
-   sqlcur.execute("select * from wxdata where dtime "+ \
-                 "between ? and ? order by dtime", (str(dbquerytime),str(curtime)))
-   sun = SunTimes(float(station_longitude),float(station_latitude))
-   wxlist = sqlcur.fetchall()
-   wxlength = len(wxlist)
-   if wxlength != 0:
-      wxsup = True
-   else:
-      wxsup = False
-   tidesup = False
-   tidesum = 0
-   tidesum2 = 0
-   tideave = 0
-   tideave2 = 0
-   maxtide = -99
-   mintide = 99
-   maxtide2 = -99
-   mintide2 = 99
-   minbatv = 99
-   maxbatv = -99
-   minbatv2 = 99
-   maxbatv2 = -99
-   minwind = 99
-   maxwind = -99
-   mintemp = 99
-   maxtemp = -99
-   minrain = 99
-   maxrain = -99
-   tide_grid_nbr = 0
-   vari_grid_nbr = 0
-   wind_grid_nbr = 0
-   windir_grid_nbr = 0
-   rain_grid_nbr = 0
-   temp_grid_nbr = 0
-   batv_grid_nbr = 0
-   batv_grid_span = 0
-   batv2_grid_nbr = 0
-   batv2_grid_span = 0
-   wind_height = 0
-   rain_height = 0
-   temp_height = 0
-   batv_height = 0
-   batv2_height = 0
-   tide_grid_y = 0
-   vari_grid_y = 0
-   wind_grid_y = 0
-   windir_grid_y = 0
-   rain_grid_y = 0
-   temp_grid_y = 0
-   batv_grid_y = 0
-   batv2_grid_y = 0
-   grid_height = 30
-   if len(tidelist) != 0:
-      tidesup = True
-      for chkent in tidelist:
-         if station1 and chkent[1] == 1 and s1enable:
-            tidelevel = station1cal-chkent[2]/12
-            if tidelevel > maxtide:
-               maxtide = tidelevel 
-            if tidelevel < mintide:
-               mintide = tidelevel
-         elif station2 and chkent[1] == 2 and s2enable:
-            tidelevel = station2cal-chkent[2]/12
-            if tidelevel > maxtide2:
-               maxtide2 = tidelevel
-            if tidelevel < mintide2:
-               mintide2 = tidelevel 
-      if mintide == 99 or maxtide == -99:
-         station1 = False
-      if mintide2 == 99 or maxtide2 == -99:
-         station2 = False
-      if mintide2 < mintide:
-         mintide = mintide2
-      if maxtide2 > maxtide:
-         maxtide = maxtide2
-      #with open('/var/www/html/tideplot.log', 'a') as logfile:
-      #   logfile.write ('mintide: '+str(mintide)+'\n')
-      #   logfile.write ('maxtide: '+str(maxtide)+'\n')
-      #   logfile.write ('mintide2: '+str(mintide2)+'\n')
-      #   logfile.write ('maxtide2: '+str(maxtide2)+'\n')
-   if len(batvlist) != 0 and s1enable:
-      for chkent in batvlist:
-         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
-            if chkent[1] > maxbatv:
-               maxbatv = chkent[1]
-            if chkent[1] < minbatv:
-               minbatv = chkent[1]
-      if minbatv == 99 or maxbatv == -99:
-         batv = False
-      else:
-         minbatv1 = int(minbatv/0.05)
-         minbatv = round(minbatv1*0.05,2)
-         maxbatv1 = int(maxbatv/0.05)
-         maxbatv = round(maxbatv1*0.05+0.05,2)
-   else:
-      batv = False       
-   if len(batv2list) != 0 and s2enable:
-      for chkent in batv2list:
-         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
-            if chkent[1] > maxbatv2:
-               maxbatv2 = chkent[1]
-            if chkent[1] < minbatv2:
-               minbatv2 = chkent[1]
-      if minbatv2 == 99 or maxbatv2 == -99:
-         batv2 = False
-      else:
-         minbatv1 = int(minbatv2/0.05)
-         minbatv2 = round(minbatv1*0.05,2)
-         maxbatv1 = int(maxbatv2/0.05)
-         maxbatv2 = round(maxbatv1*0.05+0.05,2)
-   else:
-      batv2 = False
-      
-   if len(wxlist) != 0:
-      for chkent in wxlist:
-         if chkent[1] != None and chkent[1] != 0 and chkent[1] != '':
-            if chkent[1] > maxtemp:
-               maxtemp = chkent[1]
-            if chkent[1] < mintemp:
-               mintemp = chkent[1]
-         if chkent[4] != None and chkent[4] != 0 and chkent[4] != '':
-            if chkent[4] > maxwind:
-               maxwind = chkent[4]
-            if chkent[4] < minwind:
-               minwind = chkent[4]
-         if chkent[10] != None and chkent[10] != 0 and chkent[10] != '':
-            if chkent[10] > maxrain:
-               maxrain = chkent[10]
-            if chkent[10] < minrain:
-               minrain = chkent[10]
-      if mintemp == 99 or maxtemp == -99:
-          temp = False
-      if minrain == 99 or maxrain == -99:
-          rain = False
-   else:
-      pass
-   if maxpred > maxtide:
-      maxtide = maxpred
-   if minpred < mintide:
-      mintide = minpred
-   tideave = round((maxtide-mintide)/2+math.floor(mintide),1)
-   tide_grid_nbr = round(maxtide+0.5)-math.floor(mintide)
-   vari_grid_nbr = 4
-   total_grids = tide_grid_nbr
-   nbr_gaps = 0
-   if station1 and s1enable:
-      total_grids += vari_grid_nbr
-      nbr_gaps += 1
-   if station2 and s2enable:
-      total_grids += vari_grid_nbr
-      nbr_gaps += 1
-   if wind:
-      windir_grid_nbr = 1
-      total_grids += windir_grid_nbr
-      windir_height = windir_grid_nbr*grid_height
-      windir_grid_y = windir_height/windir_grid_nbr
-      wind_grid_nbr = round((maxwind-minwind)/5+0.5)
-      total_grids += wind_grid_nbr
-      nbr_gaps += 1
-      wind_height = wind_grid_nbr*grid_height
-      wind_grid_y = round(wind_height/wind_grid_nbr/5,3)
-   if rain:
-      rain_grid_nbr = 4
-      total_grids += rain_grid_nbr
-      nbr_gaps += 1
-      rain_height = rain_grid_nbr*grid_height
-      rain_grid_y = round(rain_height/rain_grid_nbr,3)
-   if temp:
-      temp_grid_nbr = round((maxtemp-mintemp)/5+0.5)
-      total_grids += temp_grid_nbr
-      nbr_gaps += 1
-      temp_height = temp_grid_nbr*grid_height
-      temp_grid_y = round(temp_height/temp_grid_nbr,3)
-   if batv and s1enable:
-      batv_grid_nbr = round((maxbatv-minbatv)/0.05)
-      total_grids += batv_grid_nbr  
-      nbr_gaps += 1
-      batv_grid_span = round(maxbatv-minbatv,2)
-      batv_height = batv_grid_nbr*grid_height
-      batv_grid_y = round(batv_height/batv_grid_nbr,3)
-      batv_y_fact = batv_height/batv_grid_span
-   if batv2 and s2enable:
-      batv2_grid_nbr = round((maxbatv2-minbatv2)/0.05)
-      total_grids += batv2_grid_nbr  
-      nbr_gaps += 1
-      batv2_grid_span = round(maxbatv2-minbatv2,2)
-      batv2_height = batv2_grid_nbr*grid_height
-      batv2_grid_y = round(batv2_height/batv2_grid_nbr,3)
-      batv2_y_fact = batv2_height/batv2_grid_span
-
-   title_height = 10
-   dtime_height = 10
-   gap_size = 30
-   dtime_height = 30
-   footer_height = 12
-   tide_height = tide_grid_nbr*grid_height
-   vari_height = vari_grid_nbr*grid_height
-   tide_grid_y = round(tide_height/tide_grid_nbr,3)
-   vari_grid_y = round(vari_height/vari_grid_nbr,3)
-   wind_start_y = 0
-   wind_end_y = 0
-   rain_start_y = 0
-   rain_end_y = 0
-   temp_start_y =0
-   temp_end_y = 0
-   vari_start_y = 0
-   vari_end_y =0
-   vari2_start_y = 0
-   vari2_end_y =0
-   total_grid_height = total_grids*grid_height
-   total_gaps = gap_size*nbr_gaps
-   canvas_height = dtime_height+title_height+total_gaps+footer_height+total_grid_height
-   plot_width = canvas_width-30
-   windarrow = [[0,8],[0,-8],[-3,3],[3,3]]
-   right_scale_x = plot_width+15
-   left_scale_x = 15
-   dtime_start_y = 0
-   dtime_end_y = dtime_start_y + dtime_height
-   tide_start_y = dtime_end_y
-   tide_end_y = int(tide_height+tide_start_y)
-   tag_y = int(tide_end_y-(tide_grid_nbr/2*grid_height))
-   next_y = tide_end_y
-   if station1 and s1enable:
-      vari_start_y = next_y+gap_size
-      vari_end_y = int(vari_height+vari_start_y)
-      next_y = vari_end_y
-   if station2 and s2enable:
-      vari2_start_y = next_y+gap_size
-      vari2_end_y = int(vari_height+vari2_start_y)
-      next_y = vari2_end_y
-   if wind:
-      windir_start_y = next_y+gap_size
-      windir_end_y = int(windir_height+windir_start_y)
-      wind_start_y = windir_end_y
-      wind_end_y = int(wind_height+wind_start_y)
-      next_y = wind_end_y
-   if rain:
-      rain_start_y = next_y+gap_size
-      rain_end_y = int(rain_height+rain_start_y)
-      next_y = rain_end_y
-   if temp:
-      temp_start_y = next_y+gap_size
-      temp_end_y = int(temp_height+temp_start_y)
-      next_y = temp_end_y
-   if batv and s1enable:
-      batv_start_y = next_y+gap_size
-      batv_end_y = int(batv_height+batv_start_y)
-      next_y = batv_end_y
-   if batv2 and s2enable:
-      batv2_start_y = next_y+gap_size
-      batv2_end_y = int(batv2_height+batv2_start_y)
-except Exception as errmsg:
-#else:
-   pline = msgtime+' Error - '+str(errmsg)
-   with open('/var/www/html/tideplot.log', 'a') as logfile:
-            logfile.write (pline+'\n')
-#
-#  Function to obtain and process plot parameters.
-#
 def proc_data():
    global tide, tk, logfile, log, predlist, prestate2, prestate, prout, sqltimeformat, turntime, \
           formdate, plotdays, sqltimeformat, vari_height, curtime, sqlcon, sqlcur, turntime2, \
@@ -1703,4 +1214,501 @@ def proc_data():
    if not is_cgi_request:
       outfile.close()
       os.system(f'mv {filetag} /var/www/html/tideplot.html')
+
+date = date.today()
+curtime = datetime.now()
+msgtime = str(curtime)[:-10]
+
+# Mode detection: Apache sets REQUEST_METHOD for every CGI invocation; it is
+# absent when this script is run directly (e.g. from cron).
+is_cgi_request = "REQUEST_METHOD" in os.environ
+
+if is_cgi_request:
+   filetag = None
+   outfile = sys.stdout
+else:
+   filetag = "tide"+datetime.strftime(curtime, "%y%m%d%H%M%S")+".html"
+   outfile = open(filetag, "w")
+
+log = False
+prout = False
+tags = False
+station1 = False
+station2 = False
+wind = False
+rain = False
+temp = False
+default_station_id = 1
+debugit = 3
+#
+# Get station name for webpage title
+#
+envfile = find_dotenv('tide.env')
+if load_dotenv(envfile):
+   station_location = os.getenv('STATION_LOCATION')
+   station_latitude = os.getenv('STATION_LATITUDE')
+   station_longitude = os.getenv('STATION_LONGITUDE')
+   tide_station_url = os.getenv('TIDE_STATION_URL')
+   default_station_id = int(os.getenv('DEFAULT_STATION_ID', '1'))
+   #with open('/var/www/html/tideplot.log', 'a') as logfile:
+   #   logfile.write (msgtime+ 'station_location: '+station_location+'\n')                  
+else:
+   with open('/var/www/html/tideplot.log', 'a') as logfile:
+      logfile.write (msgtime+ 'environment file read failed\n')                  
+    
+#
+# Establish SQLite3 connection to the tides.db database
+#
+
+try:
+   sqlcon = sqlite3.connect(f'/home/tide/Uploads/tides.db')
+   sqlcur = sqlcon.cursor()
+except:
+   with open('/var/www/html/tideplot.log', 'a') as logfile:
+      logfile.write (msgtime+ 'tideplot sqlite3 connection failed\n')                  
+   exit()
+#
+# Read initialization data from iparams table
+#
+try:
+#if True:
+   sqlcur.execute("select * from iparams")
+   iparams = sqlcur.fetchall()
+   banflag = 0
+   banner  = ''
+   #banflag = iparams[0][2]
+   #banner = iparams[0][3]
+   station1cal = iparams[0][5]
+   station2cal = iparams[0][6]
+   s1enable = iparams[0][7]
+   s2enable = iparams[0][8]
+   #
+   # Get the lastest time entry in the tides.db database
+   # 
+   sqltimeformat = "%Y-%m-%d %H:%M:%S"
+   mintimeformat = "%Y-%m-%d %H:%M"
+   formdate = curtime.strftime("%Y-%m-%d")
+   #
+   # Process form parameters
+   #
+   if is_cgi_request:
+      form = cgi.FieldStorage()
+      init = form.getvalue('init')
+   else:
+      # Cron/file mode never had a real request to parse; always render the
+      # default (DEFAULT_STATION_ID-driven) view, matching prior tideplot.py behavior.
+      form = None
+      init = "1"
+   if init != None:
+      init = True
+      plotdays = 3
+      tags =  True
+      tagchk = 'checked'
+      station1 = (default_station_id == 1)
+      station1chk = 'checked' if station1 else ''
+      station2 = (default_station_id == 2)
+      station2chk = 'checked' if station2 else ''
+      wind = True
+      windchk = 'checked'
+      rain = True
+      rainchk = 'checked'
+      temp = True
+      tempchk = 'checked'
+      batv = (default_station_id == 1)
+      batvchk = 'checked' if batv else ''
+      batv2 = (default_station_id == 2)
+      batv2chk = 'checked' if batv2 else ''
+   else:
+      init = False
+      tags = form.getvalue('tags')
+      if tags == None:
+         tags = False
+         tagchk = ''
+      else:
+         tags = True
+         tagchk = 'checked'
+      station1 = form.getvalue('station1')
+      if station1 == None:
+         station1 = False
+         station1chk = ''
+      else:
+         station1 = True
+         station1chk = 'checked'
+      station2 = form.getvalue('station2')
+      if station2 == None:
+         station2 = False
+         station2chk = ''
+      else:
+         station2 = True
+         station2chk = 'checked'
+      wind = form.getvalue('wind')
+      if wind == None:
+         wind = False
+         windchk = ''
+      else:
+         wind = True
+         windchk = 'checked'
+      rain = form.getvalue('rain')
+      if rain == None:
+         rain = False
+         rainchk = ''
+      else:
+         rain = True
+         rainchk = 'checked'
+      temp = form.getvalue('temp')
+      if temp == None:
+         temp = False
+         tempchk = ''
+      else:
+         temp = True
+         tempchk = 'checked'
+      batv = form.getvalue('batv')
+      if batv == None:
+         batv = False
+         batvchk = ''
+      else:
+         batv = True
+         batvchk = 'checked'
+      batv2 = form.getvalue('batv2')
+      if batv2 == None:
+         batv2 = False
+         batv2chk = ''
+      else:
+         batv2 = True
+         batv2chk = 'checked'
+      plotdays = form.getvalue('dayspan')
+      if plotdays == None:
+         plotdays = 3
+      else:
+         plotdays = int(plotdays)
+      if plotdays > 20:
+         tags = False
+         tagchk = ''
+      getdate = form.getvalue('endate')
+      if getdate != None:
+         chktime = datetime.now()
+         chktime = datetime.strptime(str(chktime)[:10], '%Y-%m-%d')
+         curtime = datetime.strptime(getdate,"%Y-%m-%d")
+         if curtime == chktime:
+            curtime = datetime.now()
+         formdate = curtime.strftime("%Y-%m-%d")
+   if is_cgi_request:
+      canvas_width = form.getvalue('screenwidth')
+      if canvas_width ==  None:
+         canvas_width = 1200
+      else:
+         canvas_width = int(canvas_width)-100
+      default_height = form.getvalue('screenheight')
+      if default_height == None:
+         default_height = 750
+      else:
+         default_height = int(default_height)
+         if default_height < 750:
+            default_height = 750
+   else:
+      # Cron/file mode has no real request to read screen size from;
+      # matches prior tideplot.py's hardcoded defaults.
+      canvas_width = 1200
+      default_height = 750
+   selectedtide = 'predicts'
+   radinc = math.pi*2/91080
+   prestate = ''
+   prestate2 = ''
+   halftide = math.pi/2
+   fulltide = math.pi
+   sam_int = 60
+   predicts = []
+   turntime = ''
+   turntime2 = ''
+   tide_predict()
+   tidelist = []
+   batvlist= []
+   batv2list = []
+   windlist = []
+   localsunrise = 0
+   localsunset = 0
+   listDate = 0
+
+   dbquerytime = curtime - timedelta(days=plotdays)
+   sqlcur.execute("select dtime, stationid, distance from sensors where dtime "+ \
+                 "between ? and ? order by dtime", (str(dbquerytime),str(curtime)))
+   tidelist = sqlcur.fetchall()
+
+   tidelist = get_epochs(tidelist)
+
+   if len(tidelist) == 0:
+      station1 = False
+      station2 = False
+      canvas_height = 400
+      proc_data()
+      exit()
+   
+   if s1enable:
+      sqlcur.execute("select dtime, batv from sensors where stationid = 1 and dtime "+ \
+                    "between ? and ? order by dtime", (str(dbquerytime),str(curtime)))
+      batvlist = sqlcur.fetchall()
+   if s2enable:   
+      sqlcur.execute("select dtime, batv from sensors where stationid = 2 and dtime "+ \
+                    "between ? and ? order by dtime", (str(dbquerytime),str(curtime)))
+      batv2list = sqlcur.fetchall()
+   
+   sqlcur.execute("select * from wxdata where dtime "+ \
+                 "between ? and ? order by dtime", (str(dbquerytime),str(curtime)))
+   sun = SunTimes(float(station_longitude),float(station_latitude))
+   wxlist = sqlcur.fetchall()
+   wxlength = len(wxlist)
+   if wxlength != 0:
+      wxsup = True
+   else:
+      wxsup = False
+   tidesup = False
+   tidesum = 0
+   tidesum2 = 0
+   tideave = 0
+   tideave2 = 0
+   maxtide = -99
+   mintide = 99
+   maxtide2 = -99
+   mintide2 = 99
+   minbatv = 99
+   maxbatv = -99
+   minbatv2 = 99
+   maxbatv2 = -99
+   minwind = 99
+   maxwind = -99
+   mintemp = 99
+   maxtemp = -99
+   minrain = 99
+   maxrain = -99
+   tide_grid_nbr = 0
+   vari_grid_nbr = 0
+   wind_grid_nbr = 0
+   windir_grid_nbr = 0
+   rain_grid_nbr = 0
+   temp_grid_nbr = 0
+   batv_grid_nbr = 0
+   batv_grid_span = 0
+   batv2_grid_nbr = 0
+   batv2_grid_span = 0
+   wind_height = 0
+   rain_height = 0
+   temp_height = 0
+   batv_height = 0
+   batv2_height = 0
+   tide_grid_y = 0
+   vari_grid_y = 0
+   wind_grid_y = 0
+   windir_grid_y = 0
+   rain_grid_y = 0
+   temp_grid_y = 0
+   batv_grid_y = 0
+   batv2_grid_y = 0
+   grid_height = 30
+   if len(tidelist) != 0:
+      tidesup = True
+      for chkent in tidelist:
+         if station1 and chkent[1] == 1 and s1enable:
+            tidelevel = station1cal-chkent[2]/12
+            if tidelevel > maxtide:
+               maxtide = tidelevel 
+            if tidelevel < mintide:
+               mintide = tidelevel
+         elif station2 and chkent[1] == 2 and s2enable:
+            tidelevel = station2cal-chkent[2]/12
+            if tidelevel > maxtide2:
+               maxtide2 = tidelevel
+            if tidelevel < mintide2:
+               mintide2 = tidelevel 
+      if mintide == 99 or maxtide == -99:
+         station1 = False
+      if mintide2 == 99 or maxtide2 == -99:
+         station2 = False
+      if mintide2 < mintide:
+         mintide = mintide2
+      if maxtide2 > maxtide:
+         maxtide = maxtide2
+      #with open('/var/www/html/tideplot.log', 'a') as logfile:
+      #   logfile.write ('mintide: '+str(mintide)+'\n')
+      #   logfile.write ('maxtide: '+str(maxtide)+'\n')
+      #   logfile.write ('mintide2: '+str(mintide2)+'\n')
+      #   logfile.write ('maxtide2: '+str(maxtide2)+'\n')
+   if len(batvlist) != 0 and s1enable:
+      for chkent in batvlist:
+         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
+            if chkent[1] > maxbatv:
+               maxbatv = chkent[1]
+            if chkent[1] < minbatv:
+               minbatv = chkent[1]
+      if minbatv == 99 or maxbatv == -99:
+         batv = False
+      else:
+         minbatv1 = int(minbatv/0.05)
+         minbatv = round(minbatv1*0.05,2)
+         maxbatv1 = int(maxbatv/0.05)
+         maxbatv = round(maxbatv1*0.05+0.05,2)
+   else:
+      batv = False       
+   if len(batv2list) != 0 and s2enable:
+      for chkent in batv2list:
+         if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
+            if chkent[1] > maxbatv2:
+               maxbatv2 = chkent[1]
+            if chkent[1] < minbatv2:
+               minbatv2 = chkent[1]
+      if minbatv2 == 99 or maxbatv2 == -99:
+         batv2 = False
+      else:
+         minbatv1 = int(minbatv2/0.05)
+         minbatv2 = round(minbatv1*0.05,2)
+         maxbatv1 = int(maxbatv2/0.05)
+         maxbatv2 = round(maxbatv1*0.05+0.05,2)
+   else:
+      batv2 = False
+      
+   if len(wxlist) != 0:
+      for chkent in wxlist:
+         if chkent[1] != None and chkent[1] != 0 and chkent[1] != '':
+            if chkent[1] > maxtemp:
+               maxtemp = chkent[1]
+            if chkent[1] < mintemp:
+               mintemp = chkent[1]
+         if chkent[4] != None and chkent[4] != 0 and chkent[4] != '':
+            if chkent[4] > maxwind:
+               maxwind = chkent[4]
+            if chkent[4] < minwind:
+               minwind = chkent[4]
+         if chkent[10] != None and chkent[10] != 0 and chkent[10] != '':
+            if chkent[10] > maxrain:
+               maxrain = chkent[10]
+            if chkent[10] < minrain:
+               minrain = chkent[10]
+      if mintemp == 99 or maxtemp == -99:
+          temp = False
+      if minrain == 99 or maxrain == -99:
+          rain = False
+   else:
+      pass
+   if maxpred > maxtide:
+      maxtide = maxpred
+   if minpred < mintide:
+      mintide = minpred
+   tideave = round((maxtide-mintide)/2+math.floor(mintide),1)
+   tide_grid_nbr = round(maxtide+0.5)-math.floor(mintide)
+   vari_grid_nbr = 4
+   total_grids = tide_grid_nbr
+   nbr_gaps = 0
+   if station1 and s1enable:
+      total_grids += vari_grid_nbr
+      nbr_gaps += 1
+   if station2 and s2enable:
+      total_grids += vari_grid_nbr
+      nbr_gaps += 1
+   if wind:
+      windir_grid_nbr = 1
+      total_grids += windir_grid_nbr
+      windir_height = windir_grid_nbr*grid_height
+      windir_grid_y = windir_height/windir_grid_nbr
+      wind_grid_nbr = round((maxwind-minwind)/5+0.5)
+      total_grids += wind_grid_nbr
+      nbr_gaps += 1
+      wind_height = wind_grid_nbr*grid_height
+      wind_grid_y = round(wind_height/wind_grid_nbr/5,3)
+   if rain:
+      rain_grid_nbr = 4
+      total_grids += rain_grid_nbr
+      nbr_gaps += 1
+      rain_height = rain_grid_nbr*grid_height
+      rain_grid_y = round(rain_height/rain_grid_nbr,3)
+   if temp:
+      temp_grid_nbr = round((maxtemp-mintemp)/5+0.5)
+      total_grids += temp_grid_nbr
+      nbr_gaps += 1
+      temp_height = temp_grid_nbr*grid_height
+      temp_grid_y = round(temp_height/temp_grid_nbr,3)
+   if batv and s1enable:
+      batv_grid_nbr = round((maxbatv-minbatv)/0.05)
+      total_grids += batv_grid_nbr  
+      nbr_gaps += 1
+      batv_grid_span = round(maxbatv-minbatv,2)
+      batv_height = batv_grid_nbr*grid_height
+      batv_grid_y = round(batv_height/batv_grid_nbr,3)
+      batv_y_fact = batv_height/batv_grid_span
+   if batv2 and s2enable:
+      batv2_grid_nbr = round((maxbatv2-minbatv2)/0.05)
+      total_grids += batv2_grid_nbr  
+      nbr_gaps += 1
+      batv2_grid_span = round(maxbatv2-minbatv2,2)
+      batv2_height = batv2_grid_nbr*grid_height
+      batv2_grid_y = round(batv2_height/batv2_grid_nbr,3)
+      batv2_y_fact = batv2_height/batv2_grid_span
+
+   title_height = 10
+   dtime_height = 10
+   gap_size = 30
+   dtime_height = 30
+   footer_height = 12
+   tide_height = tide_grid_nbr*grid_height
+   vari_height = vari_grid_nbr*grid_height
+   tide_grid_y = round(tide_height/tide_grid_nbr,3)
+   vari_grid_y = round(vari_height/vari_grid_nbr,3)
+   wind_start_y = 0
+   wind_end_y = 0
+   rain_start_y = 0
+   rain_end_y = 0
+   temp_start_y =0
+   temp_end_y = 0
+   vari_start_y = 0
+   vari_end_y =0
+   vari2_start_y = 0
+   vari2_end_y =0
+   total_grid_height = total_grids*grid_height
+   total_gaps = gap_size*nbr_gaps
+   canvas_height = dtime_height+title_height+total_gaps+footer_height+total_grid_height
+   plot_width = canvas_width-30
+   windarrow = [[0,8],[0,-8],[-3,3],[3,3]]
+   right_scale_x = plot_width+15
+   left_scale_x = 15
+   dtime_start_y = 0
+   dtime_end_y = dtime_start_y + dtime_height
+   tide_start_y = dtime_end_y
+   tide_end_y = int(tide_height+tide_start_y)
+   tag_y = int(tide_end_y-(tide_grid_nbr/2*grid_height))
+   next_y = tide_end_y
+   if station1 and s1enable:
+      vari_start_y = next_y+gap_size
+      vari_end_y = int(vari_height+vari_start_y)
+      next_y = vari_end_y
+   if station2 and s2enable:
+      vari2_start_y = next_y+gap_size
+      vari2_end_y = int(vari_height+vari2_start_y)
+      next_y = vari2_end_y
+   if wind:
+      windir_start_y = next_y+gap_size
+      windir_end_y = int(windir_height+windir_start_y)
+      wind_start_y = windir_end_y
+      wind_end_y = int(wind_height+wind_start_y)
+      next_y = wind_end_y
+   if rain:
+      rain_start_y = next_y+gap_size
+      rain_end_y = int(rain_height+rain_start_y)
+      next_y = rain_end_y
+   if temp:
+      temp_start_y = next_y+gap_size
+      temp_end_y = int(temp_height+temp_start_y)
+      next_y = temp_end_y
+   if batv and s1enable:
+      batv_start_y = next_y+gap_size
+      batv_end_y = int(batv_height+batv_start_y)
+      next_y = batv_end_y
+   if batv2 and s2enable:
+      batv2_start_y = next_y+gap_size
+      batv2_end_y = int(batv2_height+batv2_start_y)
+except Exception as errmsg:
+#else:
+   pline = msgtime+' Error - '+str(errmsg)
+   with open('/var/www/html/tideplot.log', 'a') as logfile:
+            logfile.write (pline+'\n')
+#
+#  Function to obtain and process plot parameters.
+#
 proc_data()
