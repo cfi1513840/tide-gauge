@@ -1381,7 +1381,7 @@ try:
          plotdays = 3
       else:
          plotdays = int(plotdays)
-      if plotdays > 20:
+      if plotdays > 10:
          tags = False
          tagchk = ''
       getdate = form.getvalue('endate')
