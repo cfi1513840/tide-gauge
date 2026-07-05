@@ -58,9 +58,31 @@ class TidePlotRenderer:
     as a CGI response (stdout) or a published static page (cron/file mode).
     See run() for the overall sequence."""
 
+    # True constants: the same value on every render, for every site,
+    # regardless of request parameters or configuration. Promoted out of
+    # per-instance state (where they originally lived only because the
+    # blanket global->self conversion couldn't tell them apart from
+    # genuinely per-render state -- see banflag/banner note below).
+    halftide = math.pi / 2
+    fulltide = math.pi
+    grid_height = 30
+    left_scale_x = 15
+    mintimeformat = "%Y-%m-%d %H:%M"
+    sqltimeformat = "%Y-%m-%d %H:%M:%S"
+    sam_int = 60
+    selectedtide = 'predicts'
+    title_height = 10
+    dtime_start_y = 0
+    windarrow = [[0, 8], [0, -8], [-3, 3], [3, 3]]  # read-only (iterated, never mutated)
+    # banflag/banner: originally sourced from the sqlite3 iparams table
+    # elsewhere in the site, but hardcoded disabled here -- the banner
+    # feature was judged not applicable to the plot display. Fixed values,
+    # not per-render state.
+    banflag = 0
+    banner = ''
+
     def __init__(self, is_cgi_request):
         self.is_cgi_request = is_cgi_request
-        self.form = None
 
     def tide_predict(self):
 
@@ -172,7 +194,6 @@ class TidePlotRenderer:
               lasttide = thistide
               lastdelta = delta
            predsum = 0
-           self.predave = 3.5
            if len(self.predlist) != 0:
               for chkent in self.predlist:
                  if chkent[2] > self.maxpred:
@@ -1210,7 +1231,6 @@ class TidePlotRenderer:
 
 
     def run(self):
-        self.date = date.today()
         self.curtime = datetime.now()
         self.msgtime = str(self.curtime)[:-10]
 
@@ -1225,8 +1245,6 @@ class TidePlotRenderer:
            self.filetag = "tide"+datetime.strftime(self.curtime, "%y%m%d%H%M%S")+".html"
            self.outfile = open(self.filetag, "w")
 
-        self.log = False
-        self.prout = False
         self.tags = False
         self.station1 = False
         self.station2 = False
@@ -1234,7 +1252,6 @@ class TidePlotRenderer:
         self.rain = False
         self.temp = False
         default_station_id = 1
-        self.debugit = 3
         #
         # Get station name for webpage title
         #
@@ -1243,7 +1260,6 @@ class TidePlotRenderer:
            self.station_location = os.getenv('STATION_LOCATION')
            station_latitude = os.getenv('STATION_LATITUDE')
            station_longitude = os.getenv('STATION_LONGITUDE')
-           self.tide_station_url = os.getenv('TIDE_STATION_URL')
            default_station_id = int(os.getenv('DEFAULT_STATION_ID', '1'))
            #with open('/var/www/html/tideplot.log', 'a') as logfile:
            #   logfile.write (msgtime+ 'station_location: '+station_location+'\n')                  
@@ -1256,8 +1272,8 @@ class TidePlotRenderer:
         #
 
         try:
-           self.sqlcon = sqlite3.connect(f'/home/tide/Uploads/tides.db')
-           self.sqlcur = self.sqlcon.cursor()
+           sqlcon = sqlite3.connect(f'/home/tide/Uploads/tides.db')
+           self.sqlcur = sqlcon.cursor()
         except:
            with open('/var/www/html/tideplot.log', 'a') as self.logfile:
               self.logfile.write (self.msgtime+ 'tideplot sqlite3 connection failed\n')                  
@@ -1269,8 +1285,6 @@ class TidePlotRenderer:
         #if True:
            self.sqlcur.execute("select * from iparams")
            iparams = self.sqlcur.fetchall()
-           self.banflag = 0
-           self.banner  = ''
            #banflag = iparams[0][2]
            #banner = iparams[0][3]
            self.station1cal = iparams[0][5]
@@ -1280,8 +1294,6 @@ class TidePlotRenderer:
            #
            # Get the lastest time entry in the tides.db database
            # 
-           self.sqltimeformat = "%Y-%m-%d %H:%M:%S"
-           self.mintimeformat = "%Y-%m-%d %H:%M"
            self.formdate = self.curtime.strftime("%Y-%m-%d")
            #
            # Process form parameters
@@ -1405,13 +1417,9 @@ class TidePlotRenderer:
               # matches prior tideplot.py's hardcoded defaults.
               self.canvas_width = 1200
               default_height = 750
-           self.selectedtide = 'predicts'
            radinc = math.pi*2/91080
            self.prestate = ''
            self.prestate2 = ''
-           self.halftide = math.pi/2
-           self.fulltide = math.pi
-           self.sam_int = 60
            self.predicts = []
            self.turntime = ''
            self.turntime2 = ''
@@ -1459,12 +1467,11 @@ class TidePlotRenderer:
            self.tidesup = False
            tidesum = 0
            tidesum2 = 0
-           self.tideave = 0
            tideave2 = 0
            maxtide = -99
            self.mintide = 99
            maxtide2 = -99
-           self.mintide2 = 99
+           mintide2 = 99
            self.minbatv = 99
            self.maxbatv = -99
            self.minbatv2 = 99
@@ -1485,20 +1492,17 @@ class TidePlotRenderer:
            batv_grid_span = 0
            self.batv2_grid_nbr = 0
            batv2_grid_span = 0
-           self.wind_height = 0
-           self.rain_height = 0
-           self.temp_height = 0
-           self.batv_height = 0
+           wind_height = 0
+           rain_height = 0
+           temp_height = 0
+           batv_height = 0
            batv2_height = 0
            self.tide_grid_y = 0
-           self.vari_grid_y = 0
            self.wind_grid_y = 0
-           self.windir_grid_y = 0
            self.rain_grid_y = 0
            self.temp_grid_y = 0
            self.batv_grid_y = 0
            self.batv2_grid_y = 0
-           self.grid_height = 30
            if len(self.tidelist) != 0:
               self.tidesup = True
               for chkent in self.tidelist:
@@ -1512,14 +1516,14 @@ class TidePlotRenderer:
                     self.tidelevel = self.station2cal-chkent[2]/12
                     if self.tidelevel > maxtide2:
                        maxtide2 = self.tidelevel
-                    if self.tidelevel < self.mintide2:
-                       self.mintide2 = self.tidelevel 
+                    if self.tidelevel < mintide2:
+                       mintide2 = self.tidelevel 
               if self.mintide == 99 or maxtide == -99:
                  self.station1 = False
-              if self.mintide2 == 99 or maxtide2 == -99:
+              if mintide2 == 99 or maxtide2 == -99:
                  self.station2 = False
-              if self.mintide2 < self.mintide:
-                 self.mintide = self.mintide2
+              if mintide2 < self.mintide:
+                 self.mintide = mintide2
               if maxtide2 > maxtide:
                  maxtide = maxtide2
               #with open('/var/www/html/tideplot.log', 'a') as logfile:
@@ -1587,7 +1591,6 @@ class TidePlotRenderer:
               maxtide = self.maxpred
            if self.minpred < self.mintide:
               self.mintide = self.minpred
-           self.tideave = round((maxtide-self.mintide)/2+math.floor(self.mintide),1)
            self.tide_grid_nbr = round(maxtide+0.5)-math.floor(self.mintide)
            self.vari_grid_nbr = 4
            total_grids = self.tide_grid_nbr
@@ -1601,33 +1604,32 @@ class TidePlotRenderer:
            if self.wind:
               self.windir_grid_nbr = 1
               total_grids += self.windir_grid_nbr
-              self.windir_height = self.windir_grid_nbr*self.grid_height
-              self.windir_grid_y = self.windir_height/self.windir_grid_nbr
+              windir_height = self.windir_grid_nbr*self.grid_height
               self.wind_grid_nbr = round((maxwind-minwind)/5+0.5)
               total_grids += self.wind_grid_nbr
               nbr_gaps += 1
-              self.wind_height = self.wind_grid_nbr*self.grid_height
-              self.wind_grid_y = round(self.wind_height/self.wind_grid_nbr/5,3)
+              wind_height = self.wind_grid_nbr*self.grid_height
+              self.wind_grid_y = round(wind_height/self.wind_grid_nbr/5,3)
            if self.rain:
               self.rain_grid_nbr = 4
               total_grids += self.rain_grid_nbr
               nbr_gaps += 1
-              self.rain_height = self.rain_grid_nbr*self.grid_height
-              self.rain_grid_y = round(self.rain_height/self.rain_grid_nbr,3)
+              rain_height = self.rain_grid_nbr*self.grid_height
+              self.rain_grid_y = round(rain_height/self.rain_grid_nbr,3)
            if self.temp:
               self.temp_grid_nbr = round((maxtemp-self.mintemp)/5+0.5)
               total_grids += self.temp_grid_nbr
               nbr_gaps += 1
-              self.temp_height = self.temp_grid_nbr*self.grid_height
-              self.temp_grid_y = round(self.temp_height/self.temp_grid_nbr,3)
+              temp_height = self.temp_grid_nbr*self.grid_height
+              self.temp_grid_y = round(temp_height/self.temp_grid_nbr,3)
            if self.batv and self.s1enable:
               self.batv_grid_nbr = round((self.maxbatv-self.minbatv)/0.05)
               total_grids += self.batv_grid_nbr  
               nbr_gaps += 1
               batv_grid_span = round(self.maxbatv-self.minbatv,2)
-              self.batv_height = self.batv_grid_nbr*self.grid_height
-              self.batv_grid_y = round(self.batv_height/self.batv_grid_nbr,3)
-              self.batv_y_fact = self.batv_height/batv_grid_span
+              batv_height = self.batv_grid_nbr*self.grid_height
+              self.batv_grid_y = round(batv_height/self.batv_grid_nbr,3)
+              self.batv_y_fact = batv_height/batv_grid_span
            if self.batv2 and self.s2enable:
               self.batv2_grid_nbr = round((self.maxbatv2-self.minbatv2)/0.05)
               total_grids += self.batv2_grid_nbr  
@@ -1637,15 +1639,13 @@ class TidePlotRenderer:
               self.batv2_grid_y = round(batv2_height/self.batv2_grid_nbr,3)
               self.batv2_y_fact = batv2_height/batv2_grid_span
 
-           self.title_height = 10
-           self.dtime_height = 10
+           dtime_height = 10
            gap_size = 30
-           self.dtime_height = 30
+           dtime_height = 30
            footer_height = 12
            self.tide_height = self.tide_grid_nbr*self.grid_height
-           self.vari_height = self.vari_grid_nbr*self.grid_height
+           vari_height = self.vari_grid_nbr*self.grid_height
            self.tide_grid_y = round(self.tide_height/self.tide_grid_nbr,3)
-           self.vari_grid_y = round(self.vari_height/self.vari_grid_nbr,3)
            self.wind_start_y = 0
            self.wind_end_y = 0
            self.rain_start_y = 0
@@ -1658,42 +1658,39 @@ class TidePlotRenderer:
            self.vari2_end_y =0
            total_grid_height = total_grids*self.grid_height
            total_gaps = gap_size*nbr_gaps
-           self.canvas_height = self.dtime_height+self.title_height+total_gaps+footer_height+total_grid_height
+           self.canvas_height = dtime_height+self.title_height+total_gaps+footer_height+total_grid_height
            self.plot_width = self.canvas_width-30
-           self.windarrow = [[0,8],[0,-8],[-3,3],[3,3]]
            self.right_scale_x = self.plot_width+15
-           self.left_scale_x = 15
-           self.dtime_start_y = 0
-           self.dtime_end_y = self.dtime_start_y + self.dtime_height
-           self.tide_start_y = self.dtime_end_y
+           dtime_end_y = self.dtime_start_y + dtime_height
+           self.tide_start_y = dtime_end_y
            self.tide_end_y = int(self.tide_height+self.tide_start_y)
            self.tag_y = int(self.tide_end_y-(self.tide_grid_nbr/2*self.grid_height))
            next_y = self.tide_end_y
            if self.station1 and self.s1enable:
               self.vari_start_y = next_y+gap_size
-              self.vari_end_y = int(self.vari_height+self.vari_start_y)
+              self.vari_end_y = int(vari_height+self.vari_start_y)
               next_y = self.vari_end_y
            if self.station2 and self.s2enable:
               self.vari2_start_y = next_y+gap_size
-              self.vari2_end_y = int(self.vari_height+self.vari2_start_y)
+              self.vari2_end_y = int(vari_height+self.vari2_start_y)
               next_y = self.vari2_end_y
            if self.wind:
               self.windir_start_y = next_y+gap_size
-              self.windir_end_y = int(self.windir_height+self.windir_start_y)
-              self.wind_start_y = self.windir_end_y
-              self.wind_end_y = int(self.wind_height+self.wind_start_y)
+              windir_end_y = int(windir_height+self.windir_start_y)
+              self.wind_start_y = windir_end_y
+              self.wind_end_y = int(wind_height+self.wind_start_y)
               next_y = self.wind_end_y
            if self.rain:
               self.rain_start_y = next_y+gap_size
-              self.rain_end_y = int(self.rain_height+self.rain_start_y)
+              self.rain_end_y = int(rain_height+self.rain_start_y)
               next_y = self.rain_end_y
            if self.temp:
               self.temp_start_y = next_y+gap_size
-              self.temp_end_y = int(self.temp_height+self.temp_start_y)
+              self.temp_end_y = int(temp_height+self.temp_start_y)
               next_y = self.temp_end_y
            if self.batv and self.s1enable:
               self.batv_start_y = next_y+gap_size
-              self.batv_end_y = int(self.batv_height+self.batv_start_y)
+              self.batv_end_y = int(batv_height+self.batv_start_y)
               next_y = self.batv_end_y
            if self.batv2 and self.s2enable:
               self.batv2_start_y = next_y+gap_size
