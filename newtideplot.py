@@ -381,7 +381,9 @@ class TidePlotRenderer:
            #   pline = msgtime+' '+str(wxlist)
            #   with open('/var/www/html/tideplot.log', 'a') as logfile:
            #      logfile.write (pline+'\n')   
-           #   debugit -= 1if self.tidesup:
+           #   debugit -= 1
+
+           if self.tidesup:
               starttime = datetime.strptime(self.tidelist[0][0], self.sqltimeformat)
            else:
               starttime = self.dbquerytime
@@ -787,7 +789,9 @@ class TidePlotRenderer:
                        while batvtimenext < predtimenext and bidx < batvlen-1:
                           bidx += 1
                           if bidx < batvlen-1:
-                             batvtimenext = datetime.strptime(self.batvlist[bidx][0][:16], self.mintimeformat)if self.s2enable and self.batv2 and len(self.batv2list) != 0:
+                             batvtimenext = datetime.strptime(self.batvlist[bidx][0][:16], self.mintimeformat)
+
+                 if self.s2enable and self.batv2 and len(self.batv2list) != 0:
                     if batv2time == predtime_hm:
                        batv2_y = self.batv2_end_y-int((self.batv2list[b2idx][1]-self.minbatv2)*self.batv2_y_fact)
                        if savebatv2time == 0 or predtime_hm > savebatv2time + timedelta(minutes=15):               
@@ -1206,7 +1210,9 @@ class TidePlotRenderer:
 
     def run(self):
         self.curtime = datetime.now()
-        self.msgtime = str(self.curtime)[:-10]# Mode detection: Apache sets REQUEST_METHOD for every CGI invocation; it is
+        self.msgtime = str(self.curtime)[:-10]
+
+        # Mode detection: Apache sets REQUEST_METHOD for every CGI invocation; it is
         # absent when this script is run directly (e.g. from cron).
         self.is_cgi_request = "REQUEST_METHOD" in os.environ
 
