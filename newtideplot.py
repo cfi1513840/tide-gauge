@@ -25,28 +25,6 @@ import cgi, cgitb
 from dotenv import load_dotenv, find_dotenv
 from suntimes import SunTimes
 
-global tide, tk, log, prout, selectedtide, logfile, radinc, curtime, windlist, \
-       halftide, fulltide, sam_int, sqlcon, sqlcur, predlist, predicts, turntime2, \
-       prestate, prestate2, sqltimeformat, turntime, tagbutt, vari_height, plotdays, \
-       formdate, tags, endplotime, canvas_height, plot_height, canvas_width, points, \
-       plot_width, windbutt, wind, form, rain, wxlength, left_scale_x, outfile, \
-       title_start_y, title_end_y, title_height, mintmeformat, temp, right_scale_x, \
-       tide_start_y, tide_end_y, tide_height, station1, station2, station1chk, station2chk, \
-       vari_start_y, vari_end_y, vari_height, msgtime, grid_height, \
-       vari2_start_y, vari2_end_y, vari2_height, station1cal, station2cal, \
-       wind_start_y, wind_end_y, windir_start_y, windir_end_y, wind_height, s1enable, s2enable, \
-       windir_height, rain_start_y, rain_end_y, rain_height, maxpred, minpred, predave, \
-       temp_start_y, temp_end_y, temp_height, tag_y, wxsup, tideave, \
-       batv, batv_start_y, batv_end_y, batv_height, debugit, tide_station_url, \
-       batv_grid_nbr, batv_grid_y, batvinit, batv_y_fact, \
-       batv2, batv2_start_y, batv2_end_y, batv2_height, station_location, \
-       batv2_grid_nbr, batv2_grid_y, batv2init, batv2_y_fact, \
-       dtime_start_y, dtime_end_y, dtime_height, banflag, banner, \
-       tide_grid_nbr, vari_grid_nbr, wind_grid_nbr, windir_grid_nbr, rain_grid_nbr, \
-       tide_grid_y, vari_grid_y, wind_grid_y, windir_grid_y, rain_grid_y, tidesup, \
-       temp_grid_nbr, temp_grid_y, windarrow, tidelist, dbquerytime, \
-       listDate, localsunrise, localsunset, sun, mintide, mintide2, minbatv, \
-       maxbatv, minbatv2, maxbatv2, batvlist, batv2list, sun, localsunrise, localsunset
 #
 # Function to generate the predicted tide at one minute intervals. The predicted tide
 # levels are saved in [predlist] for the requested plot duration based on the NOAA tide tables.
@@ -403,9 +381,7 @@ class TidePlotRenderer:
            #   pline = msgtime+' '+str(wxlist)
            #   with open('/var/www/html/tideplot.log', 'a') as logfile:
            #      logfile.write (pline+'\n')   
-           #   debugit -= 1
-
-           if self.tidesup:
+           #   debugit -= 1if self.tidesup:
               starttime = datetime.strptime(self.tidelist[0][0], self.sqltimeformat)
            else:
               starttime = self.dbquerytime
@@ -811,9 +787,7 @@ class TidePlotRenderer:
                        while batvtimenext < predtimenext and bidx < batvlen-1:
                           bidx += 1
                           if bidx < batvlen-1:
-                             batvtimenext = datetime.strptime(self.batvlist[bidx][0][:16], self.mintimeformat)
-
-                 if self.s2enable and self.batv2 and len(self.batv2list) != 0:
+                             batvtimenext = datetime.strptime(self.batvlist[bidx][0][:16], self.mintimeformat)if self.s2enable and self.batv2 and len(self.batv2list) != 0:
                     if batv2time == predtime_hm:
                        batv2_y = self.batv2_end_y-int((self.batv2list[b2idx][1]-self.minbatv2)*self.batv2_y_fact)
                        if savebatv2time == 0 or predtime_hm > savebatv2time + timedelta(minutes=15):               
@@ -1232,9 +1206,7 @@ class TidePlotRenderer:
 
     def run(self):
         self.curtime = datetime.now()
-        self.msgtime = str(self.curtime)[:-10]
-
-        # Mode detection: Apache sets REQUEST_METHOD for every CGI invocation; it is
+        self.msgtime = str(self.curtime)[:-10]# Mode detection: Apache sets REQUEST_METHOD for every CGI invocation; it is
         # absent when this script is run directly (e.g. from cron).
         self.is_cgi_request = "REQUEST_METHOD" in os.environ
 
