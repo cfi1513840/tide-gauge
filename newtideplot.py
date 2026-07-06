@@ -10,7 +10,7 @@
 #    every custom redraw submitted via the page's own form.
 #  - As a cron job (no REQUEST_METHOD; currently scheduled at :01/:21/:41,
 #    one minute after tide.py refreshes the database copy): always renders
-#    the default (DEFAULT_STATION_ID-driven) view and publishes it to
+#    the default (iparams.stationid-driven) view and publishes it to
 #    /var/www/html/tideplot.html as a static page.
 #
 # This replaces the former separate tideplot.py / tideplot.cgi files, which
@@ -1238,7 +1238,6 @@ class TidePlotRenderer:
            self.station_location = os.getenv('STATION_LOCATION')
            station_latitude = os.getenv('STATION_LATITUDE')
            station_longitude = os.getenv('STATION_LONGITUDE')
-           default_station_id = int(os.getenv('DEFAULT_STATION_ID', '1'))
            #with open('/var/www/html/tideplot.log', 'a') as logfile:
            #   logfile.write (msgtime+ 'station_location: '+station_location+'\n')                  
         else:
@@ -1262,13 +1261,17 @@ class TidePlotRenderer:
         try:
         #if True:
            self.sqlcur.execute("select * from iparams")
-           iparams = self.sqlcur.fetchall()
-           #banflag = iparams[0][2]
-           #banner = iparams[0][3]
-           self.station1cal = iparams[0][5]
-           self.station2cal = iparams[0][6]
-           self.s1enable = iparams[0][7]
-           self.s2enable = iparams[0][8]
+           iparams = self.sqlcur.fetchone()
+           # The active station is defined by iparams.stationid, the same
+           # column tide.py and the rest of the site use -- not a separate
+           # tideplot-specific setting, so the two can never drift apart.
+           default_station_id = iparams[0]
+           #banflag = iparams[2]
+           #banner = iparams[3]
+           self.station1cal = iparams[5]
+           self.station2cal = iparams[6]
+           self.s1enable = iparams[7]
+           self.s2enable = iparams[8]
            #
            # Get the lastest time entry in the tides.db database
            # 
@@ -1281,7 +1284,7 @@ class TidePlotRenderer:
               init = form.getvalue('init')
            else:
               # Cron/file mode never had a real request to parse; always render the
-              # default (DEFAULT_STATION_ID-driven) view, matching prior tideplot.py behavior.
+              # default (iparams.stationid-driven) view, matching prior tideplot.py behavior.
               form = None
               init = "1"
            if init != None:
