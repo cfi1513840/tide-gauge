@@ -22,6 +22,7 @@ from datetime import datetime, date, timedelta, timezone
 import sqlite3
 import math
 import cgi, cgitb
+from dataclasses import dataclass, field
 from dotenv import load_dotenv, find_dotenv
 from suntimes import SunTimes
 
@@ -29,6 +30,45 @@ from suntimes import SunTimes
 # Function to generate the predicted tide at one minute intervals. The predicted tide
 # levels are saved in [predlist] for the requested plot duration based on the NOAA tide tables.
 #
+
+
+@dataclass
+class Station:
+    """Static, per-station configuration built once per render from iparams
+    and the request's form parameters. Used to drive the mechanical,
+    structurally-identical per-station work (iparams read, form checkboxes,
+    legend, battery queries, min/max battery voltage, grid drawing, and
+    vertical layout stacking) via a simple loop instead of separately-named
+    per-station variables.
+
+    The deeply time-dependent main trace-drawing loop (tide/variation
+    trace with 15-minute gap detection, battery trace with sunrise/sunset
+    overlay) intentionally keeps its existing self.station1cal-style
+    attributes and if/elif shape rather than looping over this list --
+    that logic is stateful across loop iterations in ways that are safer
+    to extend by direct analogy (a third branch matching station 2's
+    exactly) than to generalize, especially with no prior station-3
+    baseline to verify subtle timing edge cases against.
+    """
+    num: int
+    enabled: bool = False
+    cal: float = 0.0
+    color: str = 'black'
+    selected: bool = False      # station{num} form checkbox
+    show_battery: bool = False  # batv{num} form checkbox (batv for num==1)
+    selected_chk: str = ''
+    battery_chk: str = ''
+    batv_list: list = field(default_factory=list)
+    min_batv: float = 99
+    max_batv: float = -99
+    batv_grid_nbr: int = 0
+    batv_grid_y: float = 0
+    batv_height: float = 0
+    batv_y_fact: float = 0
+    batv_start_y: int = 0
+    batv_end_y: int = 0
+    vari_start_y: int = 0
+    vari_end_y: int = 0
 
 
 class TidePlotRenderer:
@@ -315,12 +355,16 @@ class TidePlotRenderer:
            self.outfile.write (f'<input type="number" name="dayspan" id="dayspan" value="{str(self.plotdays)}" step=1 min="1" max="30" required>&nbsp&nbsp&nbsp&nbsp\n')
            self.outfile.write ('<input type="hidden" name="screenwidth" id="screenwidth" value=''/>\n')
            self.outfile.write ('<input type="hidden" name="screenheight" id="screenheight" value=''/>\n')
-           if self.s1enable:
-              self.outfile.write ('<label for="station1">Sensor 1</label>\n')
-              self.outfile.write (f'<input type="checkbox" id="station1" name="station1" value="1" {self.station1chk}>&nbsp&nbsp&nbsp&nbsp\n')
-           if self.s2enable:
-              self.outfile.write ('<label for="station2">Sensor 2</label>\n')
-              self.outfile.write (f'<input type="checkbox" id="station2" name="station2" value="0" {self.station2chk}>&nbsp&nbsp&nbsp&nbsp\n')
+           # value="..." here is purely cosmetic -- the form-parsing code only
+           # checks whether the key is present at all, never its value -- but
+           # station1's/station2's existing markup differ (1 vs 0) and are
+           # preserved exactly rather than unified. station3 (new) uses "1".
+           station_chk_value = {1: '1', 2: '0', 3: '1'}
+           batv_chk_value = {1: '1', 2: '0', 3: '1'}
+           for s in self.stations:
+              if s.enabled:
+                 self.outfile.write (f'<label for="station{s.num}">Sensor {s.num}</label>\n')
+                 self.outfile.write (f'<input type="checkbox" id="station{s.num}" name="station{s.num}" value="{station_chk_value[s.num]}" {s.selected_chk}>&nbsp&nbsp&nbsp&nbsp\n')
            self.outfile.write ('<label for="tags">Tide Markers</label>\n')
            self.outfile.write (f'<input type="checkbox" id="tags" name="tags" value="1" {self.tagchk}>&nbsp&nbsp&nbsp&nbsp\n')
            self.outfile.write ('<label for="wind"> Wind</label>\n')
@@ -329,12 +373,11 @@ class TidePlotRenderer:
            self.outfile.write (f'<input type="checkbox" id="rain" name="rain" value="1" {self.rainchk}>&nbsp&nbsp&nbsp&nbsp\n')
            self.outfile.write ('<label for="temp">Temperature</label>\n')
            self.outfile.write (f'<input type="checkbox" id="temp" name="temp" value="1" {self.tempchk}>&nbsp&nbsp&nbsp&nbsp\n')
-           if self.s1enable:
-              self.outfile.write ('<label for="batv">BatV 1</label>\n')
-              self.outfile.write (f'<input type="checkbox" id="batv" name="batv" value="1" {self.batvchk}>&nbsp&nbsp&nbsp&nbsp\n')
-           if self.s2enable:
-              self.outfile.write ('<label for="batv2">BatV 2</label>\n')
-              self.outfile.write (f'<input type="checkbox" id="batv2" name="batv2" value="0" {self.batv2chk}>&nbsp&nbsp&nbsp&nbsp\n')
+           for s in self.stations:
+              if s.enabled:
+                 field_id = 'batv' if s.num == 1 else f'batv{s.num}'
+                 self.outfile.write (f'<label for="{field_id}">BatV {s.num}</label>\n')
+                 self.outfile.write (f'<input type="checkbox" id="{field_id}" name="{field_id}" value="{batv_chk_value[s.num]}" {s.battery_chk}>&nbsp&nbsp&nbsp&nbsp\n')
            self.outfile.write ('<input type="submit" value="Refresh"/>\n')
            self.outfile.write ('</form>\n')
            self.outfile.write ('</div>')
@@ -391,6 +434,7 @@ class TidePlotRenderer:
            aidx = 0
            bidx = 0
            b2idx = 0
+           b3idx = 0
            widx = 0
            saidx = -10
            swidx = -10
@@ -400,6 +444,7 @@ class TidePlotRenderer:
            tideinit = False
            variinit = False
            vari2init = False
+           vari3init = False
            wxinit = False
            rxinit = False
            txinit = False
@@ -407,6 +452,8 @@ class TidePlotRenderer:
            varistart_y = -99
            vari2start_x = -99
            vari2start_y = -99
+           vari3start_x = -99
+           vari3start_y = -99
            tidestart_x = -99
            tidestart_y = -99
            maxwind = 0
@@ -434,54 +481,38 @@ class TidePlotRenderer:
               self.outfile.write (f'ctx.fillText("{linbr}", {self.left_scale_x}, {int(gridy)});\n')
               self.outfile.write (f'ctx.fillText("{linbr}", {self.right_scale_x}, {int(gridy)});\n')
               gridy = gridy-self.grid_height
-           if self.station1 and self.s1enable:
-              self.outfile.write ('ctx.strokeStyle = "black";\n')   
-              self.outfile.write ('ctx.textAlign = "center";\n')
+           for s in self.stations:
+              if not (s.selected and s.enabled):
+                 continue
+              self.outfile.write ('ctx.strokeStyle = "black";\n')
+              if s.num == 1:
+                 self.outfile.write ('ctx.textAlign = "center";\n')
               self.outfile.write ('ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({x_start},{self.vari_start_y});\n')
-              self.outfile.write (f'ctx.lineTo({x_start},{self.vari_end_y});\n')
+              self.outfile.write (f'ctx.moveTo({x_start},{s.vari_start_y});\n')
+              self.outfile.write (f'ctx.lineTo({x_start},{s.vari_end_y});\n')
               self.outfile.write ('ctx.stroke();\n')
               self.outfile.write ('ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width-1},{self.vari_start_y});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width-1},{self.vari_end_y});\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width-1},{s.vari_start_y});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width-1},{s.vari_end_y});\n')
               self.outfile.write ('ctx.stroke();\n')
               gridy = 0
+              # station1's original block omitted the +3 label offset that
+              # station2's had; preserved here rather than unified, since
+              # neither original is being changed. station3 (new) matches
+              # station2's version.
+              label_offset = 0 if s.num == 1 else 3
               for x in range(0,self.vari_grid_nbr+1):
                  if x == 0 or x == 2 or x == self.vari_grid_nbr:
                     self.outfile.write ('ctx.strokeStyle = "black";\n')
                  else:
                     self.outfile.write ('ctx.strokeStyle = "gray";\n')
                  self.outfile.write ('ctx.beginPath();\n')
-                 self.outfile.write (f'ctx.moveTo({x_start},{int(self.vari_start_y+gridy)});\n')
-                 self.outfile.write (f'ctx.lineTo({self.plot_width},{int(self.vari_start_y+gridy)});\n')
+                 self.outfile.write (f'ctx.moveTo({x_start},{int(s.vari_start_y+gridy)});\n')
+                 self.outfile.write (f'ctx.lineTo({self.plot_width},{int(s.vari_start_y+gridy)});\n')
                  self.outfile.write ('ctx.stroke();\n')
                  self.outfile.write ('ctx.fillStyle = "black";\n')
-                 self.outfile.write (f'ctx.fillText("{str(2-x)}", {self.left_scale_x}, {int(self.vari_start_y+gridy)});\n')                          
-                 self.outfile.write (f'ctx.fillText("{str(2-x)}", {self.right_scale_x}, {int(self.vari_start_y+gridy)});\n')                          
-                 gridy += self.grid_height
-           if self.station2 and self.s2enable:
-              self.outfile.write ('ctx.strokeStyle = "black";\n')   
-              self.outfile.write ('ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({x_start},{self.vari2_start_y});\n')
-              self.outfile.write (f'ctx.lineTo({x_start},{self.vari2_end_y});\n')
-              self.outfile.write ('ctx.stroke();\n')
-              self.outfile.write ('ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width-1},{self.vari2_start_y});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width-1},{self.vari2_end_y});\n')
-              self.outfile.write ('ctx.stroke();\n')
-              gridy = 0   
-              for x in range(0,self.vari_grid_nbr+1):
-                 if x == 0 or x == 2 or x == self.vari_grid_nbr:
-                    self.outfile.write ('ctx.strokeStyle = "black";\n')
-                 else:
-                    self.outfile.write ('ctx.strokeStyle = "gray";\n')
-                 self.outfile.write ('ctx.beginPath();\n')
-                 self.outfile.write (f'ctx.moveTo({x_start},{int(self.vari2_start_y+gridy)});\n')
-                 self.outfile.write (f'ctx.lineTo({self.plot_width},{int(self.vari2_start_y+gridy)});\n')
-                 self.outfile.write ('ctx.stroke();\n')
-                 self.outfile.write ('ctx.fillStyle = "black";\n')
-                 self.outfile.write (f'ctx.fillText("{str(2-x)}", {self.left_scale_x}, {int(self.vari2_start_y+gridy+3)});\n')                          
-                 self.outfile.write (f'ctx.fillText("{str(2-x)}", {self.right_scale_x}, {int(self.vari2_start_y+gridy+3)});\n')                          
+                 self.outfile.write (f'ctx.fillText("{str(2-x)}", {self.left_scale_x}, {int(s.vari_start_y+gridy+label_offset)});\n')
+                 self.outfile.write (f'ctx.fillText("{str(2-x)}", {self.right_scale_x}, {int(s.vari_start_y+gridy+label_offset)});\n')
                  gridy += self.grid_height
            if self.wind:
               gridy = 0
@@ -559,70 +590,57 @@ class TidePlotRenderer:
               self.outfile.write (f'ctx.moveTo({self.plot_width},{self.temp_start_y});\n')
               self.outfile.write (f'ctx.lineTo({self.plot_width},{self.temp_end_y});\n')
               self.outfile.write ('ctx.stroke();\n')
-           if self.batv and self.s1enable:
+           for s in self.stations:
+              if not (s.show_battery and s.enabled):
+                 continue
               gridy = 0
-              for x in range(0,self.batv_grid_nbr+1):
-                 if x == 0 or x == self.batv_grid_nbr:
+              for x in range(0,s.batv_grid_nbr+1):
+                 if x == 0 or x == s.batv_grid_nbr:
                     self.outfile.write ('ctx.strokeStyle = "black";\n')
                  else:
                     self.outfile.write ('ctx.strokeStyle = "gray";\n')
                  self.outfile.write ('ctx.beginPath();\n')
-                 self.outfile.write (f'ctx.moveTo({x_start},{int(self.batv_start_y+gridy)});\n')
-                 self.outfile.write (f'ctx.lineTo({self.plot_width},{int(self.batv_start_y+gridy)});\n')
+                 self.outfile.write (f'ctx.moveTo({x_start},{int(s.batv_start_y+gridy)});\n')
+                 self.outfile.write (f'ctx.lineTo({self.plot_width},{int(s.batv_start_y+gridy)});\n')
                  self.outfile.write ('ctx.stroke();\n')
                  self.outfile.write ('ctx.fillStyle = "black";\n')
-                 self.outfile.write (f'ctx.fillText({format(self.maxbatv-x*0.05,".2f")}, {self.left_scale_x}, {int(self.batv_start_y+gridy+5)});\n')                          
-                 self.outfile.write (f'ctx.fillText({format(self.maxbatv-x*0.05,".2f")}, {self.right_scale_x}, {int(self.batv_start_y+gridy+5)});\n')                          
-                 gridy += self.batv_grid_y        
+                 self.outfile.write (f'ctx.fillText({format(s.max_batv-x*0.05,".2f")}, {self.left_scale_x}, {int(s.batv_start_y+gridy+5)});\n')
+                 self.outfile.write (f'ctx.fillText({format(s.max_batv-x*0.05,".2f")}, {self.right_scale_x}, {int(s.batv_start_y+gridy+5)});\n')
+                 gridy += s.batv_grid_y
               self.outfile.write ('ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({x_start},{self.batv_start_y});\n')
-              self.outfile.write (f'ctx.lineTo({x_start},{self.batv_end_y});\n')
+              self.outfile.write (f'ctx.moveTo({x_start},{s.batv_start_y});\n')
+              self.outfile.write (f'ctx.lineTo({x_start},{s.batv_end_y});\n')
               self.outfile.write ('ctx.stroke();\n')
               self.outfile.write ('ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width},{self.batv_start_y});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width},{self.batv_end_y});\n')
-              self.outfile.write ('ctx.stroke();\n')       
-           if self.batv2 and self.s2enable:
-              gridy = 0
-              for x in range(0,self.batv2_grid_nbr+1):
-                 if x == 0 or x == self.batv2_grid_nbr:
-                    self.outfile.write ('ctx.strokeStyle = "black";\n')
-                 else:
-                    self.outfile.write ('ctx.strokeStyle = "gray";\n')
-                 self.outfile.write ('ctx.beginPath();\n')
-                 self.outfile.write (f'ctx.moveTo({x_start},{int(self.batv2_start_y+gridy)});\n')
-                 self.outfile.write (f'ctx.lineTo({self.plot_width},{int(self.batv2_start_y+gridy)});\n')
-                 self.outfile.write ('ctx.stroke();\n')
-                 self.outfile.write ('ctx.fillStyle = "black";\n')
-                 self.outfile.write (f'ctx.fillText({format(self.maxbatv2-x*0.05,".2f")}, {self.left_scale_x}, {int(self.batv2_start_y+gridy+5)});\n')                          
-                 self.outfile.write (f'ctx.fillText({format(self.maxbatv2-x*0.05,".2f")}, {self.right_scale_x}, {int(self.batv2_start_y+gridy+5)});\n')                          
-                 gridy += self.batv2_grid_y         
-              self.outfile.write ('ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({x_start},{self.batv2_start_y});\n')
-              self.outfile.write (f'ctx.lineTo({x_start},{self.batv2_end_y});\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width},{s.batv_start_y});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width},{s.batv_end_y});\n')
               self.outfile.write ('ctx.stroke();\n')
-              self.outfile.write ('ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width},{self.batv2_start_y});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width},{self.batv2_end_y});\n')
-              self.outfile.write ('ctx.stroke();\n')             
            tidelen = len(self.tidelist)
            batvlen = len(self.batvlist)
            batv2len = len(self.batv2list)
+           batv3len = len(self.batv3list)
            tidetimenext = 0
            batvtimenext = 0
            batv2timenext = 0
+           batv3timenext = 0
            savetime = 0
            savex = 0
            savey = 0
            savetime2 = 0
            savex2 = 0
            savey2 = 0
+           savetime3 = 0
+           savex3 = 0
+           savey3 = 0
            savebatvtime = 0
            savebatvx = 0
            savebatvy = 0
            savebatv2time = 0
            savebatv2x = 0
            savebatv2y = 0
+           savebatv3time = 0
+           savebatv3x = 0
+           savebatv3y = 0
            for pidx, ent in enumerate(self.predlist):
               try:
                  predtime = ent[0]
@@ -660,6 +678,10 @@ class TidePlotRenderer:
                     batv2time = datetime.strptime(self.batv2list[b2idx][0][:16], self.mintimeformat)
                  if b2idx+1 < batv2len-1:
                     batv2timenext = datetime.strptime(self.batv2list[b2idx+1][0][:16], self.mintimeformat)
+                 if b3idx < batv3len-1:
+                    batv3time = datetime.strptime(self.batv3list[b3idx][0][:16], self.mintimeformat)
+                 if b3idx+1 < batv3len-1:
+                    batv3timenext = datetime.strptime(self.batv3list[b3idx+1][0][:16], self.mintimeformat)
                  if self.tidesup:
                     while tidetime == predtime_hm and aidx < tidelen-1:
                        if self.station1 and self.s1enable and self.tidelist[aidx][1] == 1:
@@ -730,6 +752,38 @@ class TidePlotRenderer:
                                 vari2init = True
                                 if vari2start_x == -99: vari2start_x = tide_x
                                 if vari2start_y == -99: vari2start_y = vari_y                                            
+                       elif self.station3 and self.s3enable and self.tidelist[aidx][1] == 3:
+                          tide_y = self.tide_end_y-int(((self.station3cal-self.tidelist[aidx][2]/12)-math.floor(self.mintide))*self.tide_grid_y)
+                          tideft = self.station3cal-self.tidelist[aidx][2]/12
+                          varift = tideft-predendft
+                          vari_y = self.vari3_end_y-int((varift+2)*self.grid_height)
+                          if savetime3 == 0 or tidetime > savetime3 + timedelta(minutes=15):
+                             pass
+                          else:
+                             self.outfile.write (f'ctx.strokeStyle = "brown";\n')
+                             self.outfile.write (f'ctx.beginPath();\n')
+                             self.outfile.write (f'ctx.moveTo({savex3},{savey3});\n')
+                             self.outfile.write (f'ctx.lineTo({tide_x},{tide_y});\n')
+                             self.outfile.write (f'ctx.stroke();\n')
+                          savetime3 = tidetime
+                          savex3 = tide_x
+                          savey3 = tide_y
+                          if predstate == 'L' or predstate == 'H':
+                             if self.prestate3 == '':
+                                self.prestate3 = predstate
+                             elif self.prestate3 != predstate:
+                                self.prestate3 = predstate
+                                if vari3init:
+                                   self.outfile.write (f'ctx.strokeStyle = "brown";\n')
+                                   self.outfile.write (f'ctx.beginPath();\n')
+                                   self.outfile.write (f'ctx.moveTo({vari3start_x},{vari3start_y});\n')
+                                   self.outfile.write (f'ctx.lineTo({tide_x},{vari_y});\n')
+                                   self.outfile.write (f'ctx.stroke();\n')
+                                   vari3start_x = tide_x
+                                   vari3start_y = vari_y
+                                vari3init = True
+                                if vari3start_x == -99: vari3start_x = tide_x
+                                if vari3start_y == -99: vari3start_y = vari_y
                        aidx += 1
                        if aidx < tidelen-1:
                           tidetime = datetime.strptime(self.tidelist[aidx][0][:16], self.mintimeformat)
@@ -842,6 +896,55 @@ class TidePlotRenderer:
                           if b2idx < batv2len-1:
                              batv2timenext = datetime.strptime(self.batv2list[b2idx][0][:16], self.mintimeformat)
 
+                 if self.s3enable and self.batv3 and len(self.batv3list) != 0:
+                    if batv3time == predtime_hm:
+                       batv3_y = self.batv3_end_y-int((self.batv3list[b3idx][1]-self.minbatv3)*self.batv3_y_fact)
+                       if savebatv3time == 0 or predtime_hm > savebatv3time + timedelta(minutes=15):
+                          pass
+                       else:
+                          self.outfile.write (f'ctx.strokeStyle = "black";\n')
+                          self.outfile.write (f'ctx.beginPath();\n')
+                          self.outfile.write (f'ctx.moveTo({savebatv3x},{savebatv3y});\n')
+                          self.outfile.write (f'ctx.lineTo({tide_x},{batv3_y});\n')
+                          self.outfile.write (f'ctx.stroke();\n')
+                          if str(predtime_hm) == self.localsunrise:
+                             self.outfile.write (f'ctx.strokeStyle = "orange";\n')
+                             self.outfile.write (f'ctx.beginPath();\n')
+                             self.outfile.write (f'ctx.moveTo({predstartx},{self.batv3_start_y});\n')
+                             self.outfile.write (f'ctx.lineTo({predstartx},{self.batv3_end_y});\n')
+                             self.outfile.write (f'ctx.stroke();\n')
+                             self.outfile.write (f'ctx.beginPath();\n')
+                             self.outfile.write (f'ctx.moveTo({predstartx},{self.batv3_start_y});\n')
+                             self.outfile.write (f'ctx.lineTo({predstartx-10},{self.batv3_start_y+10});\n')
+                             self.outfile.write (f'ctx.stroke();\n')
+                             self.outfile.write (f'ctx.beginPath();\n')
+                             self.outfile.write (f'ctx.moveTo({predstartx},{self.batv3_start_y});\n')
+                             self.outfile.write (f'ctx.lineTo({predstartx+10},{self.batv3_start_y+10});\n')
+                             self.outfile.write (f'ctx.stroke();\n')
+                          elif str(predtime_hm) == self.localsunset:
+                             self.outfile.write (f'ctx.strokeStyle = "orange";\n')
+                             self.outfile.write (f'ctx.beginPath();\n')
+                             self.outfile.write (f'ctx.moveTo({predstartx},{self.batv3_start_y});\n')
+                             self.outfile.write (f'ctx.lineTo({predstartx},{self.batv3_end_y});\n')
+                             self.outfile.write (f'ctx.stroke();\n')
+                             self.outfile.write (f'ctx.beginPath();\n')
+                             self.outfile.write (f'ctx.moveTo({predstartx},{self.batv3_end_y});\n')
+                             self.outfile.write (f'ctx.lineTo({predstartx-10},{self.batv3_end_y-10});\n')
+                             self.outfile.write (f'ctx.stroke();\n')
+                             self.outfile.write (f'ctx.beginPath();\n')
+                             self.outfile.write (f'ctx.moveTo({predstartx},{self.batv3_end_y});\n')
+                             self.outfile.write (f'ctx.lineTo({predstartx+10},{self.batv3_end_y-10});\n')
+                             self.outfile.write (f'ctx.stroke();\n')
+                       savebatv3time = batv3time
+                       savebatv3x = tide_x
+                       savebatv3y = batv3_y
+                       b3idx += 1
+                    else:
+                       while batv3timenext < predtimenext and b3idx < batv3len-1:
+                          b3idx += 1
+                          if b3idx < batv3len-1:
+                             batv3timenext = datetime.strptime(self.batv3list[b3idx][0][:16], self.mintimeformat)
+
               except Exception as errmsg:
                  pline = self.msgtime+' Error - '+str(errmsg)
                  with open('/var/www/html/tideplot.log', 'a') as self.logfile:
@@ -862,6 +965,10 @@ class TidePlotRenderer:
                  if self.station2:
                     self.outfile.write (f'ctx.moveTo({predstartx},{self.vari2_start_y});\n')
                     self.outfile.write (f'ctx.lineTo({predstartx},{self.vari2_end_y});\n')
+                    self.outfile.write (f'ctx.stroke();\n')
+                 if self.station3:
+                    self.outfile.write (f'ctx.moveTo({predstartx},{self.vari3_start_y});\n')
+                    self.outfile.write (f'ctx.lineTo({predstartx},{self.vari3_end_y});\n')
                     self.outfile.write (f'ctx.stroke();\n')
                  if self.wind:
                     self.outfile.write (f'ctx.beginPath();\n')
@@ -887,6 +994,11 @@ class TidePlotRenderer:
                     self.outfile.write (f'ctx.beginPath();\n')
                     self.outfile.write (f'ctx.moveTo({predstartx},{self.batv2_start_y});\n')
                     self.outfile.write (f'ctx.lineTo({predstartx},{self.batv2_end_y});\n')
+                    self.outfile.write (f'ctx.stroke();\n')
+                 if self.s3enable and self.batv3:
+                    self.outfile.write (f'ctx.beginPath();\n')
+                    self.outfile.write (f'ctx.moveTo({predstartx},{self.batv3_start_y});\n')
+                    self.outfile.write (f'ctx.lineTo({predstartx},{self.batv3_end_y});\n')
                     self.outfile.write (f'ctx.stroke();\n')
               if predtime.minute == 0 and predtime.hour == 12:
                  self.outfile.write (f'ctx.fillText("{linedate}", {predstartx}, {self.dtime_start_y+17});\n')                          
@@ -1070,6 +1182,19 @@ class TidePlotRenderer:
                              self.outfile.write (f'ctx.fillStyle = "darkgreen";\n')
                              self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y-23});\n')
                              self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-38});\n')
+                    if self.s3enable and self.station3 and ent[1] == 3:
+                       tidestate = str(ent[3])
+                       if tidestate == 'low' or tidestate == 'high':
+                          if self.turntime3 == '' or abs(hourtime-self.turntime3) >= 3:
+                             self.turntime3 = hourtime
+                             peak = format(self.station3cal-ent[2]/12,'.1f')
+                             peaks = peak+' '+hrmin
+                             self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
+                             self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-83}, 42, 30);\n')
+                             self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-83}, 42, 30);\n')
+                             self.outfile.write (f'ctx.fillStyle = "brown";\n')
+                             self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y-55});\n')
+                             self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-70});\n')
                  except Exception as errmsg:
                     pline = self.msgtime+' Error - '+str(errmsg)
                     with open('/var/www/html/tideplot.log', 'a') as self.logfile:
@@ -1131,6 +1256,17 @@ class TidePlotRenderer:
                              self.outfile.write (f'ctx.lineTo({endx},{dash_end_y+dash_size});\n')
                           self.outfile.write (f'ctx.stroke();\n')
                           dash_end_y += dash_size*2
+                    if self.s3enable and self.station3:
+                       dash_end_y = self.vari3_start_y
+                       while dash_end_y < self.vari3_end_y:
+                          self.outfile.write (f'ctx.beginPath();\n')
+                          self.outfile.write (f'ctx.moveTo({endx},{dash_end_y});\n')
+                          if dash_end_y+dash_size > self.vari3_end_y:
+                             self.outfile.write (f'ctx.lineTo({endx},{self.vari3_end_y});\n')
+                          else:
+                             self.outfile.write (f'ctx.lineTo({endx},{dash_end_y+dash_size});\n')
+                          self.outfile.write (f'ctx.stroke();\n')
+                          dash_end_y += dash_size*2
                     self.prestate = predstate
                     if self.tags:                  
                        self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
@@ -1185,6 +1321,9 @@ class TidePlotRenderer:
            if self.s2enable and self.station2:
               self.outfile.write ('ctx.fillStyle = "darkgreen";\n')
               self.outfile.write (f'ctx.fillText("Variation between Sensor 2 and predicted in feet", {self.plot_width/2}, {self.vari2_start_y-4});\n')
+           if self.s3enable and self.station3:
+              self.outfile.write ('ctx.fillStyle = "brown";\n')
+              self.outfile.write (f'ctx.fillText("Variation between Sensor 3 and predicted in feet", {self.plot_width/2}, {self.vari3_start_y-4});\n')
            if self.wind:   
               self.outfile.write ('ctx.fillStyle = "purple";\n')
               self.outfile.write (f'ctx.fillText("Wind speed (mph) and direction (arrow indicates wind direction relative to north)", {self.plot_width/2}, {self.windir_start_y-4});\n')
@@ -1199,6 +1338,9 @@ class TidePlotRenderer:
               self.outfile.write (f'ctx.fillText("Sensor 1 Battery Voltage", {self.plot_width/2}, {self.batv_start_y-4});\n')                          
            if self.s2enable and self.batv2:      
               self.outfile.write (f'ctx.fillText("Sensor 2 Battery Voltage", {self.plot_width/2}, {self.batv2_start_y-4});\n')                          
+           if self.s3enable and self.batv3:
+              self.outfile.write ('ctx.fillStyle = "black";\n')
+              self.outfile.write (f'ctx.fillText("Sensor 3 Battery Voltage", {self.plot_width/2}, {self.batv3_start_y-4});\n')
            self.outfile.write ('</script>\n')
            self.outfile.write ('</div>\n')
            self.outfile.write ('</body>\n')
@@ -1226,6 +1368,7 @@ class TidePlotRenderer:
         self.tags = False
         self.station1 = False
         self.station2 = False
+        self.station3 = False
         self.wind = False
         self.rain = False
         self.temp = False
@@ -1272,6 +1415,12 @@ class TidePlotRenderer:
            self.station2cal = iparams[6]
            self.s1enable = iparams[7]
            self.s2enable = iparams[8]
+           self.station3cal = iparams[12]
+           self.s3enable = iparams[11]
+           # s3type (iparams[13]) governs tide.py's own sensor transport
+           # selection (LoRa vs Notecard) and has no bearing on plotting
+           # already-stored rows, so it is intentionally not read here --
+           # matching s1type/s2type, which were never used in this file either.
            #
            # Get the lastest time entry in the tides.db database
            # 
@@ -1296,6 +1445,8 @@ class TidePlotRenderer:
               self.station1chk = 'checked' if self.station1 else ''
               self.station2 = (default_station_id == 2)
               self.station2chk = 'checked' if self.station2 else ''
+              self.station3 = (default_station_id == 3)
+              self.station3chk = 'checked' if self.station3 else ''
               self.wind = True
               self.windchk = 'checked'
               self.rain = True
@@ -1306,6 +1457,8 @@ class TidePlotRenderer:
               self.batvchk = 'checked' if self.batv else ''
               self.batv2 = (default_station_id == 2)
               self.batv2chk = 'checked' if self.batv2 else ''
+              self.batv3 = (default_station_id == 3)
+              self.batv3chk = 'checked' if self.batv3 else ''
            else:
               init = False
               self.tags = form.getvalue('tags')
@@ -1329,6 +1482,13 @@ class TidePlotRenderer:
               else:
                  self.station2 = True
                  self.station2chk = 'checked'
+              self.station3 = form.getvalue('station3')
+              if self.station3 == None:
+                 self.station3 = False
+                 self.station3chk = ''
+              else:
+                 self.station3 = True
+                 self.station3chk = 'checked'
               self.wind = form.getvalue('wind')
               if self.wind == None:
                  self.wind = False
@@ -1364,6 +1524,13 @@ class TidePlotRenderer:
               else:
                  self.batv2 = True
                  self.batv2chk = 'checked'
+              self.batv3 = form.getvalue('batv3')
+              if self.batv3 == None:
+                 self.batv3 = False
+                 self.batv3chk = ''
+              else:
+                 self.batv3 = True
+                 self.batv3chk = 'checked'
               self.plotdays = form.getvalue('dayspan')
               if self.plotdays == None:
                  self.plotdays = 3
@@ -1401,13 +1568,30 @@ class TidePlotRenderer:
            radinc = math.pi*2/91080
            self.prestate = ''
            self.prestate2 = ''
+           self.prestate3 = ''
            self.predicts = []
            self.turntime = ''
            self.turntime2 = ''
+           self.turntime3 = ''
+           # Built once, from the now-fully-determined per-station attributes
+           # above, for the mechanical per-station work that follows (battery
+           # queries, min/max battery voltage, grid drawing, layout stacking).
+           # The main trace-drawing loop further below keeps using the
+           # self.station1cal-style attributes directly -- see the Station
+           # class docstring for why.
+           self.stations = [
+              Station(1, self.s1enable, self.station1cal, 'blue',
+                      self.station1, self.batv, self.station1chk, self.batvchk),
+              Station(2, self.s2enable, self.station2cal, 'darkgreen',
+                      self.station2, self.batv2, self.station2chk, self.batv2chk),
+              Station(3, self.s3enable, self.station3cal, 'brown',
+                      self.station3, self.batv3, self.station3chk, self.batv3chk),
+           ]
            self.tide_predict()
            self.tidelist = []
            self.batvlist= []
            self.batv2list = []
+           self.batv3list = []
            self.windlist = []
            self.localsunrise = 0
            self.localsunset = 0
@@ -1423,6 +1607,7 @@ class TidePlotRenderer:
            if len(self.tidelist) == 0:
               self.station1 = False
               self.station2 = False
+              self.station3 = False
               self.canvas_height = 400
               self.proc_data()
               exit()
@@ -1435,6 +1620,12 @@ class TidePlotRenderer:
               self.sqlcur.execute("select dtime, batv from sensors where stationid = 2 and dtime "+ \
                             "between ? and ? order by dtime", (str(self.dbquerytime),str(self.curtime)))
               self.batv2list = self.sqlcur.fetchall()
+           if self.s3enable:
+              self.sqlcur.execute("select dtime, batv from sensors where stationid = 3 and dtime "+ \
+                            "between ? and ? order by dtime", (str(self.dbquerytime),str(self.curtime)))
+              self.batv3list = self.sqlcur.fetchall()
+           for s in self.stations:
+              s.batv_list = {1: self.batvlist, 2: self.batv2list, 3: self.batv3list}[s.num]
 
            self.sqlcur.execute("select * from wxdata where dtime "+ \
                          "between ? and ? order by dtime", (str(self.dbquerytime),str(self.curtime)))
@@ -1451,8 +1642,6 @@ class TidePlotRenderer:
            tideave2 = 0
            maxtide = -99
            self.mintide = 99
-           maxtide2 = -99
-           mintide2 = 99
            self.minbatv = 99
            self.maxbatv = -99
            self.minbatv2 = 99
@@ -1486,64 +1675,58 @@ class TidePlotRenderer:
            self.batv2_grid_y = 0
            if len(self.tidelist) != 0:
               self.tidesup = True
+              # Per-station min/max tide level, tracked as a pure reduction
+              # (no time-ordering dependency, so safe to generalize over
+              # self.stations rather than duplicating this block a third
+              # time) then merged into the overall self.mintide/maxtide the
+              # rest of the layout math actually reads.
+              station_mintide = {s.num: 99 for s in self.stations}
+              station_maxtide = {s.num: -99 for s in self.stations}
               for chkent in self.tidelist:
-                 if self.station1 and chkent[1] == 1 and self.s1enable:
-                    self.tidelevel = self.station1cal-chkent[2]/12
-                    if self.tidelevel > maxtide:
-                       maxtide = self.tidelevel 
-                    if self.tidelevel < self.mintide:
-                       self.mintide = self.tidelevel
-                 elif self.station2 and chkent[1] == 2 and self.s2enable:
-                    self.tidelevel = self.station2cal-chkent[2]/12
-                    if self.tidelevel > maxtide2:
-                       maxtide2 = self.tidelevel
-                    if self.tidelevel < mintide2:
-                       mintide2 = self.tidelevel 
-              if self.mintide == 99 or maxtide == -99:
-                 self.station1 = False
-              if mintide2 == 99 or maxtide2 == -99:
-                 self.station2 = False
-              if mintide2 < self.mintide:
-                 self.mintide = mintide2
-              if maxtide2 > maxtide:
-                 maxtide = maxtide2
+                 for s in self.stations:
+                    if s.selected and s.enabled and chkent[1] == s.num:
+                       self.tidelevel = s.cal - chkent[2]/12
+                       if self.tidelevel > station_maxtide[s.num]:
+                          station_maxtide[s.num] = self.tidelevel
+                       if self.tidelevel < station_mintide[s.num]:
+                          station_mintide[s.num] = self.tidelevel
+                       break
+              for s in self.stations:
+                 if station_mintide[s.num] == 99 or station_maxtide[s.num] == -99:
+                    s.selected = False
+                    setattr(self, f'station{s.num}', False)
+                 else:
+                    if station_mintide[s.num] < self.mintide:
+                       self.mintide = station_mintide[s.num]
+                    if station_maxtide[s.num] > maxtide:
+                       maxtide = station_maxtide[s.num]
               #with open('/var/www/html/tideplot.log', 'a') as logfile:
-              #   logfile.write ('mintide: '+str(mintide)+'\n')
+              #   logfile.write ('mintide: '+str(self.mintide)+'\n')
               #   logfile.write ('maxtide: '+str(maxtide)+'\n')
-              #   logfile.write ('mintide2: '+str(mintide2)+'\n')
-              #   logfile.write ('maxtide2: '+str(maxtide2)+'\n')
-           if len(self.batvlist) != 0 and self.s1enable:
-              for chkent in self.batvlist:
-                 if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
-                    if chkent[1] > self.maxbatv:
-                       self.maxbatv = chkent[1]
-                    if chkent[1] < self.minbatv:
-                       self.minbatv = chkent[1]
-              if self.minbatv == 99 or self.maxbatv == -99:
-                 self.batv = False
+           # Same pure-reduction pattern as the tide min/max above.
+           for s in self.stations:
+              if len(s.batv_list) != 0 and s.enabled:
+                 for chkent in s.batv_list:
+                    if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
+                       if chkent[1] > s.max_batv:
+                          s.max_batv = chkent[1]
+                       if chkent[1] < s.min_batv:
+                          s.min_batv = chkent[1]
+                 if s.min_batv == 99 or s.max_batv == -99:
+                    s.show_battery = False
+                    setattr(self, 'batv' if s.num == 1 else f'batv{s.num}', False)
+                 else:
+                    minbatv1 = int(s.min_batv/0.05)
+                    s.min_batv = round(minbatv1*0.05,2)
+                    maxbatv1 = int(s.max_batv/0.05)
+                    s.max_batv = round(maxbatv1*0.05+0.05,2)
               else:
-                 minbatv1 = int(self.minbatv/0.05)
-                 self.minbatv = round(minbatv1*0.05,2)
-                 maxbatv1 = int(self.maxbatv/0.05)
-                 self.maxbatv = round(maxbatv1*0.05+0.05,2)
-           else:
-              self.batv = False       
-           if len(self.batv2list) != 0 and self.s2enable:
-              for chkent in self.batv2list:
-                 if chkent[1] != None and chkent[1] < 4.3 and chkent[1] > 2.5:
-                    if chkent[1] > self.maxbatv2:
-                       self.maxbatv2 = chkent[1]
-                    if chkent[1] < self.minbatv2:
-                       self.minbatv2 = chkent[1]
-              if self.minbatv2 == 99 or self.maxbatv2 == -99:
-                 self.batv2 = False
-              else:
-                 minbatv1 = int(self.minbatv2/0.05)
-                 self.minbatv2 = round(minbatv1*0.05,2)
-                 maxbatv1 = int(self.maxbatv2/0.05)
-                 self.maxbatv2 = round(maxbatv1*0.05+0.05,2)
-           else:
-              self.batv2 = False
+                 s.show_battery = False
+                 setattr(self, 'batv' if s.num == 1 else f'batv{s.num}', False)
+              # Mirrored into the legacy self.minbatv-style attributes the
+              # main trace-drawing loop below still reads directly.
+              setattr(self, 'minbatv' if s.num == 1 else f'minbatv{s.num}', s.min_batv)
+              setattr(self, 'maxbatv' if s.num == 1 else f'maxbatv{s.num}', s.max_batv)
 
            if len(wxlist) != 0:
               for chkent in wxlist:
@@ -1576,12 +1759,10 @@ class TidePlotRenderer:
            self.vari_grid_nbr = 4
            total_grids = self.tide_grid_nbr
            nbr_gaps = 0
-           if self.station1 and self.s1enable:
-              total_grids += self.vari_grid_nbr
-              nbr_gaps += 1
-           if self.station2 and self.s2enable:
-              total_grids += self.vari_grid_nbr
-              nbr_gaps += 1
+           for s in self.stations:
+              if s.selected and s.enabled:
+                 total_grids += self.vari_grid_nbr
+                 nbr_gaps += 1
            if self.wind:
               self.windir_grid_nbr = 1
               total_grids += self.windir_grid_nbr
@@ -1603,22 +1784,18 @@ class TidePlotRenderer:
               nbr_gaps += 1
               temp_height = self.temp_grid_nbr*self.grid_height
               self.temp_grid_y = round(temp_height/self.temp_grid_nbr,3)
-           if self.batv and self.s1enable:
-              self.batv_grid_nbr = round((self.maxbatv-self.minbatv)/0.05)
-              total_grids += self.batv_grid_nbr  
-              nbr_gaps += 1
-              batv_grid_span = round(self.maxbatv-self.minbatv,2)
-              batv_height = self.batv_grid_nbr*self.grid_height
-              self.batv_grid_y = round(batv_height/self.batv_grid_nbr,3)
-              self.batv_y_fact = batv_height/batv_grid_span
-           if self.batv2 and self.s2enable:
-              self.batv2_grid_nbr = round((self.maxbatv2-self.minbatv2)/0.05)
-              total_grids += self.batv2_grid_nbr  
-              nbr_gaps += 1
-              batv2_grid_span = round(self.maxbatv2-self.minbatv2,2)
-              batv2_height = self.batv2_grid_nbr*self.grid_height
-              self.batv2_grid_y = round(batv2_height/self.batv2_grid_nbr,3)
-              self.batv2_y_fact = batv2_height/batv2_grid_span
+           for s in self.stations:
+              if s.show_battery and s.enabled:
+                 s.batv_grid_nbr = round((s.max_batv-s.min_batv)/0.05)
+                 total_grids += s.batv_grid_nbr
+                 nbr_gaps += 1
+                 batv_grid_span = round(s.max_batv-s.min_batv,2)
+                 s.batv_height = s.batv_grid_nbr*self.grid_height
+                 s.batv_grid_y = round(s.batv_height/s.batv_grid_nbr,3)
+                 s.batv_y_fact = s.batv_height/batv_grid_span
+                 # Mirrored into the legacy self.batv_y_fact-style attribute
+                 # the main trace-drawing loop below still reads directly.
+                 setattr(self, 'batv_y_fact' if s.num == 1 else f'batv{s.num}_y_fact', s.batv_y_fact)
 
            dtime_height = 10
            gap_size = 30
@@ -1633,10 +1810,9 @@ class TidePlotRenderer:
            self.rain_end_y = 0
            self.temp_start_y =0
            self.temp_end_y = 0
-           self.vari_start_y = 0
-           self.vari_end_y =0
-           self.vari2_start_y = 0
-           self.vari2_end_y =0
+           for s in self.stations:
+              s.vari_start_y = 0
+              s.vari_end_y = 0
            total_grid_height = total_grids*self.grid_height
            total_gaps = gap_size*nbr_gaps
            self.canvas_height = dtime_height+self.title_height+total_gaps+footer_height+total_grid_height
@@ -1647,14 +1823,15 @@ class TidePlotRenderer:
            self.tide_end_y = int(self.tide_height+self.tide_start_y)
            self.tag_y = int(self.tide_end_y-(self.tide_grid_nbr/2*self.grid_height))
            next_y = self.tide_end_y
-           if self.station1 and self.s1enable:
-              self.vari_start_y = next_y+gap_size
-              self.vari_end_y = int(vari_height+self.vari_start_y)
-              next_y = self.vari_end_y
-           if self.station2 and self.s2enable:
-              self.vari2_start_y = next_y+gap_size
-              self.vari2_end_y = int(vari_height+self.vari2_start_y)
-              next_y = self.vari2_end_y
+           for s in self.stations:
+              if s.selected and s.enabled:
+                 s.vari_start_y = next_y+gap_size
+                 s.vari_end_y = int(vari_height+s.vari_start_y)
+                 next_y = s.vari_end_y
+                 # Mirrored into the legacy self.vari_start_y-style attribute
+                 # the main trace-drawing loop below still reads directly.
+                 setattr(self, 'vari_start_y' if s.num == 1 else f'vari{s.num}_start_y', s.vari_start_y)
+                 setattr(self, 'vari_end_y' if s.num == 1 else f'vari{s.num}_end_y', s.vari_end_y)
            if self.wind:
               self.windir_start_y = next_y+gap_size
               windir_end_y = int(windir_height+self.windir_start_y)
@@ -1669,13 +1846,15 @@ class TidePlotRenderer:
               self.temp_start_y = next_y+gap_size
               self.temp_end_y = int(temp_height+self.temp_start_y)
               next_y = self.temp_end_y
-           if self.batv and self.s1enable:
-              self.batv_start_y = next_y+gap_size
-              self.batv_end_y = int(batv_height+self.batv_start_y)
-              next_y = self.batv_end_y
-           if self.batv2 and self.s2enable:
-              self.batv2_start_y = next_y+gap_size
-              self.batv2_end_y = int(batv2_height+self.batv2_start_y)
+           for s in self.stations:
+              if s.show_battery and s.enabled:
+                 s.batv_start_y = next_y+gap_size
+                 s.batv_end_y = int(s.batv_height+s.batv_start_y)
+                 next_y = s.batv_end_y
+                 # Mirrored into the legacy self.batv_start_y-style attribute
+                 # the main trace-drawing loop below still reads directly.
+                 setattr(self, 'batv_start_y' if s.num == 1 else f'batv{s.num}_start_y', s.batv_start_y)
+                 setattr(self, 'batv_end_y' if s.num == 1 else f'batv{s.num}_end_y', s.batv_end_y)
         except Exception as errmsg:
         #else:
            pline = self.msgtime+' Error - '+str(errmsg)
