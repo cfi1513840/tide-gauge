@@ -1202,7 +1202,14 @@ class TidePlotRenderer:
                              # High tide tags sit one grid height (30px) lower
                              # than low tide tags so they clear the tide trace
                              # near its peak; low tide tags are unaffected.
-                             high_shift = 30 if tidestate == 'high' else 0
+                             # _get_epochs() labels are inverted relative to
+                             # actual tide height (it tracks raw sensor distance,
+                             # which is inversely related to water level): the
+                             # actual HIGH tide peak is tagged 'low', and the
+                             # actual LOW tide trough is tagged 'high'. Verified
+                             # directly against real calibrated peak values, not
+                             # assumed from the label name.
+                             high_shift = 30 if tidestate == 'low' else 0
                              self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
                              self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-19+high_shift}, 42, 30);\n')
                              self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-19+high_shift}, 42, 30);\n')
@@ -1216,7 +1223,14 @@ class TidePlotRenderer:
                              self.turntime2 = hourtime
                              peak = format(self.station2cal-ent[2]/12,'.1f')
                              peaks = peak+' '+hrmin
-                             high_shift = 30 if tidestate == 'high' else 0
+                             # _get_epochs() labels are inverted relative to
+                             # actual tide height (it tracks raw sensor distance,
+                             # which is inversely related to water level): the
+                             # actual HIGH tide peak is tagged 'low', and the
+                             # actual LOW tide trough is tagged 'high'. Verified
+                             # directly against real calibrated peak values, not
+                             # assumed from the label name.
+                             high_shift = 30 if tidestate == 'low' else 0
                              self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
                              self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-51+high_shift}, 42, 30);\n')
                              self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-51+high_shift}, 42, 30);\n')
@@ -1230,7 +1244,14 @@ class TidePlotRenderer:
                              self.turntime3 = hourtime
                              peak = format(self.station3cal-ent[2]/12,'.1f')
                              peaks = peak+' '+hrmin
-                             high_shift = 30 if tidestate == 'high' else 0
+                             # _get_epochs() labels are inverted relative to
+                             # actual tide height (it tracks raw sensor distance,
+                             # which is inversely related to water level): the
+                             # actual HIGH tide peak is tagged 'low', and the
+                             # actual LOW tide trough is tagged 'high'. Verified
+                             # directly against real calibrated peak values, not
+                             # assumed from the label name.
+                             high_shift = 30 if tidestate == 'low' else 0
                              self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
                              self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-83+high_shift}, 42, 30);\n')
                              self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-83+high_shift}, 42, 30);\n')
