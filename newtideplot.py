@@ -1215,7 +1215,7 @@ class TidePlotRenderer:
                              self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-19+high_shift}, 42, 30);\n')
                              self.outfile.write (f'ctx.fillStyle = "blue";\n')
                              self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y+9+high_shift});\n')
-                             self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-6+high_shift});\n')
+                             self.outfile.write (f'ctx.fillText("{peak} ft", {startx}, {self.tag_y-6+high_shift});\n')
                     if self.s2enable and self.station2 and ent[1] == 2:
                        tidestate = str(ent[3])
                        if tidestate == 'low' or tidestate == 'high':
@@ -1236,7 +1236,7 @@ class TidePlotRenderer:
                              self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-51+high_shift}, 42, 30);\n')
                              self.outfile.write (f'ctx.fillStyle = "darkgreen";\n')
                              self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y-23+high_shift});\n')
-                             self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-38+high_shift});\n')
+                             self.outfile.write (f'ctx.fillText("{peak} ft", {startx}, {self.tag_y-38+high_shift});\n')
                     if self.s3enable and self.station3 and ent[1] == 3:
                        tidestate = str(ent[3])
                        if tidestate == 'low' or tidestate == 'high':
@@ -1257,7 +1257,7 @@ class TidePlotRenderer:
                              self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-83+high_shift}, 42, 30);\n')
                              self.outfile.write (f'ctx.fillStyle = "brown";\n')
                              self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y-55+high_shift});\n')
-                             self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-70+high_shift});\n')
+                             self.outfile.write (f'ctx.fillText("{peak} ft", {startx}, {self.tag_y-70+high_shift});\n')
                  except Exception as errmsg:
                     pline = self.msgtime+' Error - '+str(errmsg)
                     with open('/var/www/html/tideplot.log', 'a') as self.logfile:
@@ -1345,7 +1345,7 @@ class TidePlotRenderer:
                        self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y+13+high_shift}, 42, 30);\n')
                        self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y+13+high_shift}, 42, 30);\n')
                        self.outfile.write (f'ctx.fillStyle = "gray";\n')
-                       self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y+27+high_shift});\n')
+                       self.outfile.write (f'ctx.fillText("{peak} ft", {startx}, {self.tag_y+27+high_shift});\n')
                        self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y+42+high_shift});\n')
                  startx = endx
                  #starty = endy
