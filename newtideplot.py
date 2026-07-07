@@ -1311,12 +1311,21 @@ class TidePlotRenderer:
                           dash_end_y += dash_size*2
                     self.prestate1 = predstate
                     if self.tags:                  
+                       # Same high/low split as the measured tags: predicted
+                       # high tide tags sit one grid height (30px) lower than
+                       # predicted low tide tags so they clear the trace near
+                       # its peak. Note: predstate=='L' is empirically the
+                       # state associated with the HIGH tide value at this
+                       # render point (and 'H' with the low value) -- verified
+                       # directly against ent[2] across many samples, not
+                       # assumed from the variable name.
+                       high_shift = 30 if predstate == 'L' else 0
                        self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                       self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y+13}, 42, 30);\n')
-                       self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y+13}, 42, 30);\n')
+                       self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y+13+high_shift}, 42, 30);\n')
+                       self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y+13+high_shift}, 42, 30);\n')
                        self.outfile.write (f'ctx.fillStyle = "gray";\n')
-                       self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y+27});\n')
-                       self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y+42});\n')
+                       self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y+27+high_shift});\n')
+                       self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y+42+high_shift});\n')
                  startx = endx
                  #starty = endy
            self.outfile.write (f'ctx.strokeStyle = "blue";\n')
