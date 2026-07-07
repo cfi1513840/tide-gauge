@@ -224,6 +224,7 @@ class TidePlotRenderer:
     def _get_epochs(self, tide_list):
            trend1 = ''
            trend2 = ''
+           trend3 = ''
            epochs = []
            tide_average1 = [0 for x in range(0,15)]
            last_average1 = 0
@@ -233,13 +234,20 @@ class TidePlotRenderer:
            last_average2 = 0
            max_tide2 = -99
            min_tide2 = 99
+           tide_average3 = [0 for x in range(0,15)]
+           last_average3 = 0
+           max_tide3 = -99
+           min_tide3 = 99
            new_tide_list = []
            index1 = 0
            index2 = 0
+           index3 = 0
            min_tide_time1 = ''
            min_tide_time2 = ''
+           min_tide_time3 = ''
            max_tide_time1 = ''
            max_tide_time2 = ''
+           max_tide_time3 = ''
 
            for entry in tide_list:
               new_tide_list.append([entry[0], entry[1], entry[2], ''])
@@ -261,6 +269,15 @@ class TidePlotRenderer:
                     min_tide_time2 = entry[0]
                  tide_average2 = tide_average2[1:]+[entry[2]]
                  index2 += 1
+              elif entry[1] == 3:
+                 if entry[2] > max_tide3:
+                    max_tide3 = entry[2]
+                    max_tide_time3 = entry[0]
+                 if entry[2] < min_tide3:
+                    min_tide3 = entry[2]
+                    min_tide_time3 = entry[0]
+                 tide_average3 = tide_average3[1:]+[entry[2]]
+                 index3 += 1
               if index1 != 0 and index1 % 15 == 0 and entry[1] == 1:
                  average1 = sum(tide_average1)/len(tide_average1)
                  if last_average1 == 0:
@@ -298,6 +315,25 @@ class TidePlotRenderer:
                        max_tide2 = -99                            
                     trend2 = 'low'
                  last_average2 = average2
+
+              elif index3 != 0 and index3 % 15 == 0 and entry[1] == 3:
+                 average3 = sum(tide_average3)/len(tide_average3)
+                 if last_average3 == 0:
+                    last_average3 = average3
+                    continue
+                 if average3 > last_average3 + 0.05:
+                    if trend3 == 'low':
+                       epochs.append([min_tide_time3,3,trend3])
+                       min_tide3 = 99
+                       max_tide3 = -99                        
+                    trend3 = 'high'
+                 elif average3 < last_average3 - 0.05:
+                    if trend3 == 'high':
+                       epochs.append([max_tide_time3,3,trend3])
+                       min_tide3 = 99
+                       max_tide3 = -99                            
+                    trend3 = 'low'
+                 last_average3 = average3
 
            for index, entry in enumerate(new_tide_list):
               for epoch_entry in epochs:
@@ -1279,42 +1315,53 @@ class TidePlotRenderer:
                  #starty = endy
            self.outfile.write (f'ctx.strokeStyle = "blue";\n')
            self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/4-60},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/4-30},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.moveTo({self.plot_width/5-60},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.lineTo({self.plot_width/5-30},{self.tide_start_y-10});\n')
            self.outfile.write (f'ctx.stroke();\n')
            self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/4+30},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/4+60},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.moveTo({self.plot_width/5+30},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.lineTo({self.plot_width/5+60},{self.tide_start_y-10});\n')
            self.outfile.write (f'ctx.stroke();\n')
            self.outfile.write (f'ctx.strokeStyle = "darkgreen";\n')
            self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/4*2-60},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/4*2-30},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.moveTo({self.plot_width/5*2-60},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.lineTo({self.plot_width/5*2-30},{self.tide_start_y-10});\n')
            self.outfile.write (f'ctx.stroke();\n')
            self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/4*2+30},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/4*2+60},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.moveTo({self.plot_width/5*2+30},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.lineTo({self.plot_width/5*2+60},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.stroke();\n')
+           self.outfile.write (f'ctx.strokeStyle = "brown";\n')
+           self.outfile.write (f'ctx.beginPath();\n')
+           self.outfile.write (f'ctx.moveTo({self.plot_width/5*3-60},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.lineTo({self.plot_width/5*3-30},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.stroke();\n')
+           self.outfile.write (f'ctx.beginPath();\n')
+           self.outfile.write (f'ctx.moveTo({self.plot_width/5*3+30},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.lineTo({self.plot_width/5*3+60},{self.tide_start_y-10});\n')
            self.outfile.write (f'ctx.stroke();\n')
            self.outfile.write (f'ctx.strokeStyle = "gray";\n')
            self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/4*3-70},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/4*3-40},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.moveTo({self.plot_width/5*4-70},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.lineTo({self.plot_width/5*4-40},{self.tide_start_y-10});\n')
            self.outfile.write (f'ctx.stroke();\n')
            self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/4*3+40},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/4*3+70},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.moveTo({self.plot_width/5*4+40},{self.tide_start_y-10});\n')
+           self.outfile.write (f'ctx.lineTo({self.plot_width/5*4+70},{self.tide_start_y-10});\n')
            self.outfile.write (f'ctx.stroke();\n')
            self.outfile.write ('ctx.textAlign = "center";\n')
            self.outfile.write ('ctx.font = "14px Arial";\n')
            self.outfile.write ('ctx.fillStyle = "blue";\n')
-           self.outfile.write (f'ctx.fillText("Sensor 1", {self.plot_width/4}, {self.tide_start_y-4});\n')
+           self.outfile.write (f'ctx.fillText("Sensor 1", {self.plot_width/5}, {self.tide_start_y-4});\n')
            self.outfile.write ('ctx.fillStyle = "darkgreen";\n')
-           self.outfile.write (f'ctx.fillText("Sensor 2", {self.plot_width/4*2}, {self.tide_start_y-4});\n')
+           self.outfile.write (f'ctx.fillText("Sensor 2", {self.plot_width/5*2}, {self.tide_start_y-4});\n')
+           self.outfile.write ('ctx.fillStyle = "brown";\n')
+           self.outfile.write (f'ctx.fillText("Sensor 3", {self.plot_width/5*3}, {self.tide_start_y-4});\n')
            if not self.tidesup and self.banflag == '1':
               self.outfile.write ('ctx.fillStyle = "black";\n')
               self.outfile.write (f'ctx.fillText("{self.banner}", {self.plot_width/2}, {self.tide_end_y-10});\n')      
            self.outfile.write ('ctx.fillStyle = "gray";\n')
-           self.outfile.write (f'ctx.fillText("Predicted", {self.plot_width/4*3}, {self.tide_start_y-4});\n')
+           self.outfile.write (f'ctx.fillText("Predicted", {self.plot_width/5*4}, {self.tide_start_y-4});\n')
            if self.s1enable and self.station1:
               self.outfile.write ('ctx.fillStyle = "blue";\n')
               self.outfile.write (f'ctx.fillText("Variation between Sensor 1 and predicted tide in feet", {self.plot_width/2}, {self.vari1_start_y-4});\n')
