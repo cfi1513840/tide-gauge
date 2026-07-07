@@ -1894,7 +1894,7 @@ class TidePlotRenderer:
 
            dtime_height = 10
            gap_size = 30
-           dtime_height = 30
+           dtime_height = 35
            footer_height = 12
            self.tide_height = self.tide_grid_nbr*self.grid_height
            vari_height = self.vari_grid_nbr*self.grid_height
