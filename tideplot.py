@@ -1498,8 +1498,8 @@ class TidePlotRenderer:
            self.station2cal = iparams[6]
            self.s1enable = iparams[7]
            self.s2enable = iparams[8]
-           self.station3cal = iparams[12]
-           self.s3enable = iparams[11]
+           self.station3cal = iparams[11]
+           self.s3enable = iparams[12]
            # s3type (iparams[13]) governs tide.py's own sensor transport
            # selection (LoRa vs Notecard) and has no bearing on plotting
            # already-stored rows, so it is intentionally not read here --
