@@ -1199,12 +1199,16 @@ class TidePlotRenderer:
                              self.turntime1 = hourtime
                              peak = format(self.station1cal-ent[2]/12,'.1f')
                              peaks = peak+' '+hrmin
+                             # High tide tags sit one grid height (30px) lower
+                             # than low tide tags so they clear the tide trace
+                             # near its peak; low tide tags are unaffected.
+                             high_shift = 30 if tidestate == 'high' else 0
                              self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                             self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-19}, 42, 30);\n')
-                             self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-19}, 42, 30);\n')
+                             self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-19+high_shift}, 42, 30);\n')
+                             self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-19+high_shift}, 42, 30);\n')
                              self.outfile.write (f'ctx.fillStyle = "blue";\n')
-                             self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y+9});\n')
-                             self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-6});\n')
+                             self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y+9+high_shift});\n')
+                             self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-6+high_shift});\n')
                     if self.s2enable and self.station2 and ent[1] == 2:
                        tidestate = str(ent[3])
                        if tidestate == 'low' or tidestate == 'high':
@@ -1212,12 +1216,13 @@ class TidePlotRenderer:
                              self.turntime2 = hourtime
                              peak = format(self.station2cal-ent[2]/12,'.1f')
                              peaks = peak+' '+hrmin
+                             high_shift = 30 if tidestate == 'high' else 0
                              self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                             self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-51}, 42, 30);\n')
-                             self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-51}, 42, 30);\n')
+                             self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-51+high_shift}, 42, 30);\n')
+                             self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-51+high_shift}, 42, 30);\n')
                              self.outfile.write (f'ctx.fillStyle = "darkgreen";\n')
-                             self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y-23});\n')
-                             self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-38});\n')
+                             self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y-23+high_shift});\n')
+                             self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-38+high_shift});\n')
                     if self.s3enable and self.station3 and ent[1] == 3:
                        tidestate = str(ent[3])
                        if tidestate == 'low' or tidestate == 'high':
@@ -1225,12 +1230,13 @@ class TidePlotRenderer:
                              self.turntime3 = hourtime
                              peak = format(self.station3cal-ent[2]/12,'.1f')
                              peaks = peak+' '+hrmin
+                             high_shift = 30 if tidestate == 'high' else 0
                              self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                             self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-83}, 42, 30);\n')
-                             self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-83}, 42, 30);\n')
+                             self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-83+high_shift}, 42, 30);\n')
+                             self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-83+high_shift}, 42, 30);\n')
                              self.outfile.write (f'ctx.fillStyle = "brown";\n')
-                             self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y-55});\n')
-                             self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-70});\n')
+                             self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y-55+high_shift});\n')
+                             self.outfile.write (f'ctx.fillText("{peak}", {startx}, {self.tag_y-70+high_shift});\n')
                  except Exception as errmsg:
                     pline = self.msgtime+' Error - '+str(errmsg)
                     with open('/var/www/html/tideplot.log', 'a') as self.logfile:
