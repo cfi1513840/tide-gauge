@@ -364,8 +364,8 @@ class Tide:
               self.stationid, self.stationcal, '-24h')
             volts = 0
             rssi = 0
-            self.sensor_readings = self.sensor_read_list[len(self.sensor_read_list)-1]
             try:
+                self.sensor_readings = self.sensor_read_list[len(self.sensor_read_list)-1]
                 tide_time = self.sensor_readings.get("T")
                 tide_mm = self.sensor_readings['R']
                 station = self.sensor_readings['S']
