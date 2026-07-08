@@ -107,6 +107,9 @@ class Tide:
         self.s1type = self.iparams_dict.get('s1type')
         self.s2type = self.iparams_dict.get('s2type')
         self.s3type = self.iparams_dict.get('s3type')
+        self.s1enable = self.iparams_dict.get('s1enable')
+        self.s2enable = self.iparams_dict.get('s2enable')
+        self.s3enable = self.iparams_dict.get('s3enable')
         if self.stationid == 1:
             self.stationcal = self.station1cal
             self.stype = self.s1type
@@ -122,9 +125,6 @@ class Tide:
             self.influx_duration = '-35m'
         else:
             self.influx_duration = '-1m'
-        self.s1enable = self.iparams_dict.get('s1enable')
-        self.s2enable = self.iparams_dict.get('s2enable')
-        self.s3enable = self.iparams_dict.get('s3enable') 
         state.debug = self.iparams_dict.get('debug')
         self.tide_only = self.iparams_dict.get('tide_only')
         display_date_and_time = sunny.get_suntimes(cons, db)
@@ -343,6 +343,9 @@ class Tide:
             self.s1type = self.iparams_dict.get('s1type')
             self.s2type = self.iparams_dict.get('s2type')
             self.s3type = self.iparams_dict.get('s3type')
+            self.s3enable = self.iparams_dict.get('s3enable')
+            self.s1enable = self.iparams_dict.get('s1enable')
+            self.s2enable = self.iparams_dict.get('s2enable')
             if self.stationid == 1:
                 self.stationcal = self.station1cal
                 self.stype = self.s1type
@@ -352,62 +355,62 @@ class Tide:
             elif self.stationid == 3:
                 self.stationcal = self.station3cal
                 self.stype = self.s3type
-            self.s3enable = self.iparams_dict.get('s3enable')
-            self.s1enable = self.iparams_dict.get('s1enable')
-            self.s2enable = self.iparams_dict.get('s2enable')
             state.debug = self.iparams_dict.get('debug')
             self.tide_only = self.iparams_dict.get('tide_only')
             predict_list = predict.tide_predict()
             tide_list = []
             self.sensor_read_list = []
-            tide_list, self.sensor_read_list = db.fetch_tide(
-              self.stationid, self.stationcal, '-24h')
-            volts = 0
-            rssi = 0
-            try:
-                self.sensor_readings = self.sensor_read_list[len(self.sensor_read_list)-1]
-                tide_time = self.sensor_readings.get("T")
-                tide_mm = self.sensor_readings['R']
-                station = self.sensor_readings['S']
-                volts = self.sensor_readings['V']/1000
-                rssi = self.sensor_readings['P']
-                if station == 1:
-                    self.last_station1_time = self.current_time
-                    if self.stationid == 1:
-                        if self.display:
-                            self.display.station_battery_voltage_tk_var.set(
-                              str(volts))
-                            self.display.station_signal_strength_tk_var.set(
-                              str(rssi))
-                        self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
-                        self.station_oos = False
-                elif station == 2:
-                    self.last_station2_time = self.current_time
-                    if self.stationid == 2:
-                        if self.display:
-                            self.display.station_battery_voltage_tk_var.set(
-                              str(volts))
-                            self.display.station_signal_strength_tk_var.set(
-                              str(rssi))
-                        self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
-                        self.station_oos = False
-                elif station == 3:
-                    self.last_station3_time = self.current_time
-                    if self.stationid == 3:
-                        if self.display:
-                            self.display.station_battery_voltage_tk_var.set(
-                              str(volts))
-                            self.display.station_signal_strength_tk_var.set(
-                              str(rssi))
-                        self.tide_ft = round(self.station3cal-tide_mm/304.8, 2)
-                        self.station_oos = False
-                if self.tide_ft != 99:
-                    self.tide_list = self.process.update_tide_list(
-                      tide_list)
-                      #self.tide_list, self.tide_ft, tide_time)
-            except Exception as errmsg:
-                print (str(errmsg))
-                logging.warning(str(errmsg))
+            if getattr(self, f's{self.stationid}enable'):
+                
+                tide_list, self.sensor_read_list = db.fetch_tide(
+                  self.stationid, self.stationcal, '-24h')
+                volts = 0
+                rssi = 0
+                try:
+                    self.sensor_readings = self.sensor_read_list[len(self.sensor_read_list)-1]
+                    tide_time = self.sensor_readings.get("T")
+                    tide_mm = self.sensor_readings['R']
+                    station = self.sensor_readings['S']
+                    volts = self.sensor_readings['V']/1000
+                    rssi = self.sensor_readings['P']
+                    if station == 1:
+                        self.last_station1_time = self.current_time
+                        if self.stationid == 1:
+                            if self.display:
+                                self.display.station_battery_voltage_tk_var.set(
+                                  str(volts))
+                                self.display.station_signal_strength_tk_var.set(
+                                  str(rssi))
+                            self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
+                            self.station_oos = False
+                    elif station == 2:
+                        self.last_station2_time = self.current_time
+                        if self.stationid == 2:
+                            if self.display:
+                                self.display.station_battery_voltage_tk_var.set(
+                                  str(volts))
+                                self.display.station_signal_strength_tk_var.set(
+                                  str(rssi))
+                            self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
+                            self.station_oos = False
+                    elif station == 3:
+                        self.last_station3_time = self.current_time
+                        if self.stationid == 3:
+                            if self.display:
+                                self.display.station_battery_voltage_tk_var.set(
+                                  str(volts))
+                                self.display.station_signal_strength_tk_var.set(
+                                  str(rssi))
+                            self.tide_ft = round(self.station3cal-tide_mm/304.8, 2)
+                            self.station_oos = False
+                    if self.tide_ft != 99:
+                        self.tide_list = self.process.update_tide_list(
+                          tide_list)
+                          #self.tide_list, self.tide_ft, tide_time)
+                except Exception as errmsg:
+                    pass
+                    print (str(errmsg))
+                    logging.warning(str(errmsg))
 
             if self.display:
                 self.display.active_station_tk_var.set(str(self.stationid))
