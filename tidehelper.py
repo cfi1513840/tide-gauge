@@ -37,13 +37,13 @@ class Constants:
     #
     # Prepare encryption key
     #
-    with open('/var/www/html/ku', 'r') as file:
+    with open('/home/tide/bin/tidegauge/ku', 'r') as file:
         key = file.read()
     enkey = Fernet(key)
     #
     # Read encrypted variables from json file
     #
-    with open('/var/www/html/tide_constants.json','r') as file:
+    with open('/home/tide/bin/tidegauge/tide_constants.json','r') as file:
         dictjson = file.read()
     secure_dict = json.loads(dictjson)
     tide_dictionary = {}
@@ -256,10 +256,13 @@ class Notify:
             logging.warning(str(errmsg))
 
     def send_email(self, email_recipient, email_headers, email_message, debug):
-        """Method to send status or alert information via email message"""
+        """Method to send status or alert information via email message.
+        Returns (success: bool, error: str or None) so callers can track
+        delivery outcome; existing call sites that ignore the return value
+        are unaffected."""
         if debug:
             print ('Email notify to '+email_recipient+'\n'+email_message)
-            return
+            return True, None
         if self.cons.EMAIL_SERVICE != 'brevo':
             try:
                 session = smtplib.SMTP(self.cons.SMTP_SERVER,
@@ -272,8 +275,10 @@ class Notify:
                     self.cons.EMAIL_USERNAME, email_recipient, \
                     email_headers+"\r\n\r\n"+email_message)
                 session.quit()
+                return True, None
             except Exception as errmsg:
                 logging.warning(str(errmsg))
+                return False, str(errmsg)
         else:    
             try:
                 sub = None
@@ -293,9 +298,74 @@ class Notify:
                     server.starttls()
                     server.login(self.cons.BREVO_USERNAME, self.cons.BREVO_PASSWORD)
                     server.send_message(msg)
-                
+                return True, None
             except Exception as errmsg:
                 logging.warning(str(errmsg))
+                return False, str(errmsg)
+
+    MAILSPOOL_DIR = '/var/www/html/mailspool/'
+    MAILSPOOL_FAILED_DIR = '/var/www/html/mailspool/failed/'
+    MAX_MAIL_ATTEMPTS = 3
+
+    def process_mailspool(self, debug):
+        """Check the mail spool directory for pending outbound email
+        requests written by the alert-portal CGI scripts (which no longer
+        hold email credentials or send mail themselves), and attempt to
+        send each one. Requests that fail are retried on subsequent calls
+        -- one per minute, via the main scheduling loop -- up to
+        MAX_MAIL_ATTEMPTS times, after which they are moved to the
+        'failed' subdirectory and logged. Successfully sent requests are
+        simply removed; no persistent record of successful sends is kept,
+        matching this system's existing fire-and-forget logging model."""
+        try:
+            filenames = [f for f in os.listdir(self.MAILSPOOL_DIR) if f.endswith('.json')]
+        except FileNotFoundError:
+            return
+        for filename in filenames:
+            filepath = os.path.join(self.MAILSPOOL_DIR, filename)
+            try:
+                with open(filepath, 'r') as f:
+                    request = json.load(f)
+            except Exception as errmsg:
+                logging.warning(f'mailspool: could not read {filename}: {errmsg}')
+                continue
+            full_headers = f"From: {self.cons.EMAIL_USERNAME}\r\n" + request['headers']
+            if request['recipient'] == 'ADMIN':
+                # CGI scripts write 'ADMIN' rather than a real address, since
+                # they no longer have access to ADMIN1/ADMIN2 (part of the
+                # encrypted constants they no longer decrypt). Resolved to
+                # the real admin address list here, at send-time, using
+                # self.cons -- the one place that still holds it.
+                targets = self.cons.ADMIN_EMAIL
+            else:
+                targets = [request['recipient']]
+            success, error = True, None
+            for target in targets:
+                this_success, this_error = self.send_email(
+                    target, full_headers, request['body'], debug)
+                if not this_success:
+                    success = False
+                    error = this_error
+            if success:
+                os.remove(filepath)
+                continue
+            request['attempts'] = request.get('attempts', 0) + 1
+            request['last_error'] = error
+            # Write the updated attempts/error back to the original file
+            # first (temp-then-rename, same pattern the CGI scripts use to
+            # create these files), so what happens next -- staying pending,
+            # or moving to failed/ -- always acts on current, not stale,
+            # content.
+            tmp_path = filepath + '.tmp'
+            with open(tmp_path, 'w') as f:
+                json.dump(request, f)
+            os.rename(tmp_path, filepath)
+            if request['attempts'] >= self.MAX_MAIL_ATTEMPTS:
+                logging.warning(
+                    f"mailspool: permanent failure for {filename} after "
+                    f"{request['attempts']} attempts: {error}")
+                failed_path = os.path.join(self.MAILSPOOL_FAILED_DIR, filename)
+                os.rename(filepath, failed_path)
 
 class ValType:
     """Validate variable type"""

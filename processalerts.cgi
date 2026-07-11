@@ -2,11 +2,11 @@
 import os
 import cgi, cgitb
 import time
+import secrets
 from datetime import datetime
 from datetime import timedelta
 import sqlite3
 import math
-import smtplib
 from cryptography.fernet import Fernet
 import json
 from dotenv import load_dotenv, find_dotenv
@@ -14,27 +14,31 @@ from dotenv import load_dotenv, find_dotenv
 global userclr, userenc, telclr, telenc, email_address,\
   tmsgaddr, tlevel, sensorloc, daylight, dayair,  enalev, atemp, enaair,\
   form, currenttime, daywat, evnotice, evtype, enaevent, evrepeat, evday, \
-  SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD, email_message,\
+  email_message,\
   evthresh, activate, entryfound, sqlcon, sqlcur,\
   adminreq, displaytable, actdeact, wind, enawind, daywind, windir
 #
-# Function to send confirmation email message
+# Write an outbound email request to the mail spool directory for tide.py
+# to send. This CGI no longer holds email credentials or sends mail
+# directly -- see process_mailspool() in tidehelper.py. Written to a temp
+# name first, then atomically renamed into place, so tide.py's spool scan
+# never observes a half-written file. The "From:" header is added by
+# process_mailspool() itself. A recipient of 'ADMIN' is resolved there too,
+# to whichever admin addresses are actually configured -- this script no
+# longer has access to ADMIN1/ADMIN2 at all.
 #
-def send_email(recipient, subject, message):
-    global SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD
-    headers = [f"From: {EMAIL_USERNAME}",
-      f"Subject: {subject}",
+def queue_email(recipient, subject, message):
+    headers = [f"Subject: {subject}",
       f"To: {recipient}",
       "MIME-Versiion:1.0","Content-Type:text/html"]
     headers = "\r\n".join(headers)
-    session = smtplib.SMTP(SMTP_SERVER,SMTP_PORT)
-    session.ehlo()
-    session.starttls()
-    session.ehlo()
-    session.login(EMAIL_USERNAME,EMAIL_PASSWORD)
-    session.sendmail(
-      EMAIL_USERNAME,recipient,headers+"\r\n\r\n"+message)
-    session.quit()
+    filename = f'{datetime.now().strftime("%Y%m%d%H%M%S")}-{secrets.token_hex(8)}.json'
+    filepath = os.path.join(MAILSPOOL_DIR, filename)
+    tmp_path = filepath + '.tmp'
+    request = {'recipient': recipient, 'headers': headers, 'body': message}
+    with open(tmp_path, 'w') as f:
+        json.dump(request, f)
+    os.rename(tmp_path, filepath)
    
 def reportit(parm1,parm2,parm3):
     print ("Content-type:text/html\r\n\r\n")
@@ -92,8 +96,7 @@ def suspend_resume():
           f"where email_address = '{userenc}'")
     sqlcon.commit()
     subject = "Tide Station Alert Activation",
-    for recipient in admin_email:                 
-        send_email(recipient, subject, email_message)
+    queue_email('ADMIN', subject, email_message)
 
 def create_table():
     global sqlcon, sqlcur, userclr, userenc, telclt, telenc, email_address,\
@@ -600,28 +603,10 @@ def create_admin_table():
     print ('</div>')
     print ('</body>')
     print ('</html>')
-constants_dict = {}
-admin_email = []
-with open('/var/www/html/ku', 'r') as file:
-    key = file.read()
-enkey = Fernet(key)
-with open('/var/www/html/tide_constants.json','r') as file:
-    dictjson = file.read()
-constants_dict = json.loads(dictjson)
-for ent in constants_dict:
-    clearval = enkey.decrypt(constants_dict[ent].encode())
-    constants_dict[ent] = clearval.decode()
-if constants_dict['ADMIN1'] != 'None':
-    admin_email.append(constants_dict['ADMIN1'])
-if constants_dict['ADMIN2'] != 'None':
-    admin_email.append(constants_dict['ADMIN2'])
-SMTP_SERVER = constants_dict['SMTP_SERVER']
-SMTP_PORT = constants_dict['SMTP_PORT']
-EMAIL_USERNAME = constants_dict['EMAIL_USERNAME']
-EMAIL_PASSWORD = constants_dict['EMAIL_PASSWORD']
 envfile = find_dotenv('/var/www/html/tide.env')
 if load_dotenv(envfile):
     SQL_PATH = os.getenv('SQL_PATH')
+MAILSPOOL_DIR = '/var/www/html/mailspool/'
 displaytable = False
 adminreq = False
 activateuser = False
@@ -1059,8 +1044,7 @@ else:
                 email_message = (
                   'Tide station alerts have been updated for '+
                   f'{userclr}, please review')
-                for recipient in admin_email:                 
-                    send_email(recipient, subject, email_message)
+                queue_email('ADMIN', subject, email_message)
         displaytable = True
     else:
         if ((tlevel != '' and enalev == 1)
@@ -1106,8 +1090,7 @@ else:
         subject = 'Tide Station Alert Message'
         email_message = ('Tide station alerts have been updated for '+
           f'{userclr}, please review')
-        for recipient in admin_email:                 
-           send_email(recipient, subject, email_message)
+        queue_email('ADMIN', subject, email_message)
 
 if displaytable or (entryfound and admin == '0'):
     create_table()

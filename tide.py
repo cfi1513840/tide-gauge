@@ -332,6 +332,16 @@ class Tide:
             self.last_db_copy_time = self.current_time
             os.system(f'cp {cons.SQL_PATH} {cons.SQL_COPY}')            
 
+        if self.main_loop_count == 8:
+            #
+            # Check the mail spool directory once per minute for pending
+            # outbound email requests written by the alert-portal CGI
+            # scripts (password reset, alert signup confirmation, etc.).
+            # The CGI scripts no longer hold email credentials or send
+            # mail themselves -- see process_mailspool() in tidehelper.py.
+            #
+            notify.process_mailspool(state.debug)
+
         if self.main_loop_count >= 12:
             #print (self.message_time+' One minute processing')
             self.main_loop_count = 0

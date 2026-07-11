@@ -3,59 +3,42 @@ import os
 import cgi, cgitb
 from datetime import datetime
 import sqlite3
-import smtplib
 import secrets
 from cryptography.fernet import Fernet
 import json
 from dotenv import load_dotenv, find_dotenv
 
-global  SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD
-  
 #
-# Function to send confirmation email message
+# Write an outbound email request to the mail spool directory for tide.py
+# to send. This CGI no longer holds email credentials or sends mail
+# directly -- see process_mailspool() in tidehelper.py. Written to a temp
+# name first, then atomically renamed into place, so tide.py's spool scan
+# never observes a half-written file. The "From:" header is added by
+# process_mailspool() itself, which is the only place EMAIL_USERNAME is
+# now known.
 #
-def send_email(recipient, subject, message):
-    global SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD
-    headers = [f"From: {EMAIL_USERNAME}",
-      f"Subject: {subject}",
+def queue_email(recipient, subject, message):
+    headers = [f"Subject: {subject}",
       f"To: {recipient}",
       "MIME-Versiion:1.0","Content-Type:text/html"]
     headers = "\r\n".join(headers)
-    session = smtplib.SMTP(SMTP_SERVER,SMTP_PORT)
-    session.ehlo()
-    session.starttls()
-    session.ehlo()
-    session.login(EMAIL_USERNAME,EMAIL_PASSWORD)
-    session.sendmail(
-      EMAIL_USERNAME,recipient,headers+"\r\n\r\n"+message)
-    session.quit()
+    filename = f'{datetime.now().strftime("%Y%m%d%H%M%S")}-{secrets.token_hex(8)}.json'
+    filepath = os.path.join(MAILSPOOL_DIR, filename)
+    tmp_path = filepath + '.tmp'
+    request = {'recipient': recipient, 'headers': headers, 'body': message}
+    with open(tmp_path, 'w') as f:
+        json.dump(request, f)
+    os.rename(tmp_path, filepath)
 #
-# Read and decrypt secure variable names & values
+# Read non-secret configuration (paths, URL) -- no keys or encrypted
+# constants are read here anymore.
 #
-constants_dict = {}
-admin_email = []
-with open('/var/www/html/ku', 'r') as file:
-    key = file.read()
-enkey = Fernet(key)
-with open('/var/www/html/tide_constants.json','r') as file:
-    dictjson = file.read()
-constants_dict = json.loads(dictjson)
-for ent in constants_dict:
-    clearval = enkey.decrypt(constants_dict[ent].encode())
-    constants_dict[ent] = clearval.decode()
-if constants_dict['ADMIN1'] != 'None':
-    admin_email.append(constants_dict['ADMIN1'])
-if constants_dict['ADMIN2'] != 'None':
-    admin_email.append(constants_dict['ADMIN2'])
-SMTP_SERVER = constants_dict['SMTP_SERVER']
-SMTP_PORT = constants_dict['SMTP_PORT']
-EMAIL_USERNAME = constants_dict['EMAIL_USERNAME']
-EMAIL_PASSWORD = constants_dict['EMAIL_PASSWORD']
 envfile = find_dotenv('/var/www/html/tide.env')
 if load_dotenv(envfile):
     SQL_PATH = os.getenv('SQL_PATH')
     CGI_URL = os.getenv('CGI_URL')
     HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
+MAILSPOOL_DIR = f'{HTML_DIRECTORY}mailspool/'
 form = cgi.FieldStorage()
 email_address = form["eaddr"].value
 password = form["passwd"].value
@@ -473,7 +456,7 @@ try:
             subject = 'Tide Alert Request'
             email_message = 'You have requested access to Tide Station Alerts, please select the following link to validate your email address<br>'+ \
                                 f'{CGI_URL}valuser.cgi?valkey={dbvalkey}'
-            send_email(email_address, subject, email_message)     
+            queue_email(email_address, subject, email_message)     
         elif actype == '0':
             display_userform(email_address,password)
         elif actype == '1':
@@ -485,7 +468,7 @@ try:
         subject = 'Tide Alert Request'
         email_message = 'You have requested access to Tide Station Alerts, please select the following link to validate your email address<br>'+ \
                             f'{CGI_URL}valuser.cgi?valkey={valkey}'
-        send_email(email_address, subject, email_message)     
+        queue_email(email_address, subject, email_message)     
         print ("Content-type:text/html\r\n\r\n")
         print ('<html>')
         print ('<head>')
@@ -544,7 +527,7 @@ try:
         subject = 'Tide Alert Request'
         email_message = 'You have requested access to Tide Station Alerts, please select the following link to validate your email address<br>'+ \
                             f'{CGI_URL}valuser.cgi?valkey={dbvalkey}'
-        send_email(email_address, subject, email_message)     
+        queue_email(email_address, subject, email_message)     
      
     else:
         print ("Content-type:text/html\r\n\r\n")
