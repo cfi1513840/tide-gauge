@@ -59,8 +59,8 @@ class Station:
     selected_chk: str = ''
     battery_chk: str = ''
     batv_list: list = field(default_factory=list)
-    min_batv: float = 99
-    max_batv: float = -99
+    min_batv: float = float('inf')
+    max_batv: float = float('-inf')
     batv_grid_nbr: int = 0
     batv_grid_y: float = 0
     batv_height: float = 0
@@ -108,8 +108,8 @@ class TidePlotRenderer:
            tidesecs = 0
            self.predlist = []
            self.predicts = []
-           self.maxpred = -99
-           self.minpred = 99
+           self.maxpred = float('-inf')
+           self.minpred = float('inf')
         #
         # The start time for the tide prediction is the current time minus 24 hours.
         #
@@ -228,16 +228,16 @@ class TidePlotRenderer:
            epochs = []
            tide_average1 = [0 for x in range(0,15)]
            last_average1 = 0
-           max_tide1 = -99
-           min_tide1 = 99
+           max_tide1 = float('-inf')
+           min_tide1 = float('inf')
            tide_average2 = [0 for x in range(0,15)]
            last_average2 = 0
-           max_tide2 = -99
-           min_tide2 = 99
+           max_tide2 = float('-inf')
+           min_tide2 = float('inf')
            tide_average3 = [0 for x in range(0,15)]
            last_average3 = 0
-           max_tide3 = -99
-           min_tide3 = 99
+           max_tide3 = float('-inf')
+           min_tide3 = float('inf')
            new_tide_list = []
            index1 = 0
            index2 = 0
@@ -286,14 +286,14 @@ class TidePlotRenderer:
                  if average1 > last_average1 + 0.05:
                     if trend1 == 'low':
                        epochs.append([min_tide_time1,1,trend1])
-                       min_tide1 = 99
-                       max_tide1 = -99                        
+                       min_tide1 = float('inf')
+                       max_tide1 = float('-inf')                        
                     trend1 = 'high'
                  elif average1 < last_average1 - 0.05:
                     if trend1 == 'high':
                        epochs.append([max_tide_time1,1,trend1])
-                       min_tide1 = 99
-                       max_tide1 = -99                            
+                       min_tide1 = float('inf')
+                       max_tide1 = float('-inf')                            
                     trend1 = 'low'
                  last_average1 = average1
 
@@ -305,14 +305,14 @@ class TidePlotRenderer:
                  if average2 > last_average2 + 0.05:
                     if trend2 == 'low':
                        epochs.append([min_tide_time2,2,trend2])
-                       min_tide2 = 99
-                       max_tide2 = -99                        
+                       min_tide2 = float('inf')
+                       max_tide2 = float('-inf')                        
                     trend2 = 'high'
                  elif average2 < last_average2 - 0.05:
                     if trend2 == 'high':
                        epochs.append([max_tide_time2,2,trend2])
-                       min_tide2 = 99
-                       max_tide2 = -99                            
+                       min_tide2 = float('inf')
+                       max_tide2 = float('-inf')                            
                     trend2 = 'low'
                  last_average2 = average2
 
@@ -324,14 +324,14 @@ class TidePlotRenderer:
                  if average3 > last_average3 + 0.05:
                     if trend3 == 'low':
                        epochs.append([min_tide_time3,3,trend3])
-                       min_tide3 = 99
-                       max_tide3 = -99                        
+                       min_tide3 = float('inf')
+                       max_tide3 = float('-inf')                        
                     trend3 = 'high'
                  elif average3 < last_average3 - 0.05:
                     if trend3 == 'high':
                        epochs.append([max_tide_time3,3,trend3])
-                       min_tide3 = 99
-                       max_tide3 = -99                            
+                       min_tide3 = float('inf')
+                       max_tide3 = float('-inf')                            
                     trend3 = 'low'
                  last_average3 = average3
 
@@ -484,14 +484,14 @@ class TidePlotRenderer:
            wxinit = False
            rxinit = False
            txinit = False
-           vari1start_x = -99
-           vari1start_y = -99
-           vari2start_x = -99
-           vari2start_y = -99
-           vari3start_x = -99
-           vari3start_y = -99
-           tidestart_x = -99
-           tidestart_y = -99
+           vari1start_x = float('-inf')
+           vari1start_y = float('-inf')
+           vari2start_x = float('-inf')
+           vari2start_y = float('-inf')
+           vari3start_x = float('-inf')
+           vari3start_y = float('-inf')
+           tidestart_x = float('-inf')
+           tidestart_y = float('-inf')
            maxwind = 0
            maxwdir = 0
         #
@@ -752,8 +752,8 @@ class TidePlotRenderer:
                                    vari1start_x = tide_x
                                    vari1start_y = vari_y
                                 vari1init = True
-                                if vari1start_x == -99: vari1start_x = tide_x
-                                if vari1start_y == -99: vari1start_y = vari_y                    
+                                if vari1start_x == float('-inf'): vari1start_x = tide_x
+                                if vari1start_y == float('-inf'): vari1start_y = vari_y                    
                        elif self.station2 and self.s2enable and self.tidelist[aidx][1] == 2:
                           tide_y = self.tide_end_y-int(((self.station2cal-self.tidelist[aidx][2]/12)-math.floor(self.mintide))*self.tide_grid_y)
                           tideft = self.station2cal-self.tidelist[aidx][2]/12
@@ -786,8 +786,8 @@ class TidePlotRenderer:
                                    vari2start_x = tide_x
                                    vari2start_y = vari_y
                                 vari2init = True
-                                if vari2start_x == -99: vari2start_x = tide_x
-                                if vari2start_y == -99: vari2start_y = vari_y                                            
+                                if vari2start_x == float('-inf'): vari2start_x = tide_x
+                                if vari2start_y == float('-inf'): vari2start_y = vari_y                                            
                        elif self.station3 and self.s3enable and self.tidelist[aidx][1] == 3:
                           tide_y = self.tide_end_y-int(((self.station3cal-self.tidelist[aidx][2]/12)-math.floor(self.mintide))*self.tide_grid_y)
                           tideft = self.station3cal-self.tidelist[aidx][2]/12
@@ -818,8 +818,8 @@ class TidePlotRenderer:
                                    vari3start_x = tide_x
                                    vari3start_y = vari_y
                                 vari3init = True
-                                if vari3start_x == -99: vari3start_x = tide_x
-                                if vari3start_y == -99: vari3start_y = vari_y
+                                if vari3start_x == float('-inf'): vari3start_x = tide_x
+                                if vari3start_y == float('-inf'): vari3start_y = vari_y
                        aidx += 1
                        if aidx < tidelen-1:
                           tidetime = datetime.strptime(self.tidelist[aidx][0][:16], self.mintimeformat)
@@ -1735,18 +1735,18 @@ class TidePlotRenderer:
            tidesum = 0
            tidesum2 = 0
            tideave2 = 0
-           maxtide = -99
-           self.mintide = 99
-           self.minbatv1 = 99
-           self.maxbatv1 = -99
-           self.minbatv2 = 99
-           self.maxbatv2 = -99
-           minwind = 99
-           maxwind = -99
-           self.mintemp = 99
-           maxtemp = -99
-           minrain = 99
-           maxrain = -99
+           maxtide = float('-inf')
+           self.mintide = float('inf')
+           self.minbatv1 = float('inf')
+           self.maxbatv1 = float('-inf')
+           self.minbatv2 = float('inf')
+           self.maxbatv2 = float('-inf')
+           minwind = float('inf')
+           maxwind = float('-inf')
+           self.mintemp = float('inf')
+           maxtemp = float('-inf')
+           minrain = float('inf')
+           maxrain = float('-inf')
            self.tide_grid_nbr = 0
            self.vari_grid_nbr = 0
            self.wind_grid_nbr = 0
@@ -1775,8 +1775,8 @@ class TidePlotRenderer:
               # self.stations rather than duplicating this block a third
               # time) then merged into the overall self.mintide/maxtide the
               # rest of the layout math actually reads.
-              station_mintide = {s.num: 99 for s in self.stations}
-              station_maxtide = {s.num: -99 for s in self.stations}
+              station_mintide = {s.num: float('inf') for s in self.stations}
+              station_maxtide = {s.num: float('-inf') for s in self.stations}
               for chkent in self.tidelist:
                  for s in self.stations:
                     if s.selected and s.enabled and chkent[1] == s.num:
@@ -1787,7 +1787,7 @@ class TidePlotRenderer:
                           station_mintide[s.num] = self.tidelevel
                        break
               for s in self.stations:
-                 if station_mintide[s.num] == 99 or station_maxtide[s.num] == -99:
+                 if station_mintide[s.num] == float('inf') or station_maxtide[s.num] == float('-inf'):
                     s.selected = False
                     setattr(self, f'station{s.num}', False)
                  else:
@@ -1807,7 +1807,7 @@ class TidePlotRenderer:
                           s.max_batv = chkent[1]
                        if chkent[1] < s.min_batv:
                           s.min_batv = chkent[1]
-                 if s.min_batv == 99 or s.max_batv == -99:
+                 if s.min_batv == float('inf') or s.max_batv == float('-inf'):
                     s.show_battery = False
                     setattr(self, f'batv{s.num}', False)
                  else:
@@ -1840,9 +1840,9 @@ class TidePlotRenderer:
                        maxrain = chkent[10]
                     if chkent[10] < minrain:
                        minrain = chkent[10]
-              if self.mintemp == 99 or maxtemp == -99:
+              if self.mintemp == float('inf') or maxtemp == float('-inf'):
                   self.temp = False
-              if minrain == 99 or maxrain == -99:
+              if minrain == float('inf') or maxrain == float('-inf'):
                   self.rain = False
            else:
               pass
