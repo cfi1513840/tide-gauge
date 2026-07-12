@@ -4,7 +4,7 @@ from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 import logging
 import pytz
-from cryptography.fernet import Fernet
+import tidecrypto
 
 class DbManage:
     """Manages access to the sqlite3 and InfluxDB databases"""
@@ -21,6 +21,7 @@ class DbManage:
         self.last_message_count = 100
         self.initial_start = "-24h"
         self.last_time = None
+        self.f1 = tidecrypto.EMAIL_KEY
 
    
     def insert_weather(self, weather):
@@ -324,16 +325,13 @@ class DbManage:
         return self.sql_cursor.fetchall()
 
     def update_userpass(self, emailaddr, valstat, valkey):       
-        with open('k1','rb') as kfile:
-           key1 = kfile.read()
-        f1 = Fernet(key1)
         if valstat == 1:
             self.sql_cursor.execute(f"UPDATE userpass set valkey = '' where valkey = '{valkey}'")
         else:
             self.sql_cursor.execute(f"delete from userpass where valkey = '{valkey}'")
             self.sql_connection.commit()
             val_address = emailaddr.encode()
-            val_address = f1.decrypt(val_address).decode()
+            val_address = self.f1.decrypt(val_address).decode()
             pline = (f'Request window expired for {val_address}')
             logging.info(pline)
         
