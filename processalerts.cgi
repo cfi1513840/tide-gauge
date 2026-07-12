@@ -7,9 +7,9 @@ from datetime import datetime
 from datetime import timedelta
 import sqlite3
 import math
-from cryptography.fernet import Fernet
 import json
 from dotenv import load_dotenv, find_dotenv
+import tidecrypto
 
 global userclr, userenc, telclr, telenc, email_address,\
   tmsgaddr, tlevel, sensorloc, daylight, dayair,  enalev, atemp, enaair,\
@@ -631,15 +631,9 @@ for row in rows:
     for index, column in enumerate(row):
         alert_dict[column_names[index]] = column
     alert_list.append(alert_dict)
-with open('/var/www/html/k1','rb') as kfile:
-    key1 = kfile.read()
-with open('/var/www/html/k2','rb') as kfile:
-    key2 = kfile.read()
-with open('/var/www/html/k3','rb') as kfile:
-    key3 = kfile.read()
-f1 = Fernet(key1)
-f2 = Fernet(key2)
-f3 = Fernet(key3)
+f1 = tidecrypto.EMAIL_KEY
+f2 = tidecrypto.PHONE_KEY
+f3 = tidecrypto.PASSWORD_KEY
 found = False
 valid = False
 sqlcur.execute("select * from userpass")

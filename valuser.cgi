@@ -4,24 +4,19 @@ import os
 from datetime import datetime
 import sqlite3
 import smtplib
-from cryptography.fernet import Fernet
 from dotenv import load_dotenv, find_dotenv
+import tidecrypto
 
 envfile = find_dotenv('/var/www/html/tide.env')
 if load_dotenv(envfile):
     SQL_PATH = os.getenv('SQL_PATH')
     HTML_URL = os.getenv('HTML_URL')
-    HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
 form = cgi.FieldStorage()
 valkeyform = form.getvalue("valkey")
 sqlcon = sqlite3.connect(f'{SQL_PATH}')
 sqlcur = sqlcon.cursor()
-with open(f'{HTML_DIRECTORY}k1','rb') as kfile:
-   key1 = kfile.read()
-f1 = Fernet(key1)
-with open(f'{HTML_DIRECTORY}k3','rb') as kfile:
-   key3 = kfile.read()
-f3 = Fernet(key3)
+f1 = tidecrypto.EMAIL_KEY
+f3 = tidecrypto.PASSWORD_KEY
 sqlcur.execute(f"select * from userpass")
 users = sqlcur.fetchall()
 found = False

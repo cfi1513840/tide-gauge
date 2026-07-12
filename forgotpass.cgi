@@ -5,8 +5,8 @@ import sqlite3
 import secrets
 import json
 import os
-from cryptography.fernet import Fernet
 from dotenv import load_dotenv, find_dotenv
+import tidecrypto
 #
 # Read non-secret configuration (paths, URL) -- no keys or encrypted
 # constants are read here anymore.
@@ -59,9 +59,7 @@ print ('<title>Tide Alert Login Request</title>')
 try: 
    sqlcon = sqlite3.connect(f'{SQL_PATH}')
    sqlcur = sqlcon.cursor()
-   with open(f'{HTML_DIRECTORY}k1','rb') as kfile:
-      key1 = kfile.read()
-   f1 = Fernet(key1)
+   f1 = tidecrypto.EMAIL_KEY
    emailAddressByte = emailAddress.encode()
    encryptedEmailAddressByte = f1.encrypt(emailAddressByte)
    encryptedEmailAddress = encryptedEmailAddressByte.decode()

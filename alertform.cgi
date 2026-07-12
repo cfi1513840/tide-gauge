@@ -4,9 +4,9 @@ import cgi, cgitb
 from datetime import datetime
 import sqlite3
 import secrets
-from cryptography.fernet import Fernet
 import json
 from dotenv import load_dotenv, find_dotenv
+import tidecrypto
 
 #
 # Write an outbound email request to the mail spool directory for tide.py
@@ -342,12 +342,8 @@ try:
 #if True:
     sqlcon = sqlite3.connect(SQL_PATH)
     sqlcur = sqlcon.cursor()
-    with open('/var/www/html/k1','rb') as kfile:
-        key1 = kfile.read()
-    with open('/var/www/html/k3','rb') as kfile:
-        key3 = kfile.read()
-    f1 = Fernet(key1)
-    f3 = Fernet(key3)
+    f1 = tidecrypto.EMAIL_KEY
+    f3 = tidecrypto.PASSWORD_KEY
     email_addressByte = email_address.encode()
     encryptedemail_addressByte = f1.encrypt(email_addressByte)
     encryptedemail_address = encryptedemail_addressByte.decode()

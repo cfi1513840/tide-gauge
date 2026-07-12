@@ -3,7 +3,7 @@ import cgi, cgitb
 from datetime import datetime
 import sqlite3
 import smtplib
-from cryptography.fernet import Fernet
+import tidecrypto
 
 form = cgi.FieldStorage()
 emailAddress = form.getvalue("eaddr")
@@ -30,12 +30,8 @@ print ('<title>Tide Alert Login Request</title>')
 try: 
    sqlcon = sqlite3.connect('/var/www/html/tides.db')
    sqlcur = sqlcon.cursor()
-   with open('/var/www/html/k1','rb') as kfile:
-      key1 = kfile.read()
-   with open('/var/www/html/k3','rb') as kfile:
-      key3 = kfile.read()
-   f1 = Fernet(key1)
-   f3 = Fernet(key3)
+   f1 = tidecrypto.EMAIL_KEY
+   f3 = tidecrypto.PASSWORD_KEY
    emailAddressByte = emailAddress.encode()
    encryptedEmailAddressByte = f1.encrypt(emailAddressByte)
    encryptedEmailAddress = encryptedEmailAddressByte.decode()
