@@ -119,12 +119,7 @@ class Tide:
         elif self.stationid == 3:
             self.stationcal = self.station3cal
             self.stype = self.s3type
-        if self.stype == 'lora':
-            self.influx_duration = '-1m'
-        elif self.stype == 'note':
-            self.influx_duration = '-35m'
-        else:
-            self.influx_duration = '-1m'
+        self.influx_duration = '-24h'
         state.debug = self.iparams_dict.get('debug')
         self.tide_only = self.iparams_dict.get('tide_only')
         display_date_and_time = sunny.get_suntimes(cons, db)
@@ -192,7 +187,7 @@ class Tide:
         self.sensor_read_list = []
         tide_list = []
         tide_list, self.sensor_read_list = db.fetch_tide(
-          self.stationid, self.stationcal, '-24h')            
+          self.stationid, self.stationcal, self.influx_duration)            
         if tide_list:
             self.process = tideprocess.ProcTide(tide_list)
             self.tide_list = self.process.get_tide_list()
@@ -373,7 +368,7 @@ class Tide:
             if getattr(self, f's{self.stationid}enable'):
                 
                 tide_list, self.sensor_read_list = db.fetch_tide(
-                  self.stationid, self.stationcal, '-24h')
+                  self.stationid, self.stationcal, self.influx_duration)
                 volts = 0
                 rssi = 0
                 try:
