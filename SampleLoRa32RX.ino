@@ -6,6 +6,10 @@
 
 #include <heltec_unofficial.h>
 #include <string>
+#include <Wire.h>         // Only needed for Arduino 1.6.5 and earlier
+#include "SSD1306Wire.h"  // legacy: #include "SSD1306.h"
+#include "pins_arduino.h"
+//#include "time.h"
 
 // Pause between transmited packets in seconds.
 // Set to zero to only transmit a packet when pressing the user button
@@ -16,32 +20,58 @@
 // Check your own rules and regulations to see what is legal where you are.
 //#define FREQUENCY           866.3       // for Europe
 //#define FREQUENCY           915.0       // for US
-#define FREQUENCY           914.1       // for US
+//#define FREQUENCY           916.0       // for US
+#define FREQUENCY           914.5       // for US
 
 // LoRa bandwidth. Keep the decimal point to designate float.
 // Allowed values are 7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125.0, 250.0 and 500.0 kHz.
+//#define BANDWIDTH           500.0
 //#define BANDWIDTH           250.0
 #define BANDWIDTH           125.0
 
 // Number from 5 to 12. Higher means slower but higher "processor gain",
 // meaning (in nutshell) longer range and more robust against interference. 
-#define SPREADING_FACTOR    9
+#define SPREADING_FACTOR    12
 
 // Transmit power in dBm. 0 dBm = 1 mW, enough for tabletop-testing. This value can be
 // set anywhere between -9 dBm (0.125 mW) to 22 dBm (158 mW). Note that the maximum ERP
 // (which is what your antenna maximally radiates) on the EU ISM band is 25 mW, and that
 // transmissting without an antenna can damage your hardware.
-#define TRANSMIT_POWER      18
+#define TRANSMIT_POWER      22
 
-String rxdata = "test";
+String rxdata = "RX Initialization";
+char curtime[32];
+char rxpacket[64];
+char Rssi_text[8];
 volatile bool rxFlag = false;
 long station = 1;
 long counter = 0 ;
 uint64_t proc_time;
 uint64_t start_time;
 int16_t Rssi;
-int16_t test;
 char txout[16];
+
+void VextON(void) {
+  pinMode(Vext, OUTPUT);
+  digitalWrite(Vext, LOW);
+}
+
+void VextOFF(void)  //Vext default OFF
+{
+  pinMode(Vext, OUTPUT);
+  digitalWrite(Vext, HIGH);
+}
+
+void displayReset(void) {
+  // Send a reset
+  pinMode(RST_OLED, OUTPUT);
+  digitalWrite(RST_OLED, HIGH);
+  delay(1);
+  digitalWrite(RST_OLED, LOW);
+  delay(1);
+  digitalWrite(RST_OLED, HIGH);
+  delay(1);
+}
 
 void setup() {
   start_time = millis()/1000;
@@ -58,6 +88,26 @@ void setup() {
   // Start receiving
   radio.setDio1Action(rx);
   RADIOLIB_OR_HALT(radio.startReceive(RADIOLIB_SX126X_RX_TIMEOUT_INF));
+
+  // This turns on and resets the OLED on the Heltec boards
+  VextON();
+  displayReset();
+
+  // Initialising the UI will init the display too.
+  display.init();
+
+  display.flipScreenVertically();
+  display.setFont(ArialMT_Plain_10);
+
+}
+void drawFontFaceDemo() {
+  // Font Demo1
+  // create more fonts at http://oleddisplay.squix.ch/
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(0, 0, rxdata.c_str());
+  display.setFont(ArialMT_Plain_16);
+  display.drawString(0, 10, Rssi_text);
 }
 
 void loop() {
@@ -68,8 +118,13 @@ void loop() {
     radio.readData(rxdata);
     
     if (_radiolib_status == RADIOLIB_ERR_NONE) {
+        // clear the display
+      display.clear();
       Rssi = radio.getRSSI();
+      sprintf(Rssi_text, "Rssi: %d", Rssi);
       Serial.printf("%s,P%d\n", rxdata.c_str(),Rssi);
+      drawFontFaceDemo();
+      display.display();
       delay(1000);
       tx();
       delay(100);
@@ -88,15 +143,12 @@ void tx() {
     if (rxdata[0] == 'S') {
      if (rxdata[1] == '1') {
        station = 1;
-     } else if (rxdata[1] == '2') {
+     } else {
        station = 2;
-     } else if (rxdata[1] == '3') {
-       station = 3;
      }
     int delay = ((station*15)-proc_time)+60;
     sprintf(txout,"T%d,", station);
     sprintf(txout+strlen(txout),"D%d", delay);
-    Serial.printf("txout: ' %s\n",txout);
     radio.clearDio1Action();
     RADIOLIB(radio.transmit(txout));
   }

@@ -13,15 +13,16 @@
 #define STATION_ID_ASCII 49
 
 //#define RF_FREQUENCY 915000000  // Hz
-#define RF_FREQUENCY 914100000  // Hz
+//#define RF_FREQUENCY 916000000  // Hz
+#define RF_FREQUENCY 914500000  // Hz
 
-#define TX_OUTPUT_POWER 18  // dBm
+#define TX_OUTPUT_POWER -9  // dBm
 
 #define LORA_BANDWIDTH 0          // [0: 125 kHz, \
                                   //  1: 250 kHz, \
                                   //  2: 500 kHz, \
                                   //  3: Reserved]
-#define LORA_SPREADING_FACTOR 9  // [SF7..SF12]
+#define LORA_SPREADING_FACTOR 7  // [SF7..SF12]
 #define LORA_CODINGRATE 1         // [1: 4/5, \
                                   //  2: 4/6, \
                                   //  3: 4/7, \
@@ -141,7 +142,7 @@ void loop() {
       delay(500);
     }
     if (ackMode == false) {
-      //Serial.printf("ack timeout, entering sleep mode %d\n", millis());
+      Serial.printf("ack timeout, entering sleep mode %d\n", millis());
       txNumber = -1;
       timetillwakeup = 32925;
       TimerSetValue(&wakeUp, timetillwakeup);
@@ -248,7 +249,7 @@ void loop() {
 
     Uval = int(senavg);
     uint16_t batteryVoltage = getBatteryVoltage();
-    
+
     #define R1 470 // kOhms
     #define R2 1000 // kOhms
     uint16_t solarVoltage = round(analogReadmV(ADC2) * (R1 + R2) / R1); // Vsolar --- R2 --- aReadmV --- R1----GND
@@ -263,9 +264,9 @@ void loop() {
     sprintf(txpacket + strlen(txpacket), "t%d", temperatureVoltage);
 
 
-    //Serial.printf("Sending Packet %s\n", txpacket);
+    //Serial.printf("Sending Packet %s at %d\n", txpacket, millis());
     Radio.Send((uint8_t *)txpacket, strlen(txpacket));
-    delay (500);
+    delay (2500);
     rxAck = true;
     //
     // Initialize counters for the next iteration, turn off sensor power and enter sleep mode
@@ -296,6 +297,7 @@ void loop() {
   }
 }
 void OnTxDone(void) {
+  //Serial.printf("OnTxDone interrupt at %d,\r\n", millis());
   //Radio.Sleep();
   //rxAck = true;
 }
