@@ -343,13 +343,10 @@ try:
     sqlcon = sqlite3.connect(SQL_PATH)
     sqlcur = sqlcon.cursor()
     f1 = tidecrypto.EMAIL_KEY
-    f3 = tidecrypto.PASSWORD_KEY
     email_addressByte = email_address.encode()
     encryptedemail_addressByte = f1.encrypt(email_addressByte)
     encryptedemail_address = encryptedemail_addressByte.decode()
     passwordByte = password.encode()
-    encryptedPasswordByte = f3.encrypt(passwordByte)
-    encryptedPassword = encryptedPasswordByte.decode()
     sqlcur.execute(f"select * from userpass")
     users = sqlcur.fetchall()
     for user in users:
@@ -358,17 +355,19 @@ try:
         databaseEncryptedemail_addressByte = databaseEncryptedemail_address.encode()
         databaseemail_addressByte = f1.decrypt(databaseEncryptedemail_addressByte)
         databaseemail_address = databaseemail_addressByte.decode()
-        databaseEncryptedPassword = user[2]
-        databaseEncryptedPasswordByte = databaseEncryptedPassword.encode()
-        databasePasswordByte = f3.decrypt(databaseEncryptedPasswordByte)
-        databasePassword = databasePasswordByte.decode()
+        storedPassword = user[2]
         dbvalkey = user[4]
         if email_address == databaseemail_address:
             found = True
             if user[3] == 1:
                 valid = True
-            if password != databasePassword:
+            if not tidecrypto.verify_password(password, storedPassword):
                 badpass = True
+            elif tidecrypto.is_legacy_password(storedPassword):
+                migratedPassword = tidecrypto.hash_password(password)
+                sqlcur.execute("update userpass set passwd = ? where dtime = ?",
+                               (migratedPassword, databaseTime))
+                sqlcon.commit()
             break
     if actype != '2':
         if not found:
@@ -441,7 +440,7 @@ try:
             print ('<body bgcolor="black"><font size = "4">')
             print ('<div class="center-screen">')
             print ('<span style="border:2px black solid; width: 450px; background-color: #FFE4C4;">')
-            print ('<img src="/Coastal_Maine.png" width="450" height="300"/>')
+            print ('<img src="/webimage.png" width="450" height="300"/>')
             print ('<h1 style="width: 430px; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Alert Login Request</h1>')
             print (f'<p style="width: 438px; text-align: center; font-size: 25px; padding: 4px; border: 2px solid black;">{email_address} requires validation.')
             print (f'An email message has been sent to {email_address}<br>')
@@ -458,7 +457,8 @@ try:
         elif actype == '1':
             change_password(email_address,password)
     elif not found:
-        dbvals = (curtime, encryptedemail_address, encryptedPassword, 0, valkey)
+        hashedPassword = tidecrypto.hash_password(password)
+        dbvals = (curtime, encryptedemail_address, hashedPassword, 0, valkey)
         sqlcur.execute(f"INSERT INTO userpass VALUES (?,?,?,?,?)", dbvals)
         sqlcon.commit()
         subject = 'Tide Alert Request'

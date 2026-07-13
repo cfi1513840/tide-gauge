@@ -36,10 +36,7 @@ try:
    sqlcon = sqlite3.connect(f'{SQL_PATH}')
    sqlcur = sqlcon.cursor()
    f1 = tidecrypto.EMAIL_KEY
-   f3 = tidecrypto.PASSWORD_KEY
-   newPasswordByte = newPassword.encode()
-   encryptedNewPasswordByte = f3.encrypt(newPasswordByte)
-   encryptedNewPassword = encryptedNewPasswordByte.decode()
+   hashedNewPassword = tidecrypto.hash_password(newPassword)
    sqlcur.execute(f'select * from userpass where valkey == "{valkey}"')
    users = sqlcur.fetchall()
    if len(users) != 0:
@@ -47,7 +44,8 @@ try:
       databaseEncryptedEmailAddressByte = databaseEncryptedEmailAddress.encode()
       databaseEmailAddressByte = f1.decrypt(databaseEncryptedEmailAddressByte)
       databaseEmailAddress = databaseEmailAddressByte.decode()
-      sqlcur.execute(f"update userpass set passwd = '{encryptedNewPassword}', valstat = 1, valkey = '' where valkey = '{valkey}'")
+      sqlcur.execute("update userpass set passwd = ?, valstat = 1, valkey = '' where valkey = ?",
+                     (hashedNewPassword, valkey))
       sqlcon.commit()
       print ('</head>')
       print ('<body><font size = "4">')

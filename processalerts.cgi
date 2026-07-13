@@ -633,7 +633,6 @@ for row in rows:
     alert_list.append(alert_dict)
 f1 = tidecrypto.EMAIL_KEY
 f2 = tidecrypto.PHONE_KEY
-f3 = tidecrypto.PASSWORD_KEY
 found = False
 valid = False
 sqlcur.execute("select * from userpass")
@@ -643,17 +642,20 @@ passclr = form.getvalue('passwd')
 for user in dbusers:
     dbtime = user[0]
     dbuser = user[1]
-    dbpass = user[2]
+    storedPassword = user[2]
     dbval = user[3]
     cuser = dbuser.encode()
     cuser = f1.decrypt(cuser).decode()
-    cpass = dbpass.encode()
-    cpass = f3.decrypt(cpass).decode()  
-    if cuser == userclr and cpass == passclr:
+    if cuser == userclr and tidecrypto.verify_password(passclr, storedPassword):
         userenc = dbuser
         found = True
         if dbval == 1:
             valid = True
+        if tidecrypto.is_legacy_password(storedPassword):
+            migratedPassword = tidecrypto.hash_password(passclr)
+            sqlcur.execute("update userpass set passwd = ? where dtime = ?",
+                           (migratedPassword, dbtime))
+            sqlcon.commit()
         break
 if not found or not valid:
     reportit(userclr,passclr,'invalid')
