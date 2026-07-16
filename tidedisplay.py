@@ -345,7 +345,7 @@ class TideDisplay:
             self.ndbc_wave_direction_tk_var.set('')
             self.ndbc_baro_tk_var.set('')
             curtime = datetime.now()
-            if curtime > datetime.strptime(ndbc_data.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
+            if 'DateTime' not in ndbc_data or curtime > datetime.strptime(ndbc_data.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
                 return
             air_temp_display = ''
             water_temp_display = ''

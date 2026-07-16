@@ -274,7 +274,11 @@ class Tide:
             if valkeys:
                 for valkey in valkeys:
                     #print (str(valkey[0]),valkey[1])
-                    valtime = datetime.strptime(valkey[0],'%Y-%m-%d %H:%M:%S.%f')
+                    try:
+                        valtime = datetime.strptime(valkey[0],'%Y-%m-%d %H:%M:%S.%f')
+                    except (TypeError, ValueError) as errmsg:
+                        logging.warning('main: could not parse dtime for pending registration, skipping row: '+str(errmsg))
+                        continue
                     if self.current_time >= valtime+timedelta(minutes=10):
                         db.update_userpass(valkey[1], valkey[2], valkey[3])
 

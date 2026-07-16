@@ -90,7 +90,7 @@ class CreateHTML:
             ndbc_water_temp = ''
             ndbc_wave_direction = ''
             ndbc_baro = ''
-            if current_time > datetime.strptime(ndbcdata.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
+            if 'DateTime' in ndbcdata and current_time > datetime.strptime(ndbcdata.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
                 ndbcdata = {}
             #print (ndbcdata)
             if 'DateTime' in ndbcdata:
