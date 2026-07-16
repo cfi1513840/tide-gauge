@@ -125,15 +125,15 @@ class CreateHTML:
             if 'Atmospheric Pressure' in ndbcdata:
                 ndbc_baro = ndbcdata['Atmospheric Pressure']
             ndbc_currency = 2
-            if current_time < timecheck+timedelta(minutes=300):
-                if current_time >= timecheck+timedelta(minutes=150):
-                    ndbc_currency = 1
-                else:
-                    ndbc_currency = 0
-                try:
+            try:
+                if current_time < timecheck+timedelta(minutes=300):
+                    if current_time >= timecheck+timedelta(minutes=150):
+                        ndbc_currency = 1
+                    else:
+                        ndbc_currency = 0
                     ndbc_time = datetime.strftime(timecheck,'%b %d, %Y %H:%M')
-                except:
-                    logging.info('Error processing NDBC time parameter')
+            except:
+                logging.info('Error processing NDBC time parameter')
             ndbc_wind = ndbc_wind+' kts'
             ndbc_gust = ndbc_gust+' kts'
         #
