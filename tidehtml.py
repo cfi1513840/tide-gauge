@@ -78,7 +78,7 @@ class CreateHTML:
             ndbc_wind_f = ''
             ndbc_gust_f = ''
             ndbc_wave_f = ''
-            timecheck = ''
+            timecheck = datetime.min
             ndbc_time = 'Not Reporting'
             ndbc_location = ''
             ndbc_wind = ''
