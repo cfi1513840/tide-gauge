@@ -79,7 +79,7 @@
          <label for="passwd">Password:</label>
          <input type="password" name="passwd" id="passwd" minlength="8" pattern="[A-Za-z0-9]{8-16}" required><br><br>
          <div class="segmented">
-           <input type="radio" name="actype" id="login" value="0" checked disabled>
+           <input type="radio" name="actype" id="login" value="0" disabled>
            <label for="login">Manage Alerts</label>
            <input type="radio" name="actype" id="changepw" value="1" disabled>
            <label for="changepw">Change Password</label>
@@ -93,6 +93,7 @@
           var emailField = document.getElementById('eaddr');
           var passField = document.getElementById('passwd');
           var radios = document.querySelectorAll('.segmented input[type="radio"]');
+          var labels = document.querySelectorAll('.segmented label');
           var form = emailField.closest('form');
 
           function updateEnabled() {
@@ -103,8 +104,22 @@
           emailField.addEventListener('input', updateEnabled);
           passField.addEventListener('input', updateEnabled);
 
-          radios.forEach(function(r) {
-            r.addEventListener('change', function() {
+          // Listen on the labels themselves, not the radios' change event --
+          // a radio that's already checked (the default "Manage Alerts"
+          // selection) never fires 'change' when clicked again, since its
+          // checked state never actually changes. A label click always
+          // fires regardless, so this covers every pill uniformly.
+          labels.forEach(function(label) {
+            label.addEventListener('click', function() {
+              var radio = document.getElementById(label.getAttribute('for'));
+              if (radio.disabled) {
+                return;
+              }
+              // Set explicitly rather than relying on the browser's native
+              // label-click default action, which runs AFTER this listener,
+              // not before -- calling requestSubmit() synchronously here
+              // would otherwise fire before the radio is actually checked.
+              radio.checked = true;
               if (form.requestSubmit) {
                 form.requestSubmit();
               } else {
