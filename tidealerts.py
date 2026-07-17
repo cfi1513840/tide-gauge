@@ -1,9 +1,9 @@
 import sqlite3
 from datetime import datetime
-from cryptography.fernet import Fernet
 import time
 import pytz
 import logging
+import tidecrypto
 
 class TideAlerts:
     """Check conditions against alert table and provide notification as required"""
@@ -20,6 +20,8 @@ class TideAlerts:
         self.tide_count = 0
         self.phase = ''
         self.wind_samples = [0 for x in range(0,30)]
+        self.f1 = tidecrypto.EMAIL_KEY
+        self.f2 = tidecrypto.PHONE_KEY
        
     def check_alerts(self, tide, weather, ndbc_data, sunrise, sunset, debug):
         current_time = datetime.now()
@@ -60,12 +62,6 @@ class TideAlerts:
         secstolow = round((nextlowtime-current_time).total_seconds())
         mintolow = round(secstolow/60)
 
-        with open('k1','rb') as kfile:
-           key1 = kfile.read()
-        with open('k2','rb') as kfile:
-           key2 = kfile.read()
-        f1 = Fernet(key1)
-        f2 = Fernet(key2)
         self.sql_cursor.execute("select * from useralerts")
         column_names = [description[0] for description in self.sql_cursor.description]
         #print (column_names)
@@ -115,14 +111,14 @@ class TideAlerts:
             self.phase = 'Falling'
         for index, alert_dict in enumerate(alert_list):
             emailAddress = alert_dict['email_address'].encode()
-            emailAddress = f1.decrypt(emailAddress).decode()
+            emailAddress = self.f1.decrypt(emailAddress).decode()
             email_recipient = emailAddress
             alert_dict['email_address'] = email_recipient
             if (alert_dict['phone_number'] != None and 
               alert_dict['phone_number'] != '' and
               alert_dict['phone_number'] != 0):
                 telnbr = alert_dict['phone_number'].encode()
-                telnbr = f2.decrypt(telnbr).decode()
+                telnbr = self.f2.decrypt(telnbr).decode()
                 alert_dict['phone_number'] = telnbr
             else:
                 telnbr = ''

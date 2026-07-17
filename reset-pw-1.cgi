@@ -3,9 +3,9 @@ import cgi, cgitb
 from datetime import datetime
 import sqlite3
 import smtplib
-from cryptography.fernet import Fernet
 import os
 from dotenv import load_dotenv, find_dotenv
+import tidecrypto
 
 form = cgi.FieldStorage()
 valkey = form.getvalue("valkey")
@@ -20,7 +20,6 @@ envfile = find_dotenv('/var/www/html/tide.env')
 if load_dotenv(envfile):
     SQL_PATH = os.getenv('SQL_PATH')
     HTML_URL = os.getenv('HTML_URL')
-    HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
 print ("Content-type:text/html\r\n\r\n")
 print ('<html>')
 print ('<head>')
@@ -36,15 +35,8 @@ print ('<title>Tide Alert Login Request</title>')
 try: 
    sqlcon = sqlite3.connect(f'{SQL_PATH}')
    sqlcur = sqlcon.cursor()
-   with open(f'{HTML_DIRECTORY}k1','rb') as kfile:
-      key1 = kfile.read()
-   with open(f'{HTML_DIRECTORY}k3','rb') as kfile:
-      key3 = kfile.read()
-   f1 = Fernet(key1)
-   f3 = Fernet(key3)
-   newPasswordByte = newPassword.encode()
-   encryptedNewPasswordByte = f3.encrypt(newPasswordByte)
-   encryptedNewPassword = encryptedNewPasswordByte.decode()
+   f1 = tidecrypto.EMAIL_KEY
+   hashedNewPassword = tidecrypto.hash_password(newPassword)
    sqlcur.execute(f'select * from userpass where valkey == "{valkey}"')
    users = sqlcur.fetchall()
    if len(users) != 0:
@@ -52,7 +44,8 @@ try:
       databaseEncryptedEmailAddressByte = databaseEncryptedEmailAddress.encode()
       databaseEmailAddressByte = f1.decrypt(databaseEncryptedEmailAddressByte)
       databaseEmailAddress = databaseEmailAddressByte.decode()
-      sqlcur.execute(f"update userpass set passwd = '{encryptedNewPassword}', valstat = 1, valkey = '' where valkey = '{valkey}'")
+      sqlcur.execute("update userpass set passwd = ?, valstat = 1, valkey = '' where valkey = ?",
+                     (hashedNewPassword, valkey))
       sqlcon.commit()
       print ('</head>')
       print ('<body><font size = "4">')

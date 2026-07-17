@@ -4,7 +4,6 @@ from datetime import datetime
 import sqlite3
 import smtplib
 import secrets
-from cryptography.fernet import Fernet
 
 form = cgi.FieldStorage()
 valkey = form["valkey"].value

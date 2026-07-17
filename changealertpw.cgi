@@ -3,7 +3,7 @@ import cgi, cgitb
 from datetime import datetime
 import sqlite3
 import smtplib
-from cryptography.fernet import Fernet
+import tidecrypto
 
 form = cgi.FieldStorage()
 emailAddress = form.getvalue("eaddr")
@@ -30,21 +30,10 @@ print ('<title>Tide Alert Login Request</title>')
 try: 
    sqlcon = sqlite3.connect('/var/www/html/tides.db')
    sqlcur = sqlcon.cursor()
-   with open('/var/www/html/k1','rb') as kfile:
-      key1 = kfile.read()
-   with open('/var/www/html/k3','rb') as kfile:
-      key3 = kfile.read()
-   f1 = Fernet(key1)
-   f3 = Fernet(key3)
+   f1 = tidecrypto.EMAIL_KEY
    emailAddressByte = emailAddress.encode()
    encryptedEmailAddressByte = f1.encrypt(emailAddressByte)
    encryptedEmailAddress = encryptedEmailAddressByte.decode()
-   oldPasswordByte = oldPassword.encode()
-   encryptedOldPasswordByte = f3.encrypt(oldPasswordByte)
-   encryptedOldPassword = encryptedOldPasswordByte.decode()
-   newPasswordByte = newPassword.encode()
-   encryptedNewPasswordByte = f3.encrypt(newPasswordByte)
-   encryptedNewPassword = encryptedNewPasswordByte.decode()
    sqlcur.execute(f"select * from userpass")
    users = sqlcur.fetchall()
    for user in users:
@@ -53,20 +42,19 @@ try:
       databaseEncryptedEmailAddressByte = databaseEncryptedEmailAddress.encode()
       databaseEmailAddressByte = f1.decrypt(databaseEncryptedEmailAddressByte)
       databaseEmailAddress = databaseEmailAddressByte.decode()
-      databaseEncryptedPassword = user[2]
-      databaseEncryptedPasswordByte = databaseEncryptedPassword.encode()
-      databasePasswordByte = f3.decrypt(databaseEncryptedPasswordByte)
-      databasePassword = databasePasswordByte.decode()
+      storedPassword = user[2]
       if emailAddress == databaseEmailAddress:
          found = True
          if user[3] == 1:
             valid = True
-         if oldPassword != databasePassword:
+         if not tidecrypto.verify_password(oldPassword, storedPassword):
             badpass = True
          break
    #print (f' {cuser} {cpass}')
    if found and not badpass and valid:
-      sqlcur.execute(f"update userpass set passwd = '{encryptedNewPassword}' where emailaddr = '{databaseEncryptedEmailAddress}'")
+      hashedNewPassword = tidecrypto.hash_password(newPassword)
+      sqlcur.execute("update userpass set passwd = ? where emailaddr = ?",
+                     (hashedNewPassword, databaseEncryptedEmailAddress))
       sqlcon.commit()
       print ('</head>')
       print ('<body bgcolor="black"><font size = "4">')

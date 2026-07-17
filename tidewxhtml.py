@@ -49,6 +49,12 @@ class CreateWxHTML:
         if str(response) != '<Response [200]>':
             print (curtimestr,'Error '+str(response)+' from api.weather.gov call')
             wxtime = iparams['wxtime']
+            if wxtime is None:
+                self.outfile.write (f'National Weather Service Forecast Out of Service</span></p>\n')
+                self.outfile.write ('</td>\n')
+                self.outfile.write ('</tr>\n')
+                self.outfile.close()
+                return -2
             timecheck = datetime.strptime(wxtime,"%Y-%m-%d %H:%M:%S")+timedelta(hours=6)
             if current_time > timecheck:
                 self.outfile.write (f'National Weather Service Forecast Out of Service</span></p>\n')

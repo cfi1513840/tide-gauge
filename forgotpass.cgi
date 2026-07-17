@@ -2,53 +2,37 @@
 import cgi, cgitb
 from datetime import datetime
 import sqlite3
-import smtplib
 import secrets
-from cryptography.fernet import Fernet
-from dotenv import load_dotenv, find_dotenv
-import os
 import json
-global  SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD, email_message, \
-       EMAIL_RECIP, headers
+import os
+from dotenv import load_dotenv, find_dotenv
+import tidecrypto
 #
-# Function to send confirmation email message
-#
-def send_email():
-   global SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD, email_message, headers, EMAIL_RECIP
-   session = smtplib.SMTP(SMTP_SERVER,SMTP_PORT)
-   session.ehlo()
-   session.starttls()
-   session.ehlo()
-   session.login(EMAIL_USERNAME,EMAIL_PASSWORD)
-   session.sendmail(EMAIL_USERNAME,EMAIL_RECIP,headers+"\r\n\r\n"+email_message)
-   session.quit()
-#
-# Read and decrypt secure variable names & values
+# Read non-secret configuration (paths, URL) -- no keys or encrypted
+# constants are read here anymore.
 #
 envfile = find_dotenv('/var/www/html/tide.env')
 if load_dotenv(envfile):
     SQL_PATH = os.getenv('SQL_PATH')
     CGI_URL = os.getenv('CGI_URL')
-    HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
-constants_dict = {}
-admin_email = []
-with open(f'{HTML_DIRECTORY}ku', 'r') as file:
-   key = file.read()
-enkey = Fernet(key)
-with open(f'{HTML_DIRECTORY}tide_constants.json','r') as file:
-   dictjson = file.read()
-constants_dict = json.loads(dictjson)
-for ent in constants_dict:
-   clearval = enkey.decrypt(constants_dict[ent].encode())
-   constants_dict[ent] = clearval.decode()
-if constants_dict['ADMIN1'] != 'None':
-   admin_email.append(constants_dict['ADMIN1'])
-if constants_dict['ADMIN2'] != 'None':
-   admin_email.append(constants_dict['ADMIN2'])
-SMTP_SERVER = constants_dict['SMTP_SERVER']
-SMTP_PORT = constants_dict['SMTP_PORT']
-EMAIL_USERNAME = constants_dict['EMAIL_USERNAME']
-EMAIL_PASSWORD = constants_dict['EMAIL_PASSWORD']
+    HTML_DIRECTORY = os.getenv('HTML_DIRECTORY')
+MAILSPOOL_DIR = f'{HTML_DIRECTORY}mailspool/'
+#
+# Write an outbound email request to the mail spool directory for tide.py
+# to send. This CGI no longer holds email credentials or sends mail
+# directly -- see process_mailspool() in tidehelper.py. Written to a temp
+# name first, then atomically renamed into place, so tide.py's spool scan
+# never observes a half-written file.
+#
+def queue_email(recipient, headers, body):
+   filename = f'{datetime.now().strftime("%Y%m%d%H%M%S")}-{secrets.token_hex(8)}.json'
+   filepath = os.path.join(MAILSPOOL_DIR, filename)
+   tmp_path = filepath + '.tmp'
+   request = {'recipient': recipient, 'headers': headers, 'body': body}
+   with open(tmp_path, 'w') as f:
+      json.dump(request, f)
+   os.rename(tmp_path, filepath)
+
 form = cgi.FieldStorage()
 emailAddress = form.getvalue("eaddr")
 timeformat = "%Y-%m-%d %H:%M:%S"
@@ -75,9 +59,7 @@ print ('<title>Tide Alert Login Request</title>')
 try: 
    sqlcon = sqlite3.connect(f'{SQL_PATH}')
    sqlcur = sqlcon.cursor()
-   with open(f'{HTML_DIRECTORY}k1','rb') as kfile:
-      key1 = kfile.read()
-   f1 = Fernet(key1)
+   f1 = tidecrypto.EMAIL_KEY
    emailAddressByte = emailAddress.encode()
    encryptedEmailAddressByte = f1.encrypt(emailAddressByte)
    encryptedEmailAddress = encryptedEmailAddressByte.decode()
@@ -109,12 +91,11 @@ try:
    else:
       sqlcur.execute(f'UPDATE userpass set dtime = "{curtime}", valkey = "{valkey}" where dtime = "{databaseTime}"')
       sqlcon.commit()
-      EMAIL_RECIP = emailAddress
-      headers = ["From: " + EMAIL_USERNAME, "Subject: Tide Alert Request", "To: "+EMAIL_RECIP,"MIME-Versiion:1.0","Content-Type:text/html"]
+      headers = ["Subject: Tide Alert Request", "To: "+emailAddress,"MIME-Versiion:1.0","Content-Type:text/html"]
       headers = "\r\n".join(headers)
       email_message = 'Please select the link to enter a new password for your alert request<br>'+ \
                      f'{CGI_URL}reset-pw.cgi?valkey={valkey}'
-      send_email()
+      queue_email(emailAddress, headers, email_message)
       print ('</head>')
       print('<body bgcolor="black"><font size = "5">')
       print ('<div class="center-screen">')
@@ -134,8 +115,3 @@ except Exception as errmsg:
    print ('</div>')
    print ('</body>')
    print ('</html>')
-
-
-
-
-

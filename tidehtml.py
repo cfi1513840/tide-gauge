@@ -78,7 +78,7 @@ class CreateHTML:
             ndbc_wind_f = ''
             ndbc_gust_f = ''
             ndbc_wave_f = ''
-            timecheck = ''
+            timecheck = datetime.min
             ndbc_time = 'Not Reporting'
             ndbc_location = ''
             ndbc_wind = ''
@@ -90,7 +90,7 @@ class CreateHTML:
             ndbc_water_temp = ''
             ndbc_wave_direction = ''
             ndbc_baro = ''
-            if current_time > datetime.strptime(ndbcdata.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
+            if 'DateTime' in ndbcdata and current_time > datetime.strptime(ndbcdata.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
                 ndbcdata = {}
             #print (ndbcdata)
             if 'DateTime' in ndbcdata:
@@ -125,15 +125,15 @@ class CreateHTML:
             if 'Atmospheric Pressure' in ndbcdata:
                 ndbc_baro = ndbcdata['Atmospheric Pressure']
             ndbc_currency = 2
-            if current_time < timecheck+timedelta(minutes=300):
-                if current_time >= timecheck+timedelta(minutes=150):
-                    ndbc_currency = 1
-                else:
-                    ndbc_currency = 0
-                try:
+            try:
+                if current_time < timecheck+timedelta(minutes=300):
+                    if current_time >= timecheck+timedelta(minutes=150):
+                        ndbc_currency = 1
+                    else:
+                        ndbc_currency = 0
                     ndbc_time = datetime.strftime(timecheck,'%b %d, %Y %H:%M')
-                except:
-                    logging.info('Error processing NDBC time parameter')
+            except:
+                logging.info('Error processing NDBC time parameter')
             ndbc_wind = ndbc_wind+' kts'
             ndbc_gust = ndbc_gust+' kts'
         #

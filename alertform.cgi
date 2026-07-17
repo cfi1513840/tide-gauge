@@ -3,59 +3,42 @@ import os
 import cgi, cgitb
 from datetime import datetime
 import sqlite3
-import smtplib
 import secrets
-from cryptography.fernet import Fernet
 import json
 from dotenv import load_dotenv, find_dotenv
+import tidecrypto
 
-global  SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD
-  
 #
-# Function to send confirmation email message
+# Write an outbound email request to the mail spool directory for tide.py
+# to send. This CGI no longer holds email credentials or sends mail
+# directly -- see process_mailspool() in tidehelper.py. Written to a temp
+# name first, then atomically renamed into place, so tide.py's spool scan
+# never observes a half-written file. The "From:" header is added by
+# process_mailspool() itself, which is the only place EMAIL_USERNAME is
+# now known.
 #
-def send_email(recipient, subject, message):
-    global SMTP_SERVER, SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD
-    headers = [f"From: {EMAIL_USERNAME}",
-      f"Subject: {subject}",
+def queue_email(recipient, subject, message):
+    headers = [f"Subject: {subject}",
       f"To: {recipient}",
       "MIME-Versiion:1.0","Content-Type:text/html"]
     headers = "\r\n".join(headers)
-    session = smtplib.SMTP(SMTP_SERVER,SMTP_PORT)
-    session.ehlo()
-    session.starttls()
-    session.ehlo()
-    session.login(EMAIL_USERNAME,EMAIL_PASSWORD)
-    session.sendmail(
-      EMAIL_USERNAME,recipient,headers+"\r\n\r\n"+message)
-    session.quit()
+    filename = f'{datetime.now().strftime("%Y%m%d%H%M%S")}-{secrets.token_hex(8)}.json'
+    filepath = os.path.join(MAILSPOOL_DIR, filename)
+    tmp_path = filepath + '.tmp'
+    request = {'recipient': recipient, 'headers': headers, 'body': message}
+    with open(tmp_path, 'w') as f:
+        json.dump(request, f)
+    os.rename(tmp_path, filepath)
 #
-# Read and decrypt secure variable names & values
+# Read non-secret configuration (paths, URL) -- no keys or encrypted
+# constants are read here anymore.
 #
-constants_dict = {}
-admin_email = []
-with open('/var/www/html/ku', 'r') as file:
-    key = file.read()
-enkey = Fernet(key)
-with open('/var/www/html/tide_constants.json','r') as file:
-    dictjson = file.read()
-constants_dict = json.loads(dictjson)
-for ent in constants_dict:
-    clearval = enkey.decrypt(constants_dict[ent].encode())
-    constants_dict[ent] = clearval.decode()
-if constants_dict['ADMIN1'] != 'None':
-    admin_email.append(constants_dict['ADMIN1'])
-if constants_dict['ADMIN2'] != 'None':
-    admin_email.append(constants_dict['ADMIN2'])
-SMTP_SERVER = constants_dict['SMTP_SERVER']
-SMTP_PORT = constants_dict['SMTP_PORT']
-EMAIL_USERNAME = constants_dict['EMAIL_USERNAME']
-EMAIL_PASSWORD = constants_dict['EMAIL_PASSWORD']
 envfile = find_dotenv('/var/www/html/tide.env')
 if load_dotenv(envfile):
     SQL_PATH = os.getenv('SQL_PATH')
     CGI_URL = os.getenv('CGI_URL')
     HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
+MAILSPOOL_DIR = f'{HTML_DIRECTORY}mailspool/'
 form = cgi.FieldStorage()
 email_address = form["eaddr"].value
 password = form["passwd"].value
@@ -359,18 +342,11 @@ try:
 #if True:
     sqlcon = sqlite3.connect(SQL_PATH)
     sqlcur = sqlcon.cursor()
-    with open('/var/www/html/k1','rb') as kfile:
-        key1 = kfile.read()
-    with open('/var/www/html/k3','rb') as kfile:
-        key3 = kfile.read()
-    f1 = Fernet(key1)
-    f3 = Fernet(key3)
+    f1 = tidecrypto.EMAIL_KEY
     email_addressByte = email_address.encode()
     encryptedemail_addressByte = f1.encrypt(email_addressByte)
     encryptedemail_address = encryptedemail_addressByte.decode()
     passwordByte = password.encode()
-    encryptedPasswordByte = f3.encrypt(passwordByte)
-    encryptedPassword = encryptedPasswordByte.decode()
     sqlcur.execute(f"select * from userpass")
     users = sqlcur.fetchall()
     for user in users:
@@ -379,17 +355,19 @@ try:
         databaseEncryptedemail_addressByte = databaseEncryptedemail_address.encode()
         databaseemail_addressByte = f1.decrypt(databaseEncryptedemail_addressByte)
         databaseemail_address = databaseemail_addressByte.decode()
-        databaseEncryptedPassword = user[2]
-        databaseEncryptedPasswordByte = databaseEncryptedPassword.encode()
-        databasePasswordByte = f3.decrypt(databaseEncryptedPasswordByte)
-        databasePassword = databasePasswordByte.decode()
+        storedPassword = user[2]
         dbvalkey = user[4]
         if email_address == databaseemail_address:
             found = True
             if user[3] == 1:
                 valid = True
-            if password != databasePassword:
+            if not tidecrypto.verify_password(password, storedPassword):
                 badpass = True
+            elif tidecrypto.is_legacy_password(storedPassword):
+                migratedPassword = tidecrypto.hash_password(password)
+                sqlcur.execute("update userpass set passwd = ? where dtime = ?",
+                               (migratedPassword, databaseTime))
+                sqlcon.commit()
             break
     if actype != '2':
         if not found:
@@ -462,7 +440,7 @@ try:
             print ('<body bgcolor="black"><font size = "4">')
             print ('<div class="center-screen">')
             print ('<span style="border:2px black solid; width: 450px; background-color: #FFE4C4;">')
-            print ('<img src="/Coastal_Maine.png" width="450" height="300"/>')
+            print ('<img src="/webimage.png" width="450" height="300"/>')
             print ('<h1 style="width: 430px; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Alert Login Request</h1>')
             print (f'<p style="width: 438px; text-align: center; font-size: 25px; padding: 4px; border: 2px solid black;">{email_address} requires validation.')
             print (f'An email message has been sent to {email_address}<br>')
@@ -473,19 +451,20 @@ try:
             subject = 'Tide Alert Request'
             email_message = 'You have requested access to Tide Station Alerts, please select the following link to validate your email address<br>'+ \
                                 f'{CGI_URL}valuser.cgi?valkey={dbvalkey}'
-            send_email(email_address, subject, email_message)     
+            queue_email(email_address, subject, email_message)     
         elif actype == '0':
             display_userform(email_address,password)
         elif actype == '1':
             change_password(email_address,password)
     elif not found:
-        dbvals = (curtime, encryptedemail_address, encryptedPassword, 0, valkey)
+        hashedPassword = tidecrypto.hash_password(password)
+        dbvals = (curtime, encryptedemail_address, hashedPassword, 0, valkey)
         sqlcur.execute(f"INSERT INTO userpass VALUES (?,?,?,?,?)", dbvals)
         sqlcon.commit()
         subject = 'Tide Alert Request'
         email_message = 'You have requested access to Tide Station Alerts, please select the following link to validate your email address<br>'+ \
                             f'{CGI_URL}valuser.cgi?valkey={valkey}'
-        send_email(email_address, subject, email_message)     
+        queue_email(email_address, subject, email_message)     
         print ("Content-type:text/html\r\n\r\n")
         print ('<html>')
         print ('<head>')
@@ -544,7 +523,7 @@ try:
         subject = 'Tide Alert Request'
         email_message = 'You have requested access to Tide Station Alerts, please select the following link to validate your email address<br>'+ \
                             f'{CGI_URL}valuser.cgi?valkey={dbvalkey}'
-        send_email(email_address, subject, email_message)     
+        queue_email(email_address, subject, email_message)     
      
     else:
         print ("Content-type:text/html\r\n\r\n")

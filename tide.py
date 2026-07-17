@@ -119,12 +119,7 @@ class Tide:
         elif self.stationid == 3:
             self.stationcal = self.station3cal
             self.stype = self.s3type
-        if self.stype == 'lora':
-            self.influx_duration = '-1m'
-        elif self.stype == 'note':
-            self.influx_duration = '-35m'
-        else:
-            self.influx_duration = '-1m'
+        self.influx_duration = '-24h'
         state.debug = self.iparams_dict.get('debug')
         self.tide_only = self.iparams_dict.get('tide_only')
         display_date_and_time = sunny.get_suntimes(cons, db)
@@ -192,7 +187,7 @@ class Tide:
         self.sensor_read_list = []
         tide_list = []
         tide_list, self.sensor_read_list = db.fetch_tide(
-          self.stationid, self.stationcal, '-24h')            
+          self.stationid, self.stationcal, self.influx_duration)            
         if tide_list:
             self.process = tideprocess.ProcTide(tide_list)
             self.tide_list = self.process.get_tide_list()
@@ -279,7 +274,11 @@ class Tide:
             if valkeys:
                 for valkey in valkeys:
                     #print (str(valkey[0]),valkey[1])
-                    valtime = datetime.strptime(valkey[0],'%Y-%m-%d %H:%M:%S.%f')
+                    try:
+                        valtime = datetime.strptime(valkey[0],'%Y-%m-%d %H:%M:%S.%f')
+                    except (TypeError, ValueError) as errmsg:
+                        logging.warning('main: could not parse dtime for pending registration, skipping row: '+str(errmsg))
+                        continue
                     if self.current_time >= valtime+timedelta(minutes=10):
                         db.update_userpass(valkey[1], valkey[2], valkey[3])
 
@@ -332,6 +331,16 @@ class Tide:
             self.last_db_copy_time = self.current_time
             os.system(f'cp {cons.SQL_PATH} {cons.SQL_COPY}')            
 
+        if self.main_loop_count == 8:
+            #
+            # Check the mail spool directory once per minute for pending
+            # outbound email requests written by the alert-portal CGI
+            # scripts (password reset, alert signup confirmation, etc.).
+            # The CGI scripts no longer hold email credentials or send
+            # mail themselves -- see process_mailspool() in tidehelper.py.
+            #
+            notify.process_mailspool(state.debug)
+
         if self.main_loop_count >= 12:
             #print (self.message_time+' One minute processing')
             self.main_loop_count = 0
@@ -363,7 +372,7 @@ class Tide:
             if getattr(self, f's{self.stationid}enable'):
                 
                 tide_list, self.sensor_read_list = db.fetch_tide(
-                  self.stationid, self.stationcal, '-24h')
+                  self.stationid, self.stationcal, self.influx_duration)
                 volts = 0
                 rssi = 0
                 try:

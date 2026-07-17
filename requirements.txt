@@ -1,0 +1,103 @@
+# ============================================================
+# ACTION Tide & Weather Station -- Python Package Requirements
+# (ACTION: Atlantic Coastal Tide Instrumentation and Observation Network)
+# ============================================================
+# Install with:
+#     ~/.tidenv/bin/pip install -r requirements.txt
+#
+# IMPORTANT: the version pin below (legacy-cgi) reflects what's
+# confirmed working in production (tidebuddy, 2026-07-12). The other
+# packages are listed WITHOUT version pins because no authoritative
+# "known good" version has been captured yet. Before relying on this
+# file for a fresh install, generate real pins from a currently
+# operating node and use that instead of installing latest-of-everything:
+#
+#     ~/.tidenv/bin/pip freeze > requirements.txt
+#
+# then hand-merge the comments below back in, since `pip freeze`
+# output has no explanatory context of its own.
+
+# ------------------------------------------------------------
+# Non-pip infrastructure & account requirements
+# ------------------------------------------------------------
+# These cannot be installed via this file. Listed here so they are
+# not lost -- install.sh does not currently capture any of this.
+# See the Technical Reference Manual, Requirements/Deployment
+# section, for full setup detail.
+#
+# ACCOUNTS / EXTERNAL SERVICES:
+#   - Notecard.io / Notehub.io account -- required for any station
+#     using the Blues Notecard cellular path (SENSOR_SOURCE='notehub'
+#     in tide.env). Notecard devices report to Notehub.io, which
+#     routes data via webhook to tidenote.py's NotehubReceiver class,
+#     integrated into tide.py's main loop via select.select() polling.
+#   - Brevo (transactional email) account -- EMAIL_SERVICE='brevo' in
+#     tide.env. Delivered via SMTP relay (smtplib, stdlib -- no pip
+#     package required) using BREVO_SMTP_SERVER / BREVO_EMAIL_USERNAME
+#     / BREVO_EMAIL_PASSWORD from the encrypted secrets store. A
+#     non-Brevo SMTP_SERVER fallback path also exists if EMAIL_SERVICE
+#     is set to anything else.
+#   - Twilio account -- SMS delivery (see the twilio package below),
+#     used for ADMIN_TEL_NBRS alert/status messages.
+#   - Cloudflare account + cloudflared -- [Ken: confirm exact role here
+#     for the manual -- tunnel to expose the Pi's web server without
+#     port forwarding, DNS-only proxying, or something else?]
+#   - InfluxDB -- installed and configured separately; runs as its own
+#     service, not a pip package. See INFLUXDB_ORG / INFLUXDB_WRITE_CLIENT
+#     / INFLUXDB_QUERY_API usage in tidedatabase.py / tidehelper.py.
+#
+# REMOTE ACCESS:
+#   - TigerVNC (server + viewer) -- remote desktop access, replacing a
+#     prior paid RealVNC subscription. apt package, not pip.
+#
+# SYSTEM-LEVEL (apt, not pip):
+#   - python3-tk -- required ONLY if running tidedisplay.py's local
+#     Tkinter GUI display. NOT needed on headless Pi server nodes --
+#     tide.py itself never imports tkinter.
+#
+# ------------------------------------------------------------
+# Python 3.13+ compatibility note
+# ------------------------------------------------------------
+# The stdlib cgi/cgitb modules were removed in Python 3.13 (PEP 594).
+# All CGI scripts (alertform.cgi, changealertpw.cgi, forgotpass.cgi,
+# processalerts.cgi, reset-pw-1.cgi, valuser.cgi) still do
+# `import cgi, cgitb` unmodified. legacy-cgi below is the officially
+# recommended drop-in replacement (linked directly from Python's own
+# docs for the removed module) and is confirmed working in production
+# on tidebuddy (Python 3.13.5).
+#
+# This is a documented stopgap, not a permanent fix -- see the manual's
+# Technical Debt section for the planned migration to
+# urllib.parse.parse_qsl() (GET) and email.message (POST), per Python's
+# own migration guidance.
+legacy-cgi==2.6.4
+
+# ------------------------------------------------------------
+# Python package requirements
+# ------------------------------------------------------------
+argon2-cffi        # Password hashing (tidecrypto.py hash_password/verify_password) -- replaces Fernet encryption for the password field only (2026-07-13); email/phone remain Fernet-encrypted since those genuinely need to be recovered for sending mail/SMS, unlike passwords which only ever need verification
+cryptography       # Fernet encryption for k1/k2/ku keys (tidecrypto.py, tidehelper.py, encrypt_constants.py, makekeys.py); k3/PASSWORD_KEY is retained only for verifying/migrating legacy-encrypted passwords, see tidecrypto.py
+python-dotenv      # .env config file loading (tide.env) -- used across nearly every module
+influxdb-client    # InfluxDB time-series writes/queries (tidedatabase.py, tidehelper.py)
+pytz               # Timezone handling (tidealerts.py, tidedatabase.py, tide.py, tideplot.py)
+requests           # HTTP calls to NDBC/OpenWeatherMap etc. (tideget.py, tidewxhtml.py)
+urllib3            # Directly imported in tideget.py (import urllib3.util.connection), not relied on merely as a transitive dependency of requests
+pyserial           # USB serial sensor reads (tideget.py, tidemonitor.py) -- import name is 'serial'
+wget               # File download (tideget.py)
+feedparser         # RSS/XML feed parsing (tideget.py)
+twilio             # SMS delivery via Twilio account (tidehelper.py)
+
+# NOTE: both of the following are in active use, in different modules.
+# They are separate, unrelated PyPI packages despite the near-identical
+# names -- this is very likely accidental duplication from different
+# points in the project's history, and a good candidate for future
+# consolidation onto a single package, but both are required as the
+# code currently stands.
+suntime            # Sunrise/sunset calculations (tidehelper.py)
+suntimes           # Sunrise/sunset calculations (tideplot.py) -- NOT the same package as 'suntime' above
+
+# ------------------------------------------------------------
+# Desktop-only, NOT needed on headless Pi server nodes
+# ------------------------------------------------------------
+# tkinter is stdlib but requires the apt package python3-tk, and is
+# only used by tidedisplay.py's local GUI display tool.

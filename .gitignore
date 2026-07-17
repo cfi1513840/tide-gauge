@@ -10,3 +10,5 @@ wx.html
 *.env
 *.txt
 checktide*.py
+!requirements.txt
+

@@ -4,36 +4,27 @@ import os
 from datetime import datetime
 import sqlite3
 import smtplib
-from cryptography.fernet import Fernet
 from dotenv import load_dotenv, find_dotenv
+import tidecrypto
 
 envfile = find_dotenv('/var/www/html/tide.env')
 if load_dotenv(envfile):
     SQL_PATH = os.getenv('SQL_PATH')
     HTML_URL = os.getenv('HTML_URL')
-    HTML_DIRECTORY = os.getenv('HTML_DIRECTORY') 
 form = cgi.FieldStorage()
 valkeyform = form.getvalue("valkey")
 sqlcon = sqlite3.connect(f'{SQL_PATH}')
 sqlcur = sqlcon.cursor()
-with open(f'{HTML_DIRECTORY}k1','rb') as kfile:
-   key1 = kfile.read()
-f1 = Fernet(key1)
-with open(f'{HTML_DIRECTORY}k3','rb') as kfile:
-   key3 = kfile.read()
-f3 = Fernet(key3)
+f1 = tidecrypto.EMAIL_KEY
 sqlcur.execute(f"select * from userpass")
 users = sqlcur.fetchall()
 found = False
 for user in users:
    dbtime = user[0]
    dbuser = user[1]
-   dbpass = user[2]
    valkey = user[4]
    dbuser = dbuser.encode()
-   dbpass = dbpass.encode()
    deuser = f1.decrypt(dbuser).decode()
-   depass = f3.decrypt(dbpass).decode()
    if valkeyform == valkey:
       found = True
       sqlcur.execute(f"update userpass set valstat = 1, valkey='' where dtime = '{dbtime}'")
