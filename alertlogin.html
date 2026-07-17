@@ -15,16 +15,58 @@
 .dirtab {
    text-indent: 33%;
 }
+.segmented {
+   display: flex;
+   justify-content: center;
+   gap: 0;
+   margin: 10px 0;
+}
+.segmented input[type="radio"] {
+   display: none;
+}
+.segmented label {
+   display: inline-block;
+   padding: 7px 12px;
+   margin-right: 8px;
+   border: 2px solid #1B3A5C;
+   border-radius: 18px;
+   color: #1B3A5C;
+   background-color: #FFFFFF;
+   cursor: pointer;
+   font-size: 0.58em;
+   font-weight: bold;
+   white-space: nowrap;
+   transition: all 0.15s ease;
+}
+.segmented input[type="radio"]:checked + label {
+   background-color: #1B3A5C;
+   color: #FFFFFF;
+}
+.segmented label:last-of-type {
+   margin-right: 0;
+}
+.segmented input[type="radio"]:disabled + label {
+   border-color: #AAAAAA;
+   color: #AAAAAA;
+   background-color: #F2F2F2;
+   cursor: not-allowed;
+}
+.forgot-link {
+   font-size: 0.6em;
+   color: #1B3A5C;
+   font-weight: bold;
+}
 </style>
 <head>
    <title>Tide Alert Request login</title>
 </head>
   <body bgcolor="black">
     <div class="center-screen" >
-    <span style="border:2px black solid; width: 450px; background-color: #FFE4C4;">
+    <span style="border:8px double #1B3A5C; box-sizing: border-box; width: 560px; padding: 25px;
+      background-color: #E3F1F0;">
     <img src="/webimage.png"
-         width="400" height="300"/>
-      <h1 style="width: 400px;
+         width="480" height="300"/>
+      <h1 style="width: 480px;
         text-align: center;
         font-size: 25px;
         font-color: black;
@@ -36,16 +78,47 @@
          <input type="email" name="eaddr" id="eaddr" required value=""><br><br>
          <label for="passwd">Password:</label>
          <input type="password" name="passwd" id="passwd" minlength="8" pattern="[A-Za-z0-9]{8-16}" required><br><br>
-         <input type="radio" name="actype" id="login" value="0" checked>
-         <label for="login">Manage Alerts</label><br>
-         <input type="radio" name="actype" id="changepw" value="1">
-         <label for="changepw">Change Password</label><br>
-         <input type="radio" name="actype" id="register" value="2">
-         <label for="register">Register New User</label><br><br>
-         <input type="submit" value="Submit">
-      </form></p>
+         <div class="segmented">
+           <input type="radio" name="actype" id="login" value="0" checked disabled>
+           <label for="login">Manage Alerts</label>
+           <input type="radio" name="actype" id="changepw" value="1" disabled>
+           <label for="changepw">Change Password</label>
+           <input type="radio" name="actype" id="register" value="2" disabled>
+           <label for="register">Register New User</label>
+         </div>
+         <br>
+      </form>
+      <script>
+        (function() {
+          var emailField = document.getElementById('eaddr');
+          var passField = document.getElementById('passwd');
+          var radios = document.querySelectorAll('.segmented input[type="radio"]');
+          var form = emailField.closest('form');
+
+          function updateEnabled() {
+            var ready = emailField.value.trim() !== '' && passField.value.trim() !== '';
+            radios.forEach(function(r) { r.disabled = !ready; });
+          }
+
+          emailField.addEventListener('input', updateEnabled);
+          passField.addEventListener('input', updateEnabled);
+
+          radios.forEach(function(r) {
+            r.addEventListener('change', function() {
+              if (form.requestSubmit) {
+                form.requestSubmit();
+              } else {
+                form.submit();
+              }
+            });
+          });
+
+          updateEnabled();
+        })();
+      </script>
+      </p>
       <p>
-      <a href="/forgotpass.html">Forgot Password</a></p>      
+      <a class="forgot-link" href="/forgotpass.html">Forgot Password</a></p>      
     </span>
     </div>
   </body>
