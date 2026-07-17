@@ -357,7 +357,7 @@ try:
         databaseemail_address = databaseemail_addressByte.decode()
         storedPassword = user[2]
         dbvalkey = user[4]
-        if email_address == databaseemail_address:
+        if email_address.lower() == databaseemail_address.lower():
             found = True
             if user[3] == 1:
                 valid = True

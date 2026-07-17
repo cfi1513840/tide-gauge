@@ -43,7 +43,7 @@ try:
       databaseEmailAddressByte = f1.decrypt(databaseEncryptedEmailAddressByte)
       databaseEmailAddress = databaseEmailAddressByte.decode()
       storedPassword = user[2]
-      if emailAddress == databaseEmailAddress:
+      if emailAddress.lower() == databaseEmailAddress.lower():
          found = True
          if user[3] == 1:
             valid = True
@@ -77,7 +77,7 @@ try:
       print ('<img src="/webimage.png" width="450" height="300"/>')
       print ('<h1 style="width: 430px; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Tide Alert Password Change</h1>')
       print ('<p style="width: 438px; text-align: center; font-size: 25px; padding: 4px; border: 2px solid red;">')
-      print (f'Error updating password for {emailAddress} {oldPassword} {newPassword}</p>')
+      print (f'Error updating password for {emailAddress}</p>')
       print ('</p>')
       print ('</span>')
       print ('</div>')

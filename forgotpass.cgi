@@ -71,7 +71,7 @@ try:
       databaseEncryptedEmailAddressByte = databaseEncryptedEmailAddress.encode()
       databaseEmailAddressByte = f1.decrypt(databaseEncryptedEmailAddressByte)
       databaseEmailAddress = databaseEmailAddressByte.decode()
-      if emailAddress == databaseEmailAddress:
+      if emailAddress.lower() == databaseEmailAddress.lower():
          found = True
          break
    if not found:
