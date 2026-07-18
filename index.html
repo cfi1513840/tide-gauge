@@ -48,21 +48,36 @@
    background-color: #1B3A5C;
    color: #FFFFFF;
 }
-.nav-desc {
-   font-size: 0.62em;
-   color: #1B3A5C;
-   margin: 0 0 14px 0;
+.nav-row {
+   display: flex;
+   align-items: center;
+   text-align: left;
+   gap: 20px;
+   width: 640px;
+   margin: 0 auto 16px auto;
 }
-.nav-subtext {
+.nav-row button {
+   flex-shrink: 0;
+   min-width: 195px;
+}
+.nav-text-group {
+   display: block;
+}
+.nav-desc-inline {
+   font-size: 0.72em;
+   color: #1B3A5C;
+}
+.nav-subtext-inline {
+   display: block;
    font-size: 0.62em;
    font-weight: bold;
-   margin: -8px 0 16px 0;
+   margin-top: 4px;
 }
-.nav-subtext a {
+.nav-subtext-inline a {
    color: #1C6E7A;
    text-decoration: underline;
 }
-.nav-subtext a:hover {
+.nav-subtext-inline a:hover {
    color: #1B3A5C;
 }
 .card-footer {
@@ -87,11 +102,12 @@
 </head>
   <body bgcolor="black">
     <div class="center-screen" >
-    <span style="border:8px double #1B3A5C; box-sizing: border-box; width: 650px; padding: 25px;
+    <span style="border:8px double #1B3A5C; box-sizing: border-box; width: 820px; padding: 25px;
       background-color: #E3F1F0;">
     <img src="/webimage.png"
-         style="width: 560px; height: 350px; object-fit: contain; background-color: #FFFFFF;"/>
-      <h1 id="site-title" style="width: 560px;
+         style="width: 480px; height: 300px; object-fit: contain; background-color: #FFFFFF;"/>
+      <h1 id="site-title" style="width: 480px;
+        margin: 0 auto;
         text-align: center;
         font-size: 25px;
         font-color: black;
@@ -103,13 +119,21 @@
       <p>
       <form action="/cgi-bin/alertform.cgi" method="post">
         <div class="nav-buttons">
-            <button type="submit" formaction="/tide.html">Tidal Conditions</button><br>
-            <p class="nav-desc">Current and predicted tide and weather graphics</p>
-            <button type="submit" formaction="/alertlogin.html">Request Alerts</button><br>
-            <p class="nav-desc">Alert notifications based on changing conditions</p>
-            <p class="nav-subtext"><a href="/alert_tutorial.html">New to alerts? Read the quick guide &rarr;</a></p>
-            <button type="submit" formaction="/tideplot.html">Historical Analysis</button><br>
-            <p class="nav-desc">Plot tide and weather for specified time intervals</p>
+          <div class="nav-row">
+            <button type="submit" formaction="/tide.html">Tidal Conditions</button>
+            <span class="nav-desc-inline">Current and predicted tide and weather graphics</span>
+          </div>
+          <div class="nav-row">
+            <button type="submit" formaction="/alertlogin.html">Request Alerts</button>
+            <span class="nav-text-group">
+              <span class="nav-desc-inline">Alert notifications based on changing conditions</span>
+              <span class="nav-subtext-inline"><a href="/alert_tutorial.html">New to alerts? Read the quick guide &rarr;</a></span>
+            </span>
+          </div>
+          <div class="nav-row">
+            <button type="submit" formaction="/tideplot.html">Historical Analysis</button>
+            <span class="nav-desc-inline">Plot tide and weather for specified time intervals</span>
+          </div>
         </div>
       </form></p>
       <div class="card-footer">
