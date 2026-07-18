@@ -49,9 +49,36 @@
    color: #FFFFFF;
 }
 .nav-desc {
-   font-size: 0.5em;
+   font-size: 0.62em;
    color: #1B3A5C;
    margin: 0 0 14px 0;
+}
+.nav-subtext {
+   font-size: 0.62em;
+   font-weight: bold;
+   margin: -8px 0 16px 0;
+}
+.nav-subtext a {
+   color: #1C6E7A;
+   text-decoration: underline;
+}
+.nav-subtext a:hover {
+   color: #1B3A5C;
+}
+.card-footer {
+   text-align: center;
+   margin-top: 12px;
+   padding-top: 14px;
+   border-top: 1px solid #BFDEDC;
+   font-size: 0.62em;
+   font-weight: bold;
+}
+.card-footer a {
+   color: #1C6E7A;
+   text-decoration: underline;
+}
+.card-footer a:hover {
+   color: #1B3A5C;
 }
 </style>
 <head>
@@ -63,7 +90,7 @@
     <span style="border:8px double #1B3A5C; box-sizing: border-box; width: 650px; padding: 25px;
       background-color: #E3F1F0;">
     <img src="/webimage.png"
-         width="560" height="350"/>
+         style="width: 560px; height: 350px; object-fit: contain; background-color: #FFFFFF;"/>
       <h1 id="site-title" style="width: 560px;
         text-align: center;
         font-size: 25px;
@@ -80,10 +107,14 @@
             <p class="nav-desc">Current and predicted tide and weather graphics</p>
             <button type="submit" formaction="/alertlogin.html">Request Alerts</button><br>
             <p class="nav-desc">Alert notifications based on changing conditions</p>
+            <p class="nav-subtext"><a href="/alert_tutorial.html">New to alerts? Read the quick guide &rarr;</a></p>
             <button type="submit" formaction="/tideplot.html">Historical Analysis</button><br>
             <p class="nav-desc">Plot tide and weather for specified time intervals</p>
         </div>
       </form></p>
+      <div class="card-footer">
+        <a href="/ACTION_Technical_Manual.pdf">Technical documentation for site administrators</a>
+      </div>
     </span>
     </div>
     <script>
