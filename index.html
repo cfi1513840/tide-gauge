@@ -15,29 +15,110 @@
 .dirtab {
    text-indent: 33%;
 }
+.info-block {
+   display: none;
+   width: 100%;
+   box-sizing: border-box;
+   background-color: #FFFFFF;
+   border: 2px solid #1B3A5C;
+   border-radius: 8px;
+   padding: 14px 18px;
+   margin: 16px 0;
+   font-family: 'Fraunces', Georgia, serif;
+   font-style: italic;
+   font-size: 0.62em;
+   line-height: 1.5;
+   text-align: left;
+   color: #1B3A5C;
+   white-space: pre-wrap;
+}
+.nav-buttons button {
+   font-family: "Arial", "Helvetica", sans-serif;
+   font-size: 0.6em;
+   font-weight: bold;
+   color: #1B3A5C;
+   background-color: #FFFFFF;
+   border: 2px solid #1B3A5C;
+   border-radius: 20px;
+   padding: 10px 22px;
+   margin: 6px;
+   cursor: pointer;
+}
+.nav-buttons button:hover {
+   background-color: #1B3A5C;
+   color: #FFFFFF;
+}
+.nav-desc {
+   font-size: 0.5em;
+   color: #1B3A5C;
+   margin: 0 0 14px 0;
+}
 </style>
 <head>
-   <title>Tide Gauge Portal</title>
+   <title>Tide Station Hub</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,400&display=swap">
 </head>
   <body bgcolor="black">
     <div class="center-screen" >
-    <span style="border:2px black solid; width: 700px; background-color: #FFE4C4;">
+    <span style="border:8px double #1B3A5C; box-sizing: border-box; width: 650px; padding: 25px;
+      background-color: #E3F1F0;">
     <img src="/webimage.png"
-         width="700" height="300"/>
-      <h1 style="width: 701px;
+         width="560" height="350"/>
+      <h1 id="site-title" style="width: 560px;
         text-align: center;
         font-size: 25px;
         font-color: black;
         padding: 4px;
-        ">Tide Gauge Portal</h1>
+        ">Tide Station Hub</h1>
+
+      <div id="info-block" class="info-block"></div>
+
       <p>
-      <form action="/cgi-bin/alertform.cgi" method="post"> 
-            <button type="submit" formaction="/tide.html">Tidal Conditions</button>
-               - Current and predicted tide and weather graphics<br><br>
-            <button type="submit" formaction="/alertlogin.html">Request Alerts</button>
-               - Alert notifications based on changing conditions<br><br>
+      <form action="/cgi-bin/alertform.cgi" method="post">
+        <div class="nav-buttons">
+            <button type="submit" formaction="/tide.html">Tidal Conditions</button><br>
+            <p class="nav-desc">Current and predicted tide and weather graphics</p>
+            <button type="submit" formaction="/alertlogin.html">Request Alerts</button><br>
+            <p class="nav-desc">Alert notifications based on changing conditions</p>
+            <button type="submit" formaction="/tideplot.html">Historical Analysis</button><br>
+            <p class="nav-desc">Plot tide and weather for specified time intervals</p>
+        </div>
       </form></p>
     </span>
     </div>
+    <script>
+      fetch('/webinfo.txt')
+        .then(function(response) {
+          if (!response.ok) { throw new Error('not found'); }
+          return response.text();
+        })
+        .then(function(text) {
+          if (text.trim() === '') { return; }
+          var block = document.getElementById('info-block');
+          block.textContent = text;
+          block.style.display = 'block';
+        })
+        .catch(function() {
+          // webinfo.txt not present or unreadable -- leave the info block hidden
+        });
+
+      fetch('/cgi-bin/sitename.cgi')
+        .then(function(response) {
+          if (!response.ok) { throw new Error('not found'); }
+          return response.text();
+        })
+        .then(function(text) {
+          var location = text.trim();
+          if (location === '') { return; }
+          var titleEl = document.getElementById('site-title');
+          var newTitle = location + ' Tide Station Hub';
+          titleEl.textContent = newTitle;
+          document.title = newTitle;
+        })
+        .catch(function() {
+          // sitename.cgi not present/unreadable, or STATION_LOCATION unset --
+          // leave the generic "Tide Station Hub" title as-is
+        });
+    </script>
   </body>
 </html>
