@@ -10,3 +10,4 @@ wx.html
 *.env
 *.txt
 !requirements.txt
+!webinfo.txt
