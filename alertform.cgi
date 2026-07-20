@@ -440,7 +440,7 @@ def change_password(email_address,password):
     print('    var passwd1 = document.getElementsByName("passwd1")[0].value;')
     print('    var passwd2 = document.getElementsByName("passwd2")[0].value;')
     print('    if (passwd1 != passwd2) {')
-    print('      alert("passwords do not match: "+passwd1+" "+passwd2);')
+    print('      alert("passwords do not match");')
     print('      confirmit = false;')
     print('    }')
     print('    return confirmit;')
