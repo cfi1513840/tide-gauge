@@ -15,16 +15,37 @@
 .dirtab {
    text-indent: 33%;
 }
+.navbar {
+   max-width: 560px;
+   margin: 0 auto 14px auto;
+   text-align: center;
+}
+.navbar button {
+   font-family: "Arial", "Helvetica", sans-serif;
+   font-size: 1em;
+   font-weight: bold;
+   color: #FFFFFF;
+   background-color: #1B3A5C;
+   border: 2px solid #000000;
+   border-radius: 6px;
+   padding: 8px 18px;
+   margin: 0 8px;
+   cursor: pointer;
+}
 </style>
 <head>
    <title>Tide Alert Password Reset</title>
 </head>
   <body bgcolor="black"><font size = "4">
     <div class="center-screen">
-    <span style="border:2px black solid; width: 450px; background-color: #FFE4C4;">
+    <div class="navbar">
+      <a href="/index.html"><button type="button">Home</button></a>
+      <a href="/alertlogin.html"><button type="button">Return to Login</button></a>
+    </div>
+    <span style="border:8px double #1B3A5C; box-sizing: border-box; width: 560px; padding: 25px; background-color: #E3F1F0;">
     <img src="/webimage.png"
-         width="400" height="300"/>
-      <h1 style="width: 400px; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Tide Alert Password Reset</h1>
+         style="width: 480px; height: 300px; object-fit: contain; background-color: #FFFFFF;"/>
+      <h1 style="width: 480px; margin: 0 auto; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Tide Alert Password Reset</h1>
       <p>An email message will be sent to the specified address with a link to select a new password<br>
       <form action="/cgi-bin/forgotpass.cgi" method="post"> 
          <label for="eaddr">Email address:</label>
@@ -33,5 +54,5 @@
       </form></p>
     </span>
     </div>
-  </body>
+  </font></body>
 </html>
