@@ -54,7 +54,7 @@ if found:
    print ('<img src="/webimage.png" style="width: 480px; height: 300px; object-fit: contain; background-color: #FFFFFF;"/>')
    print ('<h1 style="width: 480px; margin: 0 auto; text-align: center; font-size: 25px; font-color: black; padding: 4px;">Tide Alert Password Change</h1>')
    print ('<p style="width: 480px; margin: 0 auto; box-sizing: border-box; text-align: center; font-size: 25px; padding: 8px; background-color: #FFFFFF; border: 2px solid #1B3A5C; border-radius: 8px;">')
-   print (f'Success - your email address has been validated, close this tab and return to the login screen')
+   print (f'Success - your email address has been validated, please close this tab and return to the login screen')
    print ('</p>')
    print ('</span>')
    print ('</div>')
