@@ -88,11 +88,13 @@ def suspend_resume():
         actval = actdeact
         email_message = (f'Tide station alert processing has been {sustat} '+
           'for '+userclr)
-        sqlcur.execute(f"UPDATE useralerts set activated = '{actval}' "+
+        sqlcur.execute(f"UPDATE useralerts set alerts_activated = '{actval}' "+
           f"where email_address = '{userenc}'")
     else:
-        sqlcur.execute(f"UPDATE useralerts set enalev = '{actval}',"+
-          f"enaair = '{actval}', enawind = '{actval}' "+
+        sqlcur.execute(f"UPDATE useralerts set tide_level_enable = '{actval}',"+
+          f"air_temp_enable = '{actval}', wind_speed_enable = '{actval}',"+
+          f"tidal_variation_enable = '{actval}', event_notice_enable = '{actval}',"+
+          f"water_temp_enable = '{actval}' "+
           f"where email_address = '{userenc}'")
     sqlcon.commit()
     subject = "Tide Station Alert Activation",
@@ -155,8 +157,37 @@ def create_table():
     print ('white-space: nowrap;')
     print ('}')
     print ('</style>')
+    print ('<style>')
+    print ('.navbar {')
+    print ('max-width: 1400px;')
+    print ('min-width: 800px;')
+    print ('margin: 0 auto 14px auto;')
+    print ('text-align: center;')
+    print ('}')
+    print ('.navbar button {')
+    print ('font-family: "Arial", "Helvetica", sans-serif;')
+    print ('font-size: 1em;')
+    print ('font-weight: bold;')
+    print ('color: #FFFFFF;')
+    print ('background-color: #1A53FF;')
+    print ('border: 2px solid #000000;')
+    print ('border-radius: 6px;')
+    print ('padding: 8px 18px;')
+    print ('margin: 0 8px;')
+    print ('cursor: pointer;')
+    print ('}')
+    print ('</style>')
     print ('</head>')
     print ('<body style="background-color:black;">')
+    print ('<div class="navbar">')
+    print ('<form action="/cgi-bin/alertform.cgi" method="post" style="display:inline;">')
+    print (f'<input type="hidden" name="eaddr" value="{userclr}">')
+    print (f'<input type="hidden" name="passwd" value="{passclr}">')
+    print ('<input type="hidden" name="actype" value="0">')
+    print ('<button type="submit">Add/Update Alerts</button>')
+    print ('</form>')
+    print ('<a href="/tide.html"><button type="button">Tide/Weather</button></a>')
+    print ('</div>')
     print ('<div>')
    #print ('<font size = "5">')
     print (
@@ -167,7 +198,7 @@ def create_table():
     print (
       '<td class="titlebar" colspan="24" style="background-color: #1A53FF; '+
       'border-color : #000000; border-style: solid;">')
-    print (f'Alert Database Entries for {userclr}')
+    print (f'Alert Request Settings for {userclr}')
     print ('</td>')
     print ('</tr>')
     print ('<tr valign="middle">')    
@@ -646,7 +677,7 @@ for user in dbusers:
     dbval = user[3]
     cuser = dbuser.encode()
     cuser = f1.decrypt(cuser).decode()
-    if cuser == userclr and tidecrypto.verify_password(passclr, storedPassword):
+    if cuser.lower() == userclr.lower() and tidecrypto.verify_password(passclr, storedPassword):
         userenc = dbuser
         found = True
         if dbval == 1:
@@ -657,220 +688,207 @@ for user in dbusers:
                            (migratedPassword, dbtime))
             sqlcon.commit()
         break
-if not found or not valid:
-    reportit(userclr,passclr,'invalid')
-tmsgaddr = form.getvalue('taddr')
-if tmsgaddr == None:
-    tmsgaddr = ''
-else:
-    tmsgaddr = (tmsgaddr[0:3]+'-'+tmsgaddr[3:6]+'-'+tmsgaddr[6:]).encode()
-    tmsgaddr = f2.encrypt(tmsgaddr).decode()
-#reportit(userclr,userenc,tmsgaddr)
-tlevel = form.getvalue('tlevel')
-if tlevel == None:
-    tlevel = ''
-else:
-    tlevel = float(tlevel)
-daylight = form.getvalue('daylight')
-if daylight == None:
-    daylight = 0
-else:
-    daylight = int(daylight)
-dayair = form.getvalue('dayair')
-if dayair == None:
-    dayair = 0
-else:
-    dayair = int(dayair)
-enalev = form.getvalue('enalev')
-if enalev == None:
-    enalev = ''
-else:
-    enalev = int(enalev)
-atemp = form.getvalue('atemp')
-if atemp == None:
-    atemp = ''
-else:
-    atemp = int(atemp)
-enaair = form.getvalue('enaair')
-if enaair == None:
-    enaair = ''
-else:
-    enaair = int(enaair)
-wtemp = form.getvalue('wtemp')
-if wtemp == None:
-    wtemp = ''
-else:
-    wtemp = int(wtemp)
-enawat = form.getvalue('enawat')
-if enawat == None:
-    enawat = ''
-else:
-    enawat = int(enawat)
-daywat = form.getvalue('daywat')
-if daywat == None:
-    daywat = 0
-else:
-    daywat = int(daywat)
-wind = form.getvalue('wind')
-if wind == None:
-    wind = ''
-    windir = ''
-elif wind != '':
-    wind = int(wind)
-    windir = form.getvalue('windir')
-    if windir != None:
-       windir = windir.upper()
-       if windir == 'ANY':
-          windir = ''
+if found and valid:
+    tmsgaddr = form.getvalue('taddr')
+    if tmsgaddr == None:
+        tmsgaddr = ''
     else:
+        tmsgaddr = (tmsgaddr[0:3]+'-'+tmsgaddr[3:6]+'-'+tmsgaddr[6:]).encode()
+        tmsgaddr = f2.encrypt(tmsgaddr).decode()
+    #reportit(userclr,userenc,tmsgaddr)
+    tlevel = form.getvalue('tlevel')
+    if tlevel == None:
+        tlevel = ''
+    else:
+        tlevel = float(tlevel)
+    daylight = form.getvalue('daylight')
+    if daylight == None:
+        daylight = 0
+    else:
+        daylight = int(daylight)
+    dayair = form.getvalue('dayair')
+    if dayair == None:
+        dayair = 0
+    else:
+        dayair = int(dayair)
+    enalev = form.getvalue('enalev')
+    if enalev == None:
+        enalev = ''
+    else:
+        enalev = int(enalev)
+    atemp = form.getvalue('atemp')
+    if atemp == None:
+        atemp = ''
+    else:
+        atemp = int(atemp)
+    enaair = form.getvalue('enaair')
+    if enaair == None:
+        enaair = ''
+    else:
+        enaair = int(enaair)
+    wtemp = form.getvalue('wtemp')
+    if wtemp == None:
+        wtemp = ''
+    else:
+        wtemp = int(wtemp)
+    enawat = form.getvalue('enawat')
+    if enawat == None:
+        enawat = ''
+    else:
+        enawat = int(enawat)
+    daywat = form.getvalue('daywat')
+    if daywat == None:
+        daywat = 0
+    else:
+        daywat = int(daywat)
+    wind = form.getvalue('wind')
+    if wind == None:
+        wind = ''
         windir = ''
-enawind = form.getvalue('enawind')
-if enawind == None:
-    enawind = ''
-else:
-    enawind = int(enawind)
-daywind = form.getvalue('daywind')
-if daywind == None:
-    daywind = 0
-else:
-    daywind = int(daywind)
-vari = ''
-try:
-    vari = form.getvalue('vari')
-    if vari == None:
-        vari = ''
+    elif wind != '':
+        wind = int(wind)
+        windir = form.getvalue('windir')
+        if windir != None:
+           windir = windir.upper()
+           if windir == 'ANY':
+              windir = ''
+        else:
+            windir = ''
+    enawind = form.getvalue('enawind')
+    if enawind == None:
+        enawind = ''
     else:
-        varihilo = int(form.getvalue('varihilo'))
-        vari = float(vari) * varihilo
-except:
-    #with open('/var/www/html/processalerts.log', 'a') as logfile:
-    #    logfile.write ('vari: '+vari+' setting to null\n')
+        enawind = int(enawind)
+    daywind = form.getvalue('daywind')
+    if daywind == None:
+        daywind = 0
+    else:
+        daywind = int(daywind)
     vari = ''
-enavari = form.getvalue('enavari')
-if enavari == None:
-    enavari = ''
-else:
-    enavari = int(enavari)
-dayvari = form.getvalue('dayvari')
-if dayvari == None:
-    dayvari = 0
-else:
-    dayvari = int(dayvari)
-evnotice = form.getvalue('evnotice')
-if evnotice == None:
-    evnotice = ''
-else:
-    evnotice = int(evnotice)
-enaevent = form.getvalue('enaevent')
-if enaevent == None:
-    enaevent = ''
-else:
-    enaevent = int(enaevent)
-evtype = form.getvalue('evtype')
-if evtype == None:
-    evtype = ''
-elif evtype == '':
-    evtype = '""'
-else:
-    evtype = int(evtype)
-evrepeat = form.getvalue('evrepeat')
-if evrepeat == None:
-    evrepeat = ''
-elif evrepeat == '':
-    evrepeat = '""'
-else:
-    evrepeat = int(evrepeat)
-evday = form.getvalue('evday')
-if evday == None:
-    evday = '""'
-elif evday == '':
-    evday = '""'
-else:
-    evday = int(evday)
-evthresh = form.getvalue('evthresh')
-if evthresh == None:
-    evthresh = '""'
-elif evthresh != '':
-    evthresh = float(evthresh)
-else:
-    evthresh = '""'
-activate = form.getvalue('activate')
-if activate == None:
-    activate = '0'
-admin = form.getvalue('admin')
-if admin == None:
-    admin = '0'
-atypes = [['tide_level', 'tide_level_enable', 'tide_level_day_only', tlevel,
-              enalev, daylight, 'air_temp', 'wind_speed', 'tidal_variation',
-           'event_notice', 'water_temp'],
-         ['air_temp','air_temp_enable','air_temp_day_only',atemp,
-              enaair,dayair, 'tide_level', 'wind_speed', 'tidal_variation',
-           'event_notice', 'water_temp'],
-         ['wind_speed', 'wind_speed_enable', 'wind_speed_day_only', wind,
-              enawind, daywind, 'tide_level', 'air_temp', 'tidal_variation',
-           'event_notice','water_temp'],
-         ['tidal_variation','tidal_variation_enable','tidal_variation_day_only',
-              vari, enavari, dayvari, 'tide_level', 'air_temp', 'wind_speed',
-           'event_notice','water_temp'],
-         ['event_notice', 'event_notice_enable', 'event_day_only',
-              evnotice, enaevent, evday, 'tide_level', 'air_temp', 'wind_speed',
-           'tidal_variation','water_temp'],
-         ['water_temp', 'water_temp_enable', 'water_temp_day_only', wtemp,
-              enawat, daywat, 'tide_level', 'air_temp','wind_speed',
-           'event_notice','tidal_variation']]
-if admin == '3814':
-    adminreq = True
-elif admin == '3815':
-    activateuser = True
-    actdeact = '1'
-elif admin == '3816':
-    actdeact = '0'
-    activateuser = True
-entryfound = False
-for index, alert_dict in enumerate(alert_list):
-    if alert_dict['email_address'] == userenc:
-      #reportit(userclr,activate,enalev)
-        activated = alert_dict['alerts_activated']
-        dbtextadr = alert_dict['phone_number']
-        entryfound = True
-        break
-if adminreq:
-    create_admin_table()
-elif (activate == '1' or activate == '2') and entryfound:
-    suspend_resume()
-    displaytable = True
-elif activateuser and entryfound:
-    suspend_resume()
-    displaytable = True
-else:
-#
-# If an entry for this email address is present, determine action to be taken.
-#
-    dbvals = ()
-    if entryfound:
-        for atype in atypes:
-            dbvals = ()
-            sqlcommand = ""
-#
-# if the value field is not blank and and the action is delete, delete the
-# entry for this user only if the entry contains no other type alerts,
-# otherwise, remove this entry type only by setting the value to null.
-#
-            if atype[4] == 2 and atype[3] != '':
-                sqlcommand = (
-                  f'select * from useralerts where '+
-                  f'email_address = "{userenc}" and '+
-                  f'{atype[0]} = "{atype[3]}" and '+
-                  f'{atype[6]} = "" and '+
-                  f'{atype[7]} = "" and '+
-                  f'{atype[8]} = "" and '+
-                  f'{atype[9]} = "" and '+
-                  f'{atype[10]} = ""')
-                sqlcur.execute(sqlcommand)
-                rep = sqlcur.fetchall()
-                if len(rep) != 0:
+    try:
+        vari = form.getvalue('vari')
+        if vari == None:
+            vari = ''
+        else:
+            varihilo = int(form.getvalue('varihilo'))
+            vari = float(vari) * varihilo
+    except:
+        #with open('/var/www/html/processalerts.log', 'a') as logfile:
+        #    logfile.write ('vari: '+vari+' setting to null\n')
+        vari = ''
+    enavari = form.getvalue('enavari')
+    if enavari == None:
+        enavari = ''
+    else:
+        enavari = int(enavari)
+    dayvari = form.getvalue('dayvari')
+    if dayvari == None:
+        dayvari = 0
+    else:
+        dayvari = int(dayvari)
+    evnotice = form.getvalue('evnotice')
+    if evnotice == None:
+        evnotice = ''
+    else:
+        evnotice = int(evnotice)
+    enaevent = form.getvalue('enaevent')
+    if enaevent == None:
+        enaevent = ''
+    else:
+        enaevent = int(enaevent)
+    evtype = form.getvalue('evtype')
+    if evtype == None:
+        evtype = ''
+    elif evtype == '':
+        evtype = '""'
+    else:
+        evtype = int(evtype)
+    evrepeat = form.getvalue('evrepeat')
+    if evrepeat == None:
+        evrepeat = ''
+    elif evrepeat == '':
+        evrepeat = '""'
+    else:
+        evrepeat = int(evrepeat)
+    evday = form.getvalue('evday')
+    if evday == None:
+        evday = '""'
+    elif evday == '':
+        evday = '""'
+    else:
+        evday = int(evday)
+    evthresh = form.getvalue('evthresh')
+    if evthresh == None:
+        evthresh = '""'
+    elif evthresh != '':
+        evthresh = float(evthresh)
+    else:
+        evthresh = '""'
+    activate = form.getvalue('activate')
+    if activate == None:
+        activate = '0'
+    admin = form.getvalue('admin')
+    if admin == None:
+        admin = '0'
+    atypes = [['tide_level', 'tide_level_enable', 'tide_level_day_only', tlevel,
+                  enalev, daylight, 'air_temp', 'wind_speed', 'tidal_variation',
+               'event_notice', 'water_temp'],
+             ['air_temp','air_temp_enable','air_temp_day_only',atemp,
+                  enaair,dayair, 'tide_level', 'wind_speed', 'tidal_variation',
+               'event_notice', 'water_temp'],
+             ['wind_speed', 'wind_speed_enable', 'wind_speed_day_only', wind,
+                  enawind, daywind, 'tide_level', 'air_temp', 'tidal_variation',
+               'event_notice','water_temp'],
+             ['tidal_variation','tidal_variation_enable','tidal_variation_day_only',
+                  vari, enavari, dayvari, 'tide_level', 'air_temp', 'wind_speed',
+               'event_notice','water_temp'],
+             ['event_notice', 'event_notice_enable', 'event_day_only',
+                  evnotice, enaevent, evday, 'tide_level', 'air_temp', 'wind_speed',
+               'tidal_variation','water_temp'],
+             ['water_temp', 'water_temp_enable', 'water_temp_day_only', wtemp,
+                  enawat, daywat, 'tide_level', 'air_temp','wind_speed',
+               'event_notice','tidal_variation']]
+    if admin == '3814':
+        adminreq = True
+    elif admin == '3815':
+        activateuser = True
+        actdeact = '1'
+    elif admin == '3816':
+        actdeact = '0'
+        activateuser = True
+    entryfound = False
+    for index, alert_dict in enumerate(alert_list):
+        if alert_dict['email_address'] == userenc:
+          #reportit(userclr,activate,enalev)
+            activated = alert_dict['alerts_activated']
+            dbtextadr = alert_dict['phone_number']
+            entryfound = True
+            break
+    if adminreq:
+        create_admin_table()
+    elif (activate == '1' or activate == '2') and entryfound:
+        suspend_resume()
+        displaytable = True
+    elif activateuser and entryfound:
+        suspend_resume()
+        displaytable = True
+    else:
+    #
+    # If an entry for this email address is present, determine action to be taken.
+    #
+        dbvals = ()
+        if entryfound:
+            for atype in atypes:
+                dbvals = ()
+                sqlcommand = ""
+    #
+    # if the value field is not blank and and the action is delete, delete the
+    # entry for this user only if the entry contains no other type alerts,
+    # otherwise, remove this entry type only by setting the value to null.
+    #
+                if atype[4] == 2 and atype[3] != '':
                     sqlcommand = (
-                      f'delete from useralerts where '+
+                      f'select * from useralerts where '+
                       f'email_address = "{userenc}" and '+
                       f'{atype[0]} = "{atype[3]}" and '+
                       f'{atype[6]} = "" and '+
@@ -878,246 +896,285 @@ else:
                       f'{atype[8]} = "" and '+
                       f'{atype[9]} = "" and '+
                       f'{atype[10]} = ""')
-                    #with open('/var/www/html/processalerts.log', 'a') \
-                    #  as logfile:
-                    #    logfile.write (sqlcommand+'\n')
                     sqlcur.execute(sqlcommand)
-                    sqlcon.commit()
-#
-# if the user was previously activated, save at least one (empty) entry with the 'activated' flag
-#
-                    if activated == 1:
-                        sqlcur.execute(
-                          f'select * from useralerts where '+
-                          f'email_address = "{userenc}"')
-                        rep = sqlcur.fetchall()
-                        if len(rep) == 0:
-                            dbvals = (str(currenttime),
-                              userenc,
-                              dbtextadr,
-                              activated,
-                      '','','','',
-                      '','','','',
-                      '','','','','',
-                      '','','','',
-                      '','','','',
-                      '','','','','','')
-                            sqlcur.execute(
-                              f"INSERT INTO useralerts VALUES "+
-                              "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,"+
-                              "?,?,?,?,?,?,?,?,?,?,?)", dbvals)
-                            sqlcon.commit()
-#
-# If there are other alert types in this database entry row, set the requested type field only to null and disable.
-#
-                else:
-                    if atype[0] != 'wind_speed':
-                        sqlcommand = (f'update useralerts set '+
-                          f'{atype[0]} = "", '+
-                          f'{atype[1]} = 0, '+
-                          f'{atype[2]} = "", '+
-                          'event_type = "", '+
-                          'event_repeat = "", '+
-                          'event_thresh = "" where '+
-                          f'email_address = "{userenc}" and '+
-                          f'{atype[0]} = {atype[3]}')
-                    else:
-                        sqlcommand = (f'update useralerts set '+
-                          f'{atype[0]} = "", '+
-                          f'{atype[1]} = 0, '+
-                          f'{atype[2]} = "", '+
-                          'event_type = "", '+
-                          'event_repeat = "", '+
-                          'event_thresh = "", '+
-                          f'wind_direction = "{windir}" where '+
-                          f'email_address = "{userenc}" and '+
-                          f'{atype[0]} = {atype[3]}')
-                    #with open('/var/www/html/processalerts.log', 'a') \
-                    #  as logfile:
-                    #    logfile.write (sqlcommand+'\n')
-                    sqlcur.execute(sqlcommand)
-                    sqlcon.commit()
-#
-# Process enable and disable actions.
-# If an entry already exists for this type and level, set enable/disable as appropriate,
-# otherwise if no entry exists and action is enable, create a new entry.
-#
-            else:
-                if atype[3] != '':
-                    sqlcur.execute(f'select * from useralerts '+
-                      f'where email_address = "{userenc}" and '+
-                      f'{atype[0]} = {atype[3]}')
                     rep = sqlcur.fetchall()
-               #with open('/var/www/html/processalerts.log', 'a') as logfile:
-               #   logfile.write ('sql reply '+str(rep)+'\n')
                     if len(rep) != 0:
-                        sqlcommand = (f'update useralerts set '+
-                          f'{atype[1]} = {atype[4]}, '+
-                          f'{atype[2]} = {atype[5]}, '+
-                          f'wind_direction = "{windir}", '+
-                          f'event_type = {evtype}, '+
-                          f'event_repeat = {evrepeat}, '+
-                          f'event_thresh = {evthresh} where '+
+                        sqlcommand = (
+                          f'delete from useralerts where '+
                           f'email_address = "{userenc}" and '+
-                          f'{atype[0]} = {atype[3]}')
+                          f'{atype[0]} = "{atype[3]}" and '+
+                          f'{atype[6]} = "" and '+
+                          f'{atype[7]} = "" and '+
+                          f'{atype[8]} = "" and '+
+                          f'{atype[9]} = "" and '+
+                          f'{atype[10]} = ""')
                         #with open('/var/www/html/processalerts.log', 'a') \
                         #  as logfile:
                         #    logfile.write (sqlcommand+'\n')
                         sqlcur.execute(sqlcommand)
                         sqlcon.commit()
-                    elif atype[4] == 1:
-#
-# Use an existing empty entry for the type if available, otherwise create a new entry
-#
-                        sqlcur.execute(f'select * from useralerts where email_address = "{userenc}" and {atype[0]} = ""')
+    #
+    # if the user was previously activated, save at least one (empty) entry with the 'activated' flag
+    #
+                        if activated == 1:
+                            sqlcur.execute(
+                              f'select * from useralerts where '+
+                              f'email_address = "{userenc}"')
+                            rep = sqlcur.fetchall()
+                            if len(rep) == 0:
+                                dbvals = (str(currenttime),
+                                  userenc,
+                                  dbtextadr,
+                                  activated,
+                          '','','','',
+                          '','','','',
+                          '','','','','',
+                          '','','','',
+                          '','','','',
+                          '','','','','','')
+                                sqlcur.execute(
+                                  f"INSERT INTO useralerts VALUES "+
+                                  "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,"+
+                                  "?,?,?,?,?,?,?,?,?,?,?)", dbvals)
+                                sqlcon.commit()
+    #
+    # If there are other alert types in this database entry row, set the requested type field only to null and disable.
+    #
+                    else:
+                        if atype[0] != 'wind_speed':
+                            sqlcommand = (f'update useralerts set '+
+                              f'{atype[0]} = "", '+
+                              f'{atype[1]} = 0, '+
+                              f'{atype[2]} = "", '+
+                              'event_type = "", '+
+                              'event_repeat = "", '+
+                              'event_thresh = "" where '+
+                              f'email_address = "{userenc}" and '+
+                              f'{atype[0]} = {atype[3]}')
+                        else:
+                            sqlcommand = (f'update useralerts set '+
+                              f'{atype[0]} = "", '+
+                              f'{atype[1]} = 0, '+
+                              f'{atype[2]} = "", '+
+                              'event_type = "", '+
+                              'event_repeat = "", '+
+                              'event_thresh = "", '+
+                              f'wind_direction = "{windir}" where '+
+                              f'email_address = "{userenc}" and '+
+                              f'{atype[0]} = {atype[3]}')
+                        #with open('/var/www/html/processalerts.log', 'a') \
+                        #  as logfile:
+                        #    logfile.write (sqlcommand+'\n')
+                        sqlcur.execute(sqlcommand)
+                        sqlcon.commit()
+    #
+    # Process enable and disable actions.
+    # If an entry already exists for this type and level, set enable/disable as appropriate,
+    # otherwise if no entry exists and action is enable, create a new entry.
+    #
+                else:
+                    if atype[3] != '':
+                        sqlcur.execute(f'select * from useralerts '+
+                          f'where email_address = "{userenc}" and '+
+                          f'{atype[0]} = {atype[3]}')
                         rep = sqlcur.fetchall()
+                   #with open('/var/www/html/processalerts.log', 'a') as logfile:
+                   #   logfile.write ('sql reply '+str(rep)+'\n')
                         if len(rep) != 0:
-                            if atype[0] == 'wind':
-                                sqlcommand = (
-                                  f'update useralerts set '+
-                                  f'{atype[0]} = {atype[3]},'+
-                                  f'{atype[1]} = {atype[4]}, '+
-                                  f'{atype[2]} = {atype[5]},'+
-                                  f'wind_direction = "{windir}" where '+
-                                  f'dtime = "{rep[0][0]}"')
-                            elif atype[0] == 'event_notice':
-                                sqlcommand = (
-                                  f'update useralerts set '+
-                                  f'{atype[0]} = {atype[3]},'+
-                                  f'{atype[1]} = {atype[4]}, '+
-                                  f'{atype[2]} = {atype[5]},'+
-                                  f'event_type = {evtype}, '+
-                                  f'event_repeat = {evrepeat},'+
-                                  f'event_thresh = {evthresh} where '+
-                                  f'dtime = "{rep[0][0]}"')
-                            else:                    
-                                sqlcommand = (
-                                  f'update useralerts set '+
-                                  f'{atype[0]} = {atype[3]},'+
-                                  f'{atype[1]} = {atype[4]}, '+
-                                  f'{atype[2]} = {atype[5]} '+
-                                  f'where dtime = "{rep[0][0]}"')
-                            #with open('/var/www/html/processalerts.log', \
-                            #  'a') as logfile:
-                            #    logfile.write ('sqlcommand: '+sqlcommand+'\n')
+                            sqlcommand = (f'update useralerts set '+
+                              f'{atype[1]} = {atype[4]}, '+
+                              f'{atype[2]} = {atype[5]}, '+
+                              f'wind_direction = "{windir}", '+
+                              f'event_type = {evtype}, '+
+                              f'event_repeat = {evrepeat}, '+
+                              f'event_thresh = {evthresh} where '+
+                              f'email_address = "{userenc}" and '+
+                              f'{atype[0]} = {atype[3]}')
+                            #with open('/var/www/html/processalerts.log', 'a') \
+                            #  as logfile:
+                            #    logfile.write (sqlcommand+'\n')
                             sqlcur.execute(sqlcommand)
                             sqlcon.commit()
-                        else:               
-                            dbvals = (
-                              (str(currenttime),
-                              userenc,
-                              tmsgaddr,
-                              activated,
-                              tlevel,
-                              enalev,
-                              daylight,0,
-                              atemp,
-                              enaair,0,
-                              dayair,
-                              wind,
-                              enawind,0,
-                              daywind,
-                              windir,
-                              vari,
-                              enavari,0,
-                              dayvari,
-                              wtemp,
-                              enawat,0,
-                              daywat,
-                              evnotice,
-                              enaevent,
-                              evtype,
-                              evrepeat,
-                              evday,
-                              evthresh))
-                            sqlcur.execute(
-                              f"INSERT INTO useralerts VALUES "+
-                              "(?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?,?,?,?,"+
-                              "?,?,?,?,?,?,?,?,?,?,?)", dbvals)
-                            sqlcon.commit()
-            if sqlcommand != "":
-                subject = 'Tide Station Alert Message'
-                email_message = (
-                  'Tide station alerts have been updated for '+
-                  f'{userclr}, please review')
-                queue_email('ADMIN', subject, email_message)
-        displaytable = True
-    else:
-        if ((tlevel != '' and enalev == 1)
-          or (atemp != '' and enaair == 1)
-          or (wind != '' and enawind == 1)
-          or (evnotice != '' and enaevent == 1)
-          or (wtemp != '' and enawat == 1)
-          or (vari != '' and enavari == 1)):
-            dbvals = (
-              str(currenttime),
-              userenc,
-              tmsgaddr,1,
-              tlevel,
-              enalev,
-              daylight,0,
-              atemp,
-              enaair,0,
-              dayair,
-              wind,
-              enawind,0,
-              daywind,
-              windir,
-              vari,
-              enavari,0,
-              dayvari,
-              wtemp,
-              enawat,0,
-              daywat,
-              evnotice,
-              enaevent,
-              evtype,
-              evrepeat,
-              evday,
-              evthresh)
-            sqlcur.execute(
-              f"INSERT INTO useralerts VALUES "+
-              "(?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?,?,?,?, "+
-              "?,?,?,?,?,?,?,?,?,?,?)", dbvals)
-            sqlcon.commit()
+                        elif atype[4] == 1:
+    #
+    # Use an existing empty entry for the type if available, otherwise create a new entry
+    #
+                            sqlcur.execute(f'select * from useralerts where email_address = "{userenc}" and {atype[0]} = ""')
+                            rep = sqlcur.fetchall()
+                            if len(rep) != 0:
+                                if atype[0] == 'wind':
+                                    sqlcommand = (
+                                      f'update useralerts set '+
+                                      f'{atype[0]} = {atype[3]},'+
+                                      f'{atype[1]} = {atype[4]}, '+
+                                      f'{atype[2]} = {atype[5]},'+
+                                      f'wind_direction = "{windir}" where '+
+                                      f'dtime = "{rep[0][0]}"')
+                                elif atype[0] == 'event_notice':
+                                    sqlcommand = (
+                                      f'update useralerts set '+
+                                      f'{atype[0]} = {atype[3]},'+
+                                      f'{atype[1]} = {atype[4]}, '+
+                                      f'{atype[2]} = {atype[5]},'+
+                                      f'event_type = {evtype}, '+
+                                      f'event_repeat = {evrepeat},'+
+                                      f'event_thresh = {evthresh} where '+
+                                      f'dtime = "{rep[0][0]}"')
+                                else:                    
+                                    sqlcommand = (
+                                      f'update useralerts set '+
+                                      f'{atype[0]} = {atype[3]},'+
+                                      f'{atype[1]} = {atype[4]}, '+
+                                      f'{atype[2]} = {atype[5]} '+
+                                      f'where dtime = "{rep[0][0]}"')
+                                #with open('/var/www/html/processalerts.log', \
+                                #  'a') as logfile:
+                                #    logfile.write ('sqlcommand: '+sqlcommand+'\n')
+                                sqlcur.execute(sqlcommand)
+                                sqlcon.commit()
+                            else:               
+                                dbvals = (
+                                  (str(currenttime),
+                                  userenc,
+                                  tmsgaddr,
+                                  activated,
+                                  tlevel,
+                                  enalev,
+                                  daylight,0,
+                                  atemp,
+                                  enaair,0,
+                                  dayair,
+                                  wind,
+                                  enawind,0,
+                                  daywind,
+                                  windir,
+                                  vari,
+                                  enavari,0,
+                                  dayvari,
+                                  wtemp,
+                                  enawat,0,
+                                  daywat,
+                                  evnotice,
+                                  enaevent,
+                                  evtype,
+                                  evrepeat,
+                                  evday,
+                                  evthresh))
+                                sqlcur.execute(
+                                  f"INSERT INTO useralerts VALUES "+
+                                  "(?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?,?,?,?,"+
+                                  "?,?,?,?,?,?,?,?,?,?,?)", dbvals)
+                                sqlcon.commit()
+                if sqlcommand != "":
+                    subject = 'Tide Station Alert Message'
+                    email_message = (
+                      'Tide station alerts have been updated for '+
+                      f'{userclr}, please review')
+                    queue_email('ADMIN', subject, email_message)
             displaytable = True
+        else:
+            if ((tlevel != '' and enalev == 1)
+              or (atemp != '' and enaair == 1)
+              or (wind != '' and enawind == 1)
+              or (evnotice != '' and enaevent == 1)
+              or (wtemp != '' and enawat == 1)
+              or (vari != '' and enavari == 1)):
+                dbvals = (
+                  str(currenttime),
+                  userenc,
+                  tmsgaddr,1,
+                  tlevel,
+                  enalev,
+                  daylight,0,
+                  atemp,
+                  enaair,0,
+                  dayair,
+                  wind,
+                  enawind,0,
+                  daywind,
+                  windir,
+                  vari,
+                  enavari,0,
+                  dayvari,
+                  wtemp,
+                  enawat,0,
+                  daywat,
+                  evnotice,
+                  enaevent,
+                  evtype,
+                  evrepeat,
+                  evday,
+                  evthresh)
+                sqlcur.execute(
+                  f"INSERT INTO useralerts VALUES "+
+                  "(?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?,?,?,?, "+
+                  "?,?,?,?,?,?,?,?,?,?,?)", dbvals)
+                sqlcon.commit()
+                displaytable = True
             
-    if dbvals:
-        subject = 'Tide Station Alert Message'
-        email_message = ('Tide station alerts have been updated for '+
-          f'{userclr}, please review')
-        queue_email('ADMIN', subject, email_message)
+        if dbvals:
+            subject = 'Tide Station Alert Message'
+            email_message = ('Tide station alerts have been updated for '+
+              f'{userclr}, please review')
+            queue_email('ADMIN', subject, email_message)
 
-if displaytable or (entryfound and admin == '0'):
-    create_table()
+    if displaytable or (entryfound and admin == '0'):
+        create_table()
 
-elif not entryfound and admin != '1':
-    print ("Content-type:text/html\r\n\r\n")
-    print ('<html>')
-    print ('<head>')
-    print ('<title>Tide Station Alerts</title>')
-    print ('<style type="text/css">')
-    print ('.center-screen {')
-    print ('display: flex;')
-    print ('flex-direction: column;')
-    print ('justify-content: center;')
-    print ('align-items: center;')
-    print ('text-align: center;')
-    print ('}')
-    print ('</style>')
-    print ('</head>')
-    print ('<body bgcolor="black"><font size = "4">')
-    print ('<div class="center-screen">')
-    print ('<span style="border:2px black solid; width: 450px; background-color: #FFE4C4;">')
-    print ('<img src="/webimage.png" width="450" height="300"/>')
-    print ('<h1 style="width: 430px; text-align: center; font-size: '+
-      '25px; font-color: black; padding: 4px;">Alert Request</h1>')
-    print (f'<p style="width: 438px; text-align: center; font-size: '+
-      '25px; padding: 4px; border: 2px solid red;">')
-    print (f'There are currently no alert requests for {userclr}')
-    print ('</p>')
-    print ('</span>')
-    print ('</div>')
-    print ('</body>')
-    print ('</html>')
+    elif not entryfound and admin != '1':
+        print ("Content-type:text/html\r\n\r\n")
+        print ('<html>')
+        print ('<head>')
+        print ('<title>Tide Station Alerts</title>')
+        print ('<style type="text/css">')
+        print ('.center-screen {')
+        print ('display: flex;')
+        print ('flex-direction: column;')
+        print ('justify-content: center;')
+        print ('align-items: center;')
+        print ('text-align: center;')
+        print ('}')
+        print ('.navbar {')
+        print ('text-align: center;')
+        print ('margin-bottom: 14px;')
+        print ('}')
+        print ('.navbar button {')
+        print ('font-family: "Arial", "Helvetica", sans-serif;')
+        print ('font-size: 1em;')
+        print ('font-weight: bold;')
+        print ('color: #FFFFFF;')
+        print ('background-color: #1A53FF;')
+        print ('border: 2px solid #000000;')
+        print ('border-radius: 6px;')
+        print ('padding: 8px 18px;')
+        print ('margin: 0 8px;')
+        print ('cursor: pointer;')
+        print ('}')
+        print ('</style>')
+        print ('</head>')
+        print ('<body bgcolor="black"><font size = "4">')
+        print ('<div class="navbar">')
+        print ('<form action="/cgi-bin/alertform.cgi" method="post" style="display:inline;">')
+        print (f'<input type="hidden" name="eaddr" value="{userclr}">')
+        print (f'<input type="hidden" name="passwd" value="{passclr}">')
+        print ('<input type="hidden" name="actype" value="0">')
+        print ('<button type="submit">Add/Update Alerts</button>')
+        print ('</form>')
+        print ('<a href="/tide.html"><button type="button">Tide/Weather</button></a>')
+        print ('</div>')
+        print ('<div class="center-screen">')
+        print ('<span style="border:2px black solid; width: 450px; background-color: #FFE4C4;">')
+        print ('<img src="/webimage.png" width="450" height="300"/>')
+        print ('<h1 style="width: 430px; text-align: center; font-size: '+
+          '25px; font-color: black; padding: 4px;">Alert Request</h1>')
+        print (f'<p style="width: 438px; text-align: center; font-size: '+
+          '25px; padding: 4px; border: 2px solid red;">')
+        print (f'There are currently no alert requests for {userclr}')
+        print ('</p>')
+        print ('</span>')
+        print ('</div>')
+        print ('</body>')
+        print ('</html>')
 
+else:
+    reportit(userclr,'password','invalid')

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tide Alerts &mdash; A Guide to Your Account</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+  :root {
+    --deep-water: #0B3D4F;
+    --tide-teal: #1C6E7A;
+    --sand: #F6F1E4;
+    --foam: #FFFFFF;
+    --driftwood: #443C34;
+    --low-tide-rust: #B5502E;
+    --sea-glass: #2E7D4F;
+    --line: #DCD3BE;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--sand);
+    color: var(--driftwood);
+    font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Fraunces', Georgia, serif;
+    color: var(--deep-water);
+    line-height: 1.2;
+    font-weight: 600;
+  }
+
+  a { color: var(--tide-teal); }
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 3px solid var(--tide-teal);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    background: linear-gradient(180deg, var(--deep-water) 0%, #124F65 100%);
+    color: var(--sand);
+    padding: 64px 24px 0 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero h1 {
+    color: var(--foam);
+    font-size: clamp(2rem, 5vw, 3rem);
+    margin: 0 0 12px 0;
+    letter-spacing: 0.2px;
+  }
+  .hero p {
+    max-width: 620px;
+    margin: 0 auto;
+    font-size: 1.15rem;
+    color: #CFE3E8;
+  }
+  .tide-wave {
+    display: block;
+    width: 100%;
+    height: 90px;
+    margin-top: 40px;
+  }
+
+  /* ---------- Layout ---------- */
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 24px 80px 24px;
+  }
+
+  nav.toc {
+    background: var(--foam);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 28px;
+    margin: -50px auto 48px auto;
+    max-width: 832px;
+    box-shadow: 0 8px 24px rgba(11,61,79,0.12);
+    position: relative;
+  }
+  nav.toc h2 {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--tide-teal);
+    margin: 0 0 12px 0;
+  }
+  nav.toc ol {
+    margin: 0;
+    padding-left: 22px;
+    columns: 2;
+    column-gap: 32px;
+  }
+  nav.toc li { margin-bottom: 8px; break-inside: avoid; }
+  nav.toc a { text-decoration: none; color: var(--driftwood); font-weight: 500; }
+  nav.toc a:hover { color: var(--tide-teal); text-decoration: underline; }
+
+  section {
+    margin: 64px 0;
+    scroll-margin-top: 20px;
+  }
+  section h2 {
+    font-size: 1.7rem;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 10px;
+  }
+  section h2 .eyebrow {
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--tide-teal);
+    letter-spacing: 1px;
+  }
+  section h3 { font-size: 1.2rem; margin-top: 28px; }
+
+  /* ---------- Steps (genuinely sequential content only) ---------- */
+  .steps { list-style: none; padding: 0; margin: 24px 0; counter-reset: step; }
+  .steps li {
+    counter-increment: step;
+    position: relative;
+    padding: 4px 0 4px 56px;
+    margin-bottom: 22px;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0; top: 0;
+    width: 38px; height: 38px;
+    background: var(--deep-water);
+    color: var(--foam);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  .steps li strong { color: var(--deep-water); }
+
+  /* ---------- Callouts ---------- */
+  .callout {
+    border-left: 4px solid var(--tide-teal);
+    background: #EEF6F5;
+    border-radius: 0 8px 8px 0;
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+  .callout.time {
+    border-left-color: var(--low-tide-rust);
+    background: #FBEEE8;
+  }
+  .callout.privacy {
+    border-left-color: var(--sea-glass);
+    background: #EBF5EF;
+  }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .label {
+    font-weight: 700;
+    color: var(--driftwood);
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .callout.time .label { color: var(--low-tide-rust); }
+  .callout.privacy .label { color: var(--sea-glass); }
+
+  /* ---------- Alert type cards ---------- */
+  .alert-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 18px;
+    margin: 28px 0;
+  }
+  .alert-card {
+    background: var(--foam);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+  }
+  .alert-card h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .alert-card .icon {
+    width: 28px; height: 28px;
+    flex-shrink: 0;
+  }
+  .alert-card p { margin: 0; font-size: 0.96rem; }
+
+  /* ---------- Controls explainer ---------- */
+  .control-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin: 14px 0;
+    padding: 12px 16px;
+    background: var(--foam);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .control-row .tag {
+    flex-shrink: 0;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--foam);
+    background: var(--tide-teal);
+    padding: 4px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .control-row.rust .tag { background: var(--low-tide-rust); }
+  .control-row p { margin: 0; }
+
+  /* ---------- Sample confirmation table ---------- */
+  .sample-table-wrap {
+    overflow-x: auto;
+    margin: 20px 0;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+  }
+  table.sample {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 640px;
+  }
+  table.sample th {
+    background: var(--deep-water);
+    color: var(--foam);
+    padding: 10px 12px;
+    text-align: center;
+    font-weight: 600;
+  }
+  table.sample td {
+    padding: 10px 12px;
+    text-align: center;
+    background: var(--foam);
+    border-top: 1px solid var(--line);
+  }
+  table.sample caption {
+    caption-side: top;
+    text-align: left;
+    font-weight: 700;
+    color: var(--deep-water);
+    padding-bottom: 8px;
+  }
+
+  footer {
+    background: var(--deep-water);
+    color: #B9D3DB;
+    text-align: center;
+    padding: 40px 24px;
+    font-size: 0.92rem;
+  }
+  footer a { color: var(--foam); }
+
+  @media (max-width: 640px) {
+    nav.toc { margin-top: -30px; padding: 18px 20px; }
+    nav.toc ol { columns: 1; }
+    .hero { padding-top: 48px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Understanding Your Tide Alerts</h1>
+  <p>A plain-language guide to creating an account, setting up notifications, and reading what comes back &mdash; for the tide and weather stations run by volunteers and academic partners along the coast.</p>
+  <svg class="tide-wave" viewBox="0 0 1200 90" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,45 C150,10 300,80 450,45 C600,10 750,80 900,45 C1050,10 1150,60 1200,45 L1200,90 L0,90 Z" fill="#F6F1E4"/>
+    <path d="M0,45 C150,10 300,80 450,45 C600,10 750,80 900,45 C1050,10 1150,60 1200,45" fill="none" stroke="#CFE3E8" stroke-width="2"/>
+  </svg>
+</div>
+
+<div class="wrap">
+
+  <nav class="toc" aria-label="Table of contents">
+    <h2>On this page</h2>
+    <ol>
+      <li><a href="#account">Creating an account</a></li>
+      <li><a href="#login">Logging in</a></li>
+      <li><a href="#privacy">How your information is protected</a></li>
+      <li><a href="#manage">Managing your account</a></li>
+      <li><a href="#form">The alert request form</a></li>
+      <li><a href="#confirmation">Reading your confirmation page</a></li>
+      <li><a href="#check">Checking your settings without changing them</a></li>
+      <li><a href="#help">Getting help</a></li>
+    </ol>
+  </nav>
+
+  <section id="account">
+    <h2><span class="eyebrow">01</span> Creating an Account</h2>
+    <p>An account is what lets the station send alerts to your email or phone when conditions you care about are met &mdash; a certain tide height, an approaching high tide, unusual wind, and so on. Setting one up takes a minute.</p>
+
+    <ol class="steps">
+      <li><strong>Open the registration form</strong> from the station's home page and choose "Register New User."</li>
+      <li><strong>Enter your email address and choose a password.</strong></li>
+      <li><strong>Submit the form.</strong> The station sends a confirmation email to the address you entered.</li>
+      <li><strong>Open that email and click the confirmation link.</strong> This proves the email address is really yours before any alerts are sent to it.</li>
+    </ol>
+
+    <div class="callout time">
+      <span class="label">Act quickly</span>
+      <p>The confirmation link is only valid for <strong>10 minutes</strong> after you register. If you don't click it in time, the registration attempt expires and you'll need to fill out the form again. This isn't a bug &mdash; it's a deliberate limit so that unfinished, unconfirmed sign-ups don't pile up in the system indefinitely.</p>
+    </div>
+  </section>
+
+  <section id="login">
+    <h2><span class="eyebrow">02</span> Logging In</h2>
+    <p>There isn't a separate "Login" button &mdash; the same form handles logging in, changing your password, and registering, all through one set of radio buttons. To log in, enter your email and password and leave <strong>"Manage Alerts"</strong> selected (it's the option already selected by default), then submit the form.</p>
+    <p>A successful login takes you to the alert request form described below, with your email address already filled in. The other fields always start blank, regardless of what you've saved before &mdash; see <a href="#check">Checking Your Settings Without Changing Them</a> for how to actually view what's currently on file.</p>
+    <p>If your email and password don't match what's on file, the form will let you know rather than silently failing &mdash; double-check for typos, or use the password reset option covered in <a href="#manage">Managing Your Account</a>.</p>
+  </section>
+
+  <section id="privacy">
+    <h2><span class="eyebrow">03</span> How Your Information Is Protected</h2>
+    <p>This tide station is a free service, kept running by volunteers and academic partners &mdash; not a company, and not something that runs on advertising or data. Here's what that means in practice, and how your information is actually handled behind the scenes.</p>
+
+    <div class="callout privacy">
+      <span class="label">Our commitment</span>
+      <p>Your email address and phone number are used <em>only</em> to deliver the alerts you ask for. They are never shared, sold, or used for anything else &mdash; not by us, and not by anyone we work with.</p>
+    </div>
+
+    <h3>Your email and phone number</h3>
+    <p>Before your email address or phone number is ever saved, it's run through an encryption process that scrambles it into unreadable text. That scrambled version is the only thing stored. It can only be unscrambled by the station's own software, at the moment it actually needs to send you an alert &mdash; not by browsing the database directly.</p>
+
+    <h3>Your password</h3>
+    <p>Your password is treated even more carefully: it isn't stored at all, not even in scrambled form. Instead, the system stores a one-way mathematical fingerprint of it. When you log in, your typed password is put through the same process and the two fingerprints are compared. If they match, you're in. There's no step in this process that reveals your actual password to anyone, including the people who maintain this station.</p>
+  </section>
+
+  <section id="manage">
+    <h2><span class="eyebrow">04</span> Managing Your Account</h2>
+
+    <h3>Changing your password</h3>
+    <p>From the login form, enter your email and current password, choose <strong>"Change Password,"</strong> and submit. You'll land on a second page asking only for your new password (entered twice, to confirm it) &mdash; your current password carries over automatically from the first screen, so you won't need to type it again. If it didn't match what's on file, the change won't go through.</p>
+
+    <h3>Forgot your password?</h3>
+    <p>Choose "Forgot Password" and enter your email address. If it matches an account on file, you'll receive an email with a link to set a new password. As with registration, this link is only valid for <strong>10 minutes</strong> &mdash; if it expires, just request a new one.</p>
+  </section>
+
+  <section id="form">
+    <h2><span class="eyebrow">05</span> The Alert Request Form</h2>
+    <p>Once logged in, you'll see one form covering everything the station can watch on your behalf. You don't need to fill in every field &mdash; set up only the alerts that are useful to you, and leave the rest blank.</p>
+
+    <div class="callout">
+      <span class="label">Phone number format</span>
+      <p>If you'd like text alerts, enter your phone number as 10 digits only &mdash; no dashes, spaces, or parentheses (for example, <code>8435555555</code>, not <code>843-555-5555</code>). The form will reject other formats.</p>
+    </div>
+
+    <h3>The six kinds of alerts</h3>
+    <div class="alert-grid">
+      <div class="alert-card">
+        <h3>&#127754; Tide Level</h3>
+        <p>Notify me each time the actual measured tide crosses a height you set, in feet &mdash; once as it rises past that level, and again as it falls back through it.</p>
+      </div>
+      <div class="alert-card">
+        <h3>&#128260; Tidal Variation</h3>
+        <p>Notify me when the real tide differs from what NOAA predicted &mdash; by more than a set amount, either higher or lower than expected. Useful for catching storm surge or other unusual conditions.</p>
+      </div>
+      <div class="alert-card">
+        <h3>&#9200; Event Notice</h3>
+        <p>Give me advance warning &mdash; a set number of minutes ahead of time &mdash; before the next high or low tide, but only if that tide is expected to exceed a threshold you choose.</p>
+      </div>
+      <div class="alert-card">
+        <h3>&#127777; Air Temperature</h3>
+        <p>Notify me when the air temperature reaches a value you set, in degrees Fahrenheit.</p>
+      </div>
+      <div class="alert-card">
+        <h3>&#127754; Water Temperature</h3>
+        <p>Notify me when the coastal water temperature reaches a value you set.</p>
+      </div>
+      <div class="alert-card">
+        <h3>&#128168; Wind Speed</h3>
+        <p>Notify me when wind speed reaches a value you set &mdash; optionally, only when it's blowing from a particular direction.</p>
+      </div>
+    </div>
+
+    <h3>Options that apply to most alerts</h3>
+
+    <div class="control-row">
+      <span class="tag">Daylight Only</span>
+      <p>Check this box if you only want to be notified when the condition occurs during daylight hours. Handy if you'd rather not get a 3&nbsp;a.m. text about something you can't act on until morning anyway.</p>
+    </div>
+
+    <div class="control-row">
+      <span class="tag">Enable</span>
+      <p>Turns this particular alert on. This is selected by default whenever you set values for an alert.</p>
+    </div>
+
+    <div class="control-row">
+      <span class="tag">Disable</span>
+      <p>Turns the alert off temporarily, without erasing the threshold you've already set. Choose this if you want a break without having to re-enter everything later.</p>
+    </div>
+
+    <div class="control-row rust">
+      <span class="tag">Delete</span>
+      <p>Removes this alert entirely. Unlike Disable, there's nothing left to turn back on afterward &mdash; you'd need to set it up again from scratch.</p>
+    </div>
+
+    <h3>Pausing everything at once</h3>
+    <p>Near the bottom of the form, three options let you control all of your alerts together, without touching your individual settings:</p>
+    <div class="control-row">
+      <span class="tag">Suspend All</span>
+      <p>Pause every alert you have &mdash; useful if you're traveling or simply want quiet for a while. Nothing is deleted; your settings are all still there when you come back.</p>
+    </div>
+    <div class="control-row">
+      <span class="tag">Resume All</span>
+      <p>Turn everything back on after a suspension.</p>
+    </div>
+    <div class="control-row">
+      <span class="tag">Clear Resume/Suspend</span>
+      <p>Reset this master switch without changing anything else &mdash; used only in unusual cases.</p>
+    </div>
+  </section>
+
+  <section id="confirmation">
+    <h2><span class="eyebrow">06</span> Reading Your Confirmation Page</h2>
+    <p>Every time you submit the form &mdash; whether you're changing something or not &mdash; you'll land on a page titled <strong>"Alert Database Entries"</strong> for your account. This is a straightforward table showing exactly what's currently saved: your phone number (if provided), each alert's threshold, whether it's enabled, and its Daylight Only status.</p>
+    <p>Think of it as a receipt: confirmation that the form did what you expected, and a quick reference for what's actually active on your account right now.</p>
+
+    <div class="sample-table-wrap">
+      <table class="sample">
+        <caption>Example: Alert Database Entries for you&#64;example.com</caption>
+        <thead>
+          <tr>
+            <th>Phone&nbsp;Nbr</th>
+            <th>Tide</th>
+            <th>Ena</th>
+            <th>Day</th>
+            <th>Air</th>
+            <th>Ena</th>
+            <th>Water</th>
+            <th>Ena</th>
+            <th>Wind</th>
+            <th>Ena</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>843&#8209;555&#8209;5555</td>
+            <td>9.5&nbsp;ft</td>
+            <td>Yes</td>
+            <td>No</td>
+            <td>85&deg;F</td>
+            <td>Yes</td>
+            <td>&mdash;</td>
+            <td>No</td>
+            <td>20&nbsp;mph</td>
+            <td>Yes</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="check">
+    <h2><span class="eyebrow">07</span> Checking Your Settings Without Changing Them</h2>
+    <p>Want to see what you currently have set up, without risking a change to any of it? Log in, leave every field on the form completely blank, and submit it as-is.</p>
+    <div class="callout">
+      <span class="label">Good to know</span>
+      <p>A blank field is always treated as "leave this alone," never as "clear this." So submitting a totally empty form makes no changes at all &mdash; it simply takes you straight to your confirmation page, showing your current settings exactly as they stand. It's the fastest way to check what's active on your account.</p>
+    </div>
+  </section>
+
+  <section id="help">
+    <h2><span class="eyebrow">08</span> Getting Help</h2>
+    <p>If something isn't working as described here &mdash; a confirmation email never arrives, a login that should work doesn't, or anything else looks wrong &mdash; reach out to <a href="mailto:cfi1513840@gmail.com">cfi1513840@gmail.com</a>. Since this station is run by volunteers, please allow some time for a reply.</p>
+  </section>
+
+</div>
+
+<footer>
+  <p>This tide and weather monitoring station is a free, volunteer-run service provided in partnership with academic and community organizations along the coast.</p>
+</footer>
+
+</body>
+</html>
