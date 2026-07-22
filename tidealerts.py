@@ -26,14 +26,26 @@ class TideAlerts:
     def check_alerts(self, tide, weather, ndbc_data, sunrise, sunset, debug):
         current_time = datetime.now()
         message_time = datetime.strftime(current_time, self.cons.TIME_FORMAT)
-        temperature = weather.get('temperature')
-        wind_speed = weather.get('wind_speed')
-        wind_gust = weather.get('wind_gust')
+
+        def to_float_or_none(raw_value):
+            # External weather/NDBC sources may hand back a proper float,
+            # an int, a numeric string, an empty string, or None depending
+            # on the source and conditions -- normalize all of that to
+            # either a real float or None, so every comparison downstream
+            # can safely rely on "not None means it's a usable number."
+            if raw_value is None:
+                return None
+            try:
+                return float(raw_value)
+            except (TypeError, ValueError):
+                return None
+
+        temperature = to_float_or_none(weather.get('temperature'))
+        wind_speed = to_float_or_none(weather.get('wind_speed'))
+        wind_gust = to_float_or_none(weather.get('wind_gust'))
         wind_direction = weather.get('wind_direction_symbol')
         tide_level = tide
-        water_temp = ndbc_data.get('Water Temperature')
-        if isinstance(water_temp, (float, int)):
-            water_temp = float(water_temp)
+        water_temp = to_float_or_none(ndbc_data.get('Water Temperature'))
         #
         # Get the times for the next high and low tides
         #
@@ -231,7 +243,7 @@ class TideAlerts:
                 email_headers = "\r\n".join(email_headers)
 
                 if status == 0:
-                    if (temperature != '' and temperature >= db_level-0.1 and
+                    if (temperature is not None and temperature >= db_level-0.1 and
                       temperature < db_level+0.1):
                         alert_list[index]['air_temp_status'] = 1
                         if (not dayonly or (dayonly and (localtime > sunrise and
@@ -248,7 +260,7 @@ class TideAlerts:
                                 self.notify.send_SMS(telnbr,
                                   text_message, debug) 
                 else:
-                    if (temperature != '' and temperature <= db_level-2.5 or
+                    if (temperature is not None and temperature <= db_level-2.5 or
                       temperature >= db_level+2.5):
                         alert_list[index]['air_temp_status'] = 0
 
@@ -312,7 +324,7 @@ class TideAlerts:
                   email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]
                 email_headers = "\r\n".join(email_headers)
-                if wind_speed != '' and wind_gust != '':
+                if wind_speed is not None and wind_gust is not None:
                     windfact = max(wind_speed,wind_gust)
                     self.wind_samples = self.wind_samples[1:]+[windfact]
                 else:
