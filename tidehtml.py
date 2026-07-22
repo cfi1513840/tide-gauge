@@ -852,13 +852,6 @@ class CreateHTML:
                     ploty = int(plot_base-(avetide-min_y)*y_grid_size)
                     outfile.write (f'ctx.fillRect({plotx},{ploty},2,2);\n')                                             
         outfile.write ('</script>\n')
-        outfile.write ('<div class="navbar">\n')
-        outfile.write ('<a href="/index.html"><button type="button">Home</button></a>\n')
-        outfile.write ('<a href="/alertlogin.html"><button type="button">Request Alerts</button></a>\n')
-        outfile.write ('<a href="/tideplot.html"><button type="button">Historical Analysis</button></a>\n')
-        outfile.write ('</div>\n')
-        outfile.write ('</body>\n')
-        outfile.write ('</html>\n')
         outfile.close()
         self.wxexit = filetag
         excode = subprocess.run(['mv', f'{filetag}', 'tide.tmp'])
