@@ -490,10 +490,10 @@ class Tide:
     def send_visit_report(self):
 
         self.visit = True
-        test_email = visits.email_report()
-        test_SMS = visits.sms_report()
+        email_visits = visits.email_report()
+        SMS_visits = visits.sms_report()
         email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
-          "\n"+test_email)
+          "\n"+email_visits)
         for email_recip in cons.ADMIN_EMAIL:
             if email_recip == None:
                 continue
@@ -511,7 +511,7 @@ class Tide:
               email_message, state.debug,)
 
         text_message = ("From "+cons.HOSTNAME+": "+self.message_time+
-          "\n"+test_SMS)
+          "\n"+SMS_visits)
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:
                 continue
