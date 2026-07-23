@@ -48,6 +48,7 @@ cons = tidehelper.Constants()
 state = tidehelper.TideState()
 notify = tidehelper.Notify(cons)
 val = tidehelper.ValType()
+visits = tidehelper.Visitors("/var/log/apache2/access.lot.1")
 getwx = tideget.GetWeather(cons, val, notify)
 db = tidedatabase.DbManage(cons)
 note_receiver = NotehubReceiver(cons, db)
@@ -342,6 +343,13 @@ class Tide:
             notify.process_mailspool(state.debug)
 
         if self.main_loop_count >= 12:
+
+            test_email, test_SMS = visits.reports()
+            print (test_email)
+            print (test_SMS)
+
+
+
             #print (self.message_time+' One minute processing')
             self.main_loop_count = 0
             self.iparams_dict = db.fetch_iparams()
