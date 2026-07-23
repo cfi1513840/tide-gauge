@@ -345,7 +345,7 @@ class Tide:
         if self.main_loop_count >= 12:
 
             test_email = visits.email_report()
-            test_SMS = visits.SMS_report()
+            test_SMS = visits.sms_report()
             print (test_email)
             print (test_SMS)
 
