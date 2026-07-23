@@ -497,10 +497,6 @@ class Tide:
         for email_recip in cons.ADMIN_EMAIL:
             if email_recip == None:
                 continue
-            #headers = ["From: " + cons.EMAIL_USERNAME,
-            #  "Subject: Tide Station Visits", "To: "+
-            #  email_recip,"MIME-Versiion:1.0","Content-Type:text/html"]
-            #headers = "\r\n".join(headers)
             email_recipient = email_recip
             email_headers = ["From: " + cons.EMAIL_USERNAME,
               f"Subject: {cons.STATION_LOCATION} Tide Station Visits", "To: "
