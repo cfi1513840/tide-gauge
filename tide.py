@@ -296,9 +296,8 @@ class Tide:
             else:
                 self.ndbc_retry = True
 
-        #if (self.main_loop_count == 5 and self.current_time.hour == 7 and
-        #    not self.visit):
-        if (self.main_loop_count == 5):
+        if (self.main_loop_count == 5 and self.current_time.hour == 7 and
+            not self.visit):
             #
             # Webpage visit reports are sent to admin every day at 07:00
             #
