@@ -562,7 +562,7 @@ class Visitors:
             self.visitors[event_name].add(visitor_id)
        
     def email_report(self):
-    """Return a plain-text report suitable for email."""
+        """Return a plain-text report suitable for email."""
 
         date_text = self.report_date.strftime("%B %d, %Y")
 
