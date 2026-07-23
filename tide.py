@@ -359,7 +359,7 @@ class Tide:
                   email_recip,"MIME-Versiion:1.0","Content-Type:text/html"]
                 headers = "\r\n".join(headers)
                 email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
-                  test_email
+                  test_email)
                 email_recipient = email_recip
                 email_headers = ["From: " + cons.EMAIL_USERNAME,
                   f"Subject: {cons.STATION_LOCATION} Tide Station Visits", "To: "
