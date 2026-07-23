@@ -346,9 +346,30 @@ class Tide:
 
             test_email = visits.email_report()
             test_SMS = visits.sms_report()
-            print (test_email)
-            print ("***************************************")
-            print (test_SMS)
+            #print (test_email)
+            #print ("***************************************")
+            #print (test_SMS)
+
+
+            for email_recip in cons.ADMIN_EMAIL:
+                if email_recip == None:
+                    continue
+                headers = ["From: " + cons.EMAIL_USERNAME,
+                  "Subject: BBI Tide Station Visits", "To: "+
+                  email_recip,"MIME-Versiion:1.0","Content-Type:text/html"]
+                headers = "\r\n".join(headers)
+                email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+                  test_email
+                email_recipient = email_recip
+                email_headers = ["From: " + cons.EMAIL_USERNAME,
+                  f"Subject: {cons.STATION_LOCATION} Tide Station Visits", "To: "
+                  +email_recipient,"MIME-Versiion:1.0",
+                  "Content-Type:text/html"]
+                email_headers =  "\r\n".join(email_headers)
+                notify.send_email(email_recipient, email_headers,
+                  email_message, state.debug,)
+
+
 
 
 
