@@ -347,6 +347,7 @@ class Tide:
             test_email = visits.email_report()
             test_SMS = visits.sms_report()
             print (test_email)
+            print ("***************************************")
             print (test_SMS)
 
 
