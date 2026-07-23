@@ -346,20 +346,16 @@ class Tide:
 
             test_email = visits.email_report()
             test_SMS = visits.sms_report()
-            #print (test_email)
-            #print ("***************************************")
-            #print (test_SMS)
 
-
+            email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+              "\n"+test_email)
             for email_recip in cons.ADMIN_EMAIL:
                 if email_recip == None:
                     continue
-                headers = ["From: " + cons.EMAIL_USERNAME,
-                  "Subject: BBI Tide Station Visits", "To: "+
-                  email_recip,"MIME-Versiion:1.0","Content-Type:text/html"]
-                headers = "\r\n".join(headers)
-                email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
-                  "\n"+test_email)
+                #headers = ["From: " + cons.EMAIL_USERNAME,
+                #  "Subject: Tide Station Visits", "To: "+
+                #  email_recip,"MIME-Versiion:1.0","Content-Type:text/html"]
+                #headers = "\r\n".join(headers)
                 email_recipient = email_recip
                 email_headers = ["From: " + cons.EMAIL_USERNAME,
                   f"Subject: {cons.STATION_LOCATION} Tide Station Visits", "To: "
@@ -369,9 +365,12 @@ class Tide:
                 notify.send_email(email_recipient, email_headers,
                   email_message, state.debug,)
 
-
-
-
+            text_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+              "\n"+test_SMS)
+            for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
+                if twilio_phone_recipient == None:
+                    continue
+                notify.send_SMS(twilio_phone_recipient, text_message, state.debug)
 
             #print (self.message_time+' One minute processing')
             self.main_loop_count = 0
