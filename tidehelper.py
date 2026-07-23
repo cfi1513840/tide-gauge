@@ -385,7 +385,6 @@ class ValType:
         
 import re
 from collections import defaultdict
-from datetime import datetime
 from urllib.parse import urlsplit
 
 
@@ -561,43 +560,43 @@ class Visitors:
             )
 
             self.visitors[event_name].add(visitor_id)
+       
+     def email_report(self):
+    """Return a plain-text report suitable for email."""
 
-    def email_report(self):
-        """Return a plain-text report suitable for email."""
+    date_text = self.report_date.strftime("%B %d, %Y")
 
-        date_text = self.report_date.strftime("%B %d, %Y")
+    lines = [
+        f"Website Activity Report — {date_text}",
+        "",
+    ]
 
-        lines = [
-            f"Website Activity Report — {date_text}",
-            "",
-            f"{'Page or function':<28}"
-            f"{'Uses':>7}"
-            f"{'Visitors':>10}",
-            "-" * 45,
-        ]
+    for event_name in self.EVENTS:
+        use_count = self.uses[event_name]
+        visitor_count = len(self.visitors[event_name])
 
-        for event_name in self.EVENTS:
-            lines.append(
-                f"{event_name:<28}"
-                f"{self.uses[event_name]:>7}"
-                f"{len(self.visitors[event_name]):>10}"
-            )
+        lines.append(
+            f"{event_name}: "
+            f"{use_count} uses, "
+            f"{visitor_count} visitors"
+        )
 
-        lines.extend([
-            "",
-            "Uses: Total successful requests.",
-            "Visitors: Distinct IP address/browser combinations.",
-            f"Recognizable bot requests excluded: "
-            f"{self.bot_requests}",
-        ])
+    lines.extend([
+        "",
+        f"Recognizable bot requests excluded: "
+        f"{self.bot_requests}",
+        "",
+        "Uses: Total successful requests.",
+        "Visitors: Distinct IP address/browser combinations.",
+    ])
 
-        if self.unparsed_lines:
-            lines.append(
-                f"Unrecognized log lines: "
-                f"{self.unparsed_lines}"
-            )
+    if self.unparsed_lines:
+        lines.append(
+            f"Unrecognized log lines: {self.unparsed_lines}"
+        )
 
-        return "\n".join(lines)
+    return "\n".join(lines)   
+        
 
     def sms_report(self):
         """Return a compact report suitable for SMS."""
