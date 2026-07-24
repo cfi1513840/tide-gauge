@@ -48,6 +48,7 @@ cons = tidehelper.Constants()
 state = tidehelper.TideState()
 notify = tidehelper.Notify(cons)
 val = tidehelper.ValType()
+visits = tidehelper.Visitors("/var/log/apache2/access.log.1")
 getwx = tideget.GetWeather(cons, val, notify)
 db = tidedatabase.DbManage(cons)
 note_receiver = NotehubReceiver(cons, db)
@@ -342,6 +343,7 @@ class Tide:
             notify.process_mailspool(state.debug)
 
         if self.main_loop_count >= 12:
+
             #print (self.message_time+' One minute processing')
             self.main_loop_count = 0
             self.iparams_dict = db.fetch_iparams()
@@ -488,37 +490,14 @@ class Tide:
     def send_visit_report(self):
 
         self.visit = True
-        grephome = ["grep -o 'webimage.png' /var/log/apache2/access.log.1  | wc -l"]
-        greptide = ["grep -o 'GET /tide.html' /var/log/apache2/access.log.1  | wc -l"]
-        grepuser = ["grep -o 'GET /alertlogin.html' /var/log/apache2/access.log.1  | wc -l"]
-        grepumod = ["grep -o 'POST /cgi-bin/alertform.cgi' /var/log/apache2/access.log.1  | wc -l"]
-        homecount = subprocess.check_output(grephome,shell=True)
-        homecount = int(homecount)
-        tidecount = subprocess.check_output(greptide,shell=True)
-        tidecount = int(tidecount)
-        usercount = subprocess.check_output(grepuser,shell=True)
-        usercount = int(usercount)
-        umodcount = subprocess.check_output(grepumod,shell=True)
-        umodcount = int(umodcount)
-        with open('/var/log/apache2/access.log.1', 'r') as visfile:
-            vislines = visfile.readlines()
-        visfields = vislines[0].split()
-        visdate = visfields[3][1:12]
+        email_visits = visits.email_report()
+        SMS_visits = visits.sms_report()
+        email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+          "\n"+email_visits)
         for email_recip in cons.ADMIN_EMAIL:
             if email_recip == None:
                 continue
-            headers = ["From: " + cons.EMAIL_USERNAME,
-              "Subject: BBI Tide Station Visits", "To: "+
-              email_recip,"MIME-Versiion:1.0","Content-Type:text/html"]
-            headers = "\r\n".join(headers)
-            email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
-              " - Page Hits on "+visdate+
-              "<br />Home Page - "+str(homecount)+
-              "<br />Current Tide Page - "+str(tidecount)+
-              "<br />User Alert Login Form - "+str(usercount)+
-              "<br />User Alert Update - "+str(umodcount))
             email_recipient = email_recip
-            #email_recipient = cons.ADMIN_EMAIL[0]
             email_headers = ["From: " + cons.EMAIL_USERNAME,
               f"Subject: {cons.STATION_LOCATION} Tide Station Visits", "To: "
               +email_recipient,"MIME-Versiion:1.0",
@@ -528,18 +507,11 @@ class Tide:
               email_message, state.debug,)
 
         text_message = ("From "+cons.HOSTNAME+": "+self.message_time+
-          " - Page Hits on "+visdate+
-          "\nHome Page - "+str(homecount)+
-          "\nTide Page - "+str(tidecount)+
-          "\nAlert Login Page - "+str(usercount)+
-          "\nAlert Form - "+str(umodcount))
+          "\n"+SMS_visits)
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:
                 continue
             notify.send_SMS(twilio_phone_recipient, text_message, state.debug)
-
-
-
 #
 # Start the ball rolling
 #

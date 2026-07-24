@@ -71,25 +71,25 @@ class CreateHTML:
             if 'V' in sensor: batv = sensor['V']
             if 's' in sensor: solarv = sensor['s']
             if 'P' in sensor: rssi = sensor['P']
+        ndbc_wind_f = ''
+        ndbc_gust_f = ''
+        ndbc_wave_f = ''
+        timecheck = datetime.min
+        ndbc_time = 'Not Reporting'
+        ndbc_location = ''
+        ndbc_wind = ''
+        ndbc_wind_direction = ''
+        ndbc_gust = ''
+        ndbc_wave_height = ''
+        ndbc_wave_period = ''
+        ndbc_air_temp = ''
+        ndbc_water_temp = ''
+        ndbc_wave_direction = ''
+        ndbc_baro = ''
         if ndbcdata and not self.tide_only:
             #
             # Extract NDBC dictionary data
             #
-            ndbc_wind_f = ''
-            ndbc_gust_f = ''
-            ndbc_wave_f = ''
-            timecheck = datetime.min
-            ndbc_time = 'Not Reporting'
-            ndbc_location = ''
-            ndbc_wind = ''
-            ndbc_wind_direction = ''
-            ndbc_gust = ''
-            ndbc_wave_height = ''
-            ndbc_wave_period = ''
-            ndbc_air_temp = ''
-            ndbc_water_temp = ''
-            ndbc_wave_direction = ''
-            ndbc_baro = ''
             if 'DateTime' in ndbcdata and current_time > datetime.strptime(ndbcdata.get('DateTime'), '%b %d, %Y %H:%M') + timedelta(hours=4):
                 ndbcdata = {}
             #print (ndbcdata)
@@ -373,26 +373,42 @@ class CreateHTML:
         outfile.write ('p.nbot {\n')
         outfile.write ('border-bottom-style: none;\n')
         outfile.write ('}\n')    
+        outfile.write ('.navbar {\n')
+        outfile.write ('max-width: 560px;\n')
+        outfile.write ('margin: 14px auto;\n')
+        outfile.write ('text-align: center;\n')
+        outfile.write ('}\n')
+        outfile.write ('.navbar button {\n')
+        outfile.write ('font-family: "Arial", "Helvetica", sans-serif;\n')
+        outfile.write ('font-size: 1em;\n')
+        outfile.write ('font-weight: bold;\n')
+        outfile.write ('color: #FFFFFF;\n')
+        outfile.write ('background-color: #1B3A5C;\n')
+        outfile.write ('border: 2px solid #000000;\n')
+        outfile.write ('border-radius: 6px;\n')
+        outfile.write ('padding: 8px 18px;\n')
+        outfile.write ('margin: 0 8px;\n')
+        outfile.write ('cursor: pointer;\n')
+        outfile.write ('}\n')
         outfile.write ('</style>\n')
         outfile.write ('</head>\n')
         outfile.write ('<body style="background-color:black;">\n')
+        outfile.write ('<div class="navbar">\n')
+        outfile.write ('<a href="/index.html"><button type="button">Home</button></a>\n')
+        outfile.write ('<a href="/alertlogin.html"><button type="button">Request Alerts</button></a>\n')
+        outfile.write ('<a href="/tideplot.html"><button type="button">Historical Analysis</button></a>\n')
+        outfile.write ('</div>\n')
         outfile.write ('<div>\n')
         outfile.write (f'<table width="{canw_str}" border="2" cellpadding="2" cellspacing="2" style="border-color: #000000; border-style: solid; background-color: #ccffff;">\n')
         outfile.write ('<tr valign="middle">\n') 
         #outfile.write ('<td colspan="4" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         #outfile.write (f'BatV: {round(float(batv)/1000, 3)}&nbsp&nbsp&nbsprssi: {rssi}</span></p>\n')
         #outfile.write ('</td>\n')
-        outfile.write ('<td colspan="5" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
+        outfile.write ('<td colspan="7" style="background-color: #1A53FF; text-align: center;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         outfile.write (f'{self.cons.STATION_LOCATION} Tide & Weather - {dispdate}.&nbsp&nbspSunrise: {sunrise} - Sunset: {sunset}</span></p>\n')
         outfile.write ('</td>\n')
-        outfile.write ('<td colspan="2" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
+        outfile.write ('<td colspan="3" style="background-color: #1A53FF; text-align: center;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         outfile.write (f'BatV: {round(float(batv)/1000, 3)}&nbsp&nbsp&nbsprssi: {rssi}</span></p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td colspan="2" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
-        outfile.write (f'<form action="/alertlogin.html"><button type="submit">Alerts</button></form></span></p>\n')
-        outfile.write ('</td>\n')
-        outfile.write ('<td colspan="2" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
-        outfile.write (f'<form action="/tideplot.html"><button type="submit">Plots</button></form></span></p>\n')
         outfile.write ('</td>\n')
         outfile.write ('</tr>\n')
         if not self.tide_only:
@@ -459,7 +475,7 @@ class CreateHTML:
             outfile.write ('<tr valign="middle">\n')
             #outfile.write ('<td colspan="10" style="background-color: #1A53FF;">\n')
             outfile.write ('<td colspan="10" style="background-color: #6BB4E2;">\n')
-            if True:
+            if ndbc_currency == 0:
                 outfile.write (
                   f'<p><a href="{self.NDBC_URL}" '+
                   f'style="color: black">{self.cons.NDBC_TITLE}</a></p>\n')
@@ -836,8 +852,6 @@ class CreateHTML:
                     ploty = int(plot_base-(avetide-min_y)*y_grid_size)
                     outfile.write (f'ctx.fillRect({plotx},{ploty},2,2);\n')                                             
         outfile.write ('</script>\n')
-        #outfile.write ('</body>\n') # temporary
-        #outfile.write ('</html>\n') # temporary
         outfile.close()
         self.wxexit = filetag
         excode = subprocess.run(['mv', f'{filetag}', 'tide.tmp'])
