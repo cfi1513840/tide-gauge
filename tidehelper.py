@@ -517,15 +517,11 @@ class Visitors:
                 f"No valid Apache entries found in {self.log_file}"
             )
 
-        self.report_date = max(
+        self.report_date = min(
             record["date"] for record in records
         )
 
         for record in records:
-
-            # Ignore entries from earlier dates
-            if record["date"] != self.report_date:
-                continue
 
             event = self._path_lookup.get(record["path"])
 
