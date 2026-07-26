@@ -391,11 +391,6 @@ from urllib.parse import urlsplit
 class Visitors:
 
     EVENTS = {
-        "Home page": (
-            "Home",
-            {"/", "/index.html"},
-            {"GET"},
-        ),
         "Tide & Weather": (
             "Tide",
             {"/tide.html"},
@@ -517,9 +512,8 @@ class Visitors:
                 f"No valid Apache entries found in {self.log_file}"
             )
 
-        self.report_date = min(
-            record["date"] for record in records
-        )
+        if self.report_date is None:
+            self.report_date = records[0]["date"]
 
         for record in records:
 
