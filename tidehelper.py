@@ -442,6 +442,8 @@ class Visitors:
 
     def __init__(self, log_file):
         self.log_file = log_file
+        
+    def _initialize(self):
         self.report_date = None
 
         self.uses = defaultdict(int)
@@ -451,7 +453,6 @@ class Visitors:
         self.unparsed_lines = 0
 
         self._path_lookup = self._create_path_lookup()
-        #self._analyze()
 
     def _create_path_lookup(self):
         """Create a lookup from a URL path to its report category."""
@@ -607,6 +608,6 @@ class Visitors:
 
     def reports(self):
         """Return both email and SMS reports."""
-        
+        self._initialize()
         self._analyze()
         return self.email_report(), self.sms_report()
