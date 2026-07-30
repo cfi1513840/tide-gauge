@@ -3,20 +3,26 @@
 """
 File: tidehelper.py
 Author: K. Howell
-Version: 1.0
-Date: 2025-03-29
+Version: 1.1
+Date: 2026-07-30
 Description:
 Provides the following utility functions: sending email and sms messages,
 acquiring sunrise and sunset times and declaring system constants,
-and checking variable field types.
+checking variable field types, and formatting website visit reports.
 """
+from __future__ import annotations
+
 import os
 import subprocess
 import math
 import smtplib
 import json
+import re
 import socket
+from collections import OrderedDict
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Optional
 import logging
 from suntime import Sun
 import pytz
@@ -382,232 +388,142 @@ class ValType:
             except:
                 newvar = -99
         return newvar
-        
-import re
-from collections import defaultdict
-from urllib.parse import urlsplit
 
+class DailyVisitReport:
+    """
+    Parses an Apache2 "combined" format access log and produces a plain-text
+    summary of visits to a fixed set of tracked pages.
 
-class Visitors:
+    Counting rule: a line counts as a "visit" to a tracked page if the
+    request path (query string ignored) matches one of the tracked paths
+    AND the response status is < 400 (i.e. it was actually served, not a
+    404/403/5xx). This filters out the constant background noise of bots
+    probing for pages that don't exist, while still counting real page
+    loads regardless of HTTP method (GET, POST, HEAD) -- which matters for
+    pages like the alert form CGI that are visited via POST.
+    """
 
-    EVENTS = {
-        "Tide & Weather": (
-            "Tide",
-            {"/tide.html"},
-            {"GET", "POST"},
-        ),
-        "Alert Login": (
-            "Login",
-            {"/alertlogin.html"},
-            {"GET"},
-        ),
-        "Alert Form Displayed": (
-            "Form",
-            {"/cgi-bin/alertform.cgi"},
-            {"GET", "POST"},
-        ),
-        "Alert Request Processed": (
-            "Alerts",
-            {"/cgi-bin/processalerts.cgi"},
-            {"POST"},
-        ),
-        "Historical Analysis": (
-            "History",
-            {"/tideplot.html"},
-            {"GET", "POST"},
-        ),
-        "Historical Plot Generated": (
-            "Plots",
-            {"/cgi-bin/tideplot.cgi"},
-            {"GET", "POST"},
-        ),
-    }
-
-    BOT_PATTERN = re.compile(
-        r"bot|spider|crawler|crawl|slurp|scan|scrapy|"
-        r"wget|curl|python-requests|go-http-client|"
-        r"headless|phantom|selenium|claude|bytespider|"
-        r"applebot|oai-searchbot|mj12bot|domainscores|"
-        r"petalbot|wp-safe-scanner",
-        re.IGNORECASE,
-    )
-
-    LOG_PATTERN = re.compile(
-        r'^(?P<ip>\S+) \S+ \S+ '
-        r'\[(?P<time>[^\]]+)\] '
-        r'"(?P<method>\S+) (?P<url>\S+) [^"]*" '
-        r'(?P<status>\d{3}) \S+ '
-        r'"[^"]*" "(?P<agent>[^"]*)"'
-    )
-
-    def __init__(self, log_file):
-        self.log_file = log_file
-        
-    def _initialize(self):
-        self.report_date = None
-
-        self.uses = defaultdict(int)
-        self.visitors = defaultdict(set)
-
-        self.bot_requests = 0
-        self.unparsed_lines = 0
-
-        self._path_lookup = self._create_path_lookup()
-
-    def _create_path_lookup(self):
-        """Create a lookup from a URL path to its report category."""
-
-        path_lookup = {}
-
-        for event_name, event_data in self.EVENTS.items():
-            short_name, paths, methods = event_data
-
-            for path in paths:
-                path_lookup[path] = (event_name, methods)
-
-        return path_lookup
-
-    def _read_log(self):
-        """Read and parse valid entries from the Apache log."""
-
-        records = []
-
-        with open(
-            self.log_file,
-            encoding="utf-8",
-            errors="replace",
-        ) as logfile:
-
-            for line in logfile:
-                match = self.LOG_PATTERN.match(line)
-
-                if not match:
-                    self.unparsed_lines += 1
-                    continue
-
-                request_time = datetime.strptime(
-                    match.group("time"),
-                    "%d/%b/%Y:%H:%M:%S %z",
-                )
-
-                records.append({
-                    "date": request_time.date(),
-                    "ip": match.group("ip"),
-                    "method": match.group("method"),
-                    "path": urlsplit(
-                        match.group("url")
-                    ).path,
-                    "status": int(match.group("status")),
-                    "agent": match.group("agent"),
-                })
-
-        return records
-
-    def _analyze(self):
-        """Analyze the most recent date contained in the log."""
-
-        records = self._read_log()
-
-        if not records:
-            raise ValueError(
-                f"No valid Apache entries found in {self.log_file}"
-            )
-
-        if self.report_date is None:
-            self.report_date = records[0]["date"]
-
-        for record in records:
-
-            event = self._path_lookup.get(record["path"])
-
-            if event is None:
-                continue
-
-            event_name, allowed_methods = event
-
-            if record["method"] not in allowed_methods:
-                continue
-
-            # Count successful and cached responses
-            if not 200 <= record["status"] < 400:
-                continue
-
-            agent = record["agent"]
-
-            if (
-                not agent
-                or agent == "-"
-                or self.BOT_PATTERN.search(agent)
-            ):
-                self.bot_requests += 1
-                continue
-
-            self.uses[event_name] += 1
-
-            # Each IP/browser combination counts once per category
-            visitor_id = (
-                record["ip"],
-                agent,
-            )
-
-            self.visitors[event_name].add(visitor_id)
-       
-    def email_report(self):
-        """Return a plain-text report suitable for email."""
-
-        date_text = self.report_date.strftime("%B %d, %Y")
-
-        lines = [
-            f"Website Activity Report — {date_text}",
-            "",
+    # Ordered so the report always lists categories in this sequence,
+    # even when a category had zero visits.
+    CATEGORIES: "OrderedDict[str, tuple[str, ...]]" = OrderedDict(
+        [
+            ("Tide & Weather", ("/tide.html",)),
+            ("Alert Login", ("/alertlogin.html",)),
+            ("Alert Form", ("/cgi-bin/alertform.cgi",)),
+            ("Alert Request", ("/cgi-bin/processalerts.cgi",)),
+            ("Historical Analysis", ("/tideplot.html", "/cgi-bin/tideplot.cgi")),
         ]
+    )
 
-        for event_name in self.EVENTS:
-            use_count = self.uses[event_name]
-            visitor_count = len(self.visitors[event_name])
+    # Apache "combined" log format:
+    # %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"
+    LOG_LINE_RE = re.compile(
+        r'^(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) '
+        r'\[(?P<time>[^\]]+)\] '
+        r'"(?P<request>[^"]*)" '
+        r'(?P<status>\d{3}) (?P<size>\S+) '
+        r'"(?P<referer>[^"]*)" "(?P<agent>[^"]*)"'
+    )
 
-            lines.append(
-                f"{event_name}: "
-                f"{use_count} uses, "
-                f"{visitor_count} visitors"
-            )
+    # First token of the quoted request line, e.g. GET /tide.html HTTP/1.1
+    REQUEST_LINE_RE = re.compile(r'^(?P<method>\S+) (?P<path>\S+) (?P<protocol>\S+)$')
 
-        lines.extend([
-            "",
-            f"Recognizable bot requests excluded: "
-            f"{self.bot_requests}",
-            "",
-            "Uses: Total successful requests.",
-            "Visitors: Distinct IP address/browser combinations.",
-        ])
+    APACHE_TIME_FORMAT = "%d/%b/%Y:%H:%M:%S %z"
+    REPORT_DATE_FORMAT = "%B %d, %Y"
 
-        if self.unparsed_lines:
-            lines.append(
-                f"Unrecognized log lines: {self.unparsed_lines}"
-            )
+    def __init__(self, log_path: str = "/var/log/apache2/access.log.1"):
+        self.log_path = Path(log_path)
 
-        return "\n".join(lines)   
-        
+        # Build a flat lookup of tracked path -> category label, so
+        # categorizing a single request is an O(1) dict lookup.
+        self._path_to_category: dict[str, str] = {}
+        for label, paths in self.CATEGORIES.items():
+            for path in paths:
+                self._path_to_category[path] = label
 
-    def sms_report(self):
-        """Return a compact report suitable for SMS."""
+    def get_daily_report(self) -> str:
+        """
+        Read the access log and return a plain-text visit summary.
 
-        date_text = self.report_date.strftime("%m/%d/%Y")
-        parts = [f"Web {date_text}"]
+        This is the method meant to be called once a day (e.g. by a 07:00
+        cron job) to retrieve the previous day's visit counts.
+        """
+        try:
+            lines = self.log_path.read_text(errors="replace").splitlines()
+        except FileNotFoundError:
+            return f"Website Activity: log file not found at {self.log_path}"
+        except OSError as exc:
+            return f"Website Activity: unable to read log ({exc})"
 
-        for event_name, event_data in self.EVENTS.items():
-            short_name, paths, methods = event_data
+        counts = OrderedDict((label, 0) for label in self.CATEGORIES)
+        visitors: "OrderedDict[str, set[str]]" = OrderedDict(
+            (label, set()) for label in self.CATEGORIES
+        )
+        report_date: Optional[datetime] = None
 
-            parts.append(
-                f"{short_name} "
-                f"{self.uses[event_name]}/"
-                f"{len(self.visitors[event_name])}"
-            )
+        for line in lines:
+            if not line.strip():
+                continue
 
-        return "; ".join(parts) + ". Uses/visitors."
+            match = self.LOG_LINE_RE.match(line)
+            if not match:
+                continue
 
-    def reports(self):
-        """Return both email and SMS reports."""
-        self._initialize()
-        self._analyze()
-        return self.email_report(), self.sms_report()
+            if report_date is None:
+                report_date = self._parse_apache_time(match.group("time"))
+
+            status = int(match.group("status"))
+            if status >= 400:
+                continue
+
+            path = self._extract_path(match.group("request"))
+            if path is None:
+                continue
+
+            label = self._path_to_category.get(path)
+            if label is not None:
+                counts[label] += 1
+                visitors[label].add(match.group("host"))
+
+        return self._format_report(report_date, counts, visitors)
+
+    def _extract_path(self, request_line: str) -> Optional[str]:
+        """
+        Pull the path (no query string) out of a request line such as
+        'GET /tide.html?screenwidth=980 HTTP/1.1'. Returns None for
+        malformed request lines (e.g. '-' from a timed-out connection).
+        """
+        match = self.REQUEST_LINE_RE.match(request_line)
+        if not match:
+            return None
+        return match.group("path").split("?", 1)[0]
+
+    def _parse_apache_time(self, time_str: str) -> Optional[datetime]:
+        try:
+            return datetime.strptime(time_str, self.APACHE_TIME_FORMAT)
+        except ValueError:
+            return None
+
+    def _format_report(
+        self,
+        report_date: Optional[datetime],
+        counts: "OrderedDict[str, int]",
+        visitors: "OrderedDict[str, set[str]]",
+    ) -> str:
+        if report_date is not None:
+            date_str = report_date.strftime(self.REPORT_DATE_FORMAT)
+        else:
+            date_str = "Unknown Date"
+
+        lines = [f"Website Activity for {date_str}"]
+        for label, count in counts.items():
+            unique = len(visitors[label])
+            lines.append(f"{label}: {count} ({unique} visitor{'s' if unique != 1 else ''})")
+
+        total_hits = sum(counts.values())
+        total_unique = len(set().union(*visitors.values())) if visitors else 0
+        lines.append(
+            f"Total: {total_hits} ({total_unique} visitor{'s' if total_unique != 1 else ''})"
+        )
+
+        return "\n".join(lines)

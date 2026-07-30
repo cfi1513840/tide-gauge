@@ -48,7 +48,7 @@ cons = tidehelper.Constants()
 state = tidehelper.TideState()
 notify = tidehelper.Notify(cons)
 val = tidehelper.ValType()
-visits = tidehelper.Visitors("/var/log/apache2/access.log.1")
+visits = tidehelper.DailyVisitReport("/var/log/apache2/access.log.1")
 getwx = tideget.GetWeather(cons, val, notify)
 db = tidedatabase.DbManage(cons)
 note_receiver = NotehubReceiver(cons, db)
@@ -490,10 +490,9 @@ class Tide:
     def send_visit_report(self):
 
         self.visit = True
-        email_visits = visits.email_report()
-        SMS_visits = visits.sms_report()
+        visits_text = visits.get_daily_report()
         email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
-          "\n"+email_visits)
+          "\n"+visits_text)
         for email_recip in cons.ADMIN_EMAIL:
             if email_recip == None:
                 continue
@@ -507,7 +506,7 @@ class Tide:
               email_message, state.debug,)
 
         text_message = ("From "+cons.HOSTNAME+": "+self.message_time+
-          "\n"+SMS_visits)
+          "\n"+visits_text)
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:
                 continue
