@@ -1,5 +1,6 @@
 #include <Notecard.h>
 #include <STM32LowPower.h>
+#include <IWatchdog.h>
 
 #define usbSerial Serial
 Notecard notecard;
@@ -21,17 +22,44 @@ double vround = 0;
 double temp = 0;
 double tround = 0;
 int distance = 0;
-int packet_count = 0;
+uint32_t one_minute_timer = 0;
+uint32_t last_send_timer_count = 0;
 int buffer_index = 0;
 int interval = 15;
-double sensor_height = 13.90;
-int packet_counts[60];
+const char *sensor_id = "PRO";
 uint32_t times[60];
 int distances[60];
 int correlations[60];
 int rssi = 0;
+String allData;
+String valStr;
+uint32_t timestamp = 0;
+
+const float HYSTERESIS = 0.05;  // 50mV deadband
+
+// Thresholds for switching DOWN (stricter - battery is draining)
+const float THRESH_VLOW  = 3.45;
+const float THRESH_LOW  = 3.60;
+const float THRESH_MID  = 3.75;
+const float THRESH_HIGH  = 3.90;
+
+
+// Thresholds for switching back UP (relaxed - voltage recovered)
+const float THRESH_HIGH_RECOVER = THRESH_HIGH + HYSTERESIS;
+const float THRESH_MID_RECOVER = THRESH_MID + HYSTERESIS;
+const float THRESH_LOW_RECOVER = THRESH_LOW + HYSTERESIS;
+const float THRESH_VLOW_RECOVER = THRESH_VLOW + HYSTERESIS;
+
+int new_interval;
+
+
 
 void setup() {
+    //IWatchdog.begin(10 * 1000 * 1000); // 10s
+
+    allData.reserve(256); // Pre-allocate memory to keep it fast
+    valStr.reserve(6);
+
     // Initialize 3V3 Regulator to default state
     pinMode(ENABLE_3V3, OUTPUT);
     pinMode(DISCHARGE_3V3, OUTPUT);
@@ -57,11 +85,18 @@ void setup() {
     }
 }
 void loop() {
+  //IWatchdog.reload();
+
   //usbSerial has to be restarted following Low Power deepSleep. Commented out if not used.
   //usbSerial.end();
   delay(100);
   //usbSerial.begin(115200);
   delay(500);
+  Serial1.end();
+  Serial1.begin(9600);
+  Wire.end();
+  Wire.begin();
+  notecard.begin();
 
   // Initialize variables
   voltage = 0;
@@ -75,37 +110,60 @@ void loop() {
   thresh = 0;
   matchCount = 0;
   count = 0;
-  packet_count++;
- 
+  indexR = -1;
+  allData = "";
+  memset(readings, 0, sizeof(readings));
+  memset(measurements, 0, sizeof(measurements));
+  one_minute_timer++;
+
   // Set report interval based on battery voltage level
   J *rsp = notecard.requestAndResponse(notecard.newRequest("card.voltage"));
   if (rsp != NULL) {
       voltage = JGetNumber(rsp, "value");
       notecard.deleteResponse(rsp);
-      if (voltage < 3.6 && interval != 60) {
-          interval = 60;
-          packet_count = 1;    
-      } else if (voltage < 3.8 && interval != 30) {
-          interval = 30;
-          packet_count = 1;
-      } else if (interval != 15) {
-          interval = 15;
-          packet_count = 1;
+      if (voltage < THRESH_VLOW) {
+          new_interval = 1440;
+      } else if (voltage < THRESH_VLOW_RECOVER && interval == 1440) {
+          new_interval = 1440;
+      } else if (voltage < THRESH_LOW) {
+          new_interval = 120;
+      } else if (voltage < THRESH_MID_RECOVER && interval == 120) {
+          new_interval = 120;
+      } else if (voltage < THRESH_MID) {
+          new_interval = 60;
+      } else if (voltage < THRESH_MID_RECOVER && interval == 60) {
+          new_interval = 60;
+      } else if (voltage < THRESH_HIGH) {
+          new_interval = 30;
+      } else if (voltage < THRESH_HIGH_RECOVER && interval == 30) {
+          new_interval = 30;
+      } else {
+          new_interval = 15;
+      }
+      if (new_interval != interval) {
+          interval = new_interval;
       }
       vround = round(voltage * 100.0) / 100.0;
+  } else {
+      // usbSerial.println("ERR: newRequest returned NULL");
   }
   rsp = notecard.requestAndResponse(notecard.newRequest("card.temp"));
   if (rsp != NULL) {
       temp = JGetNumber(rsp, "value");
       notecard.deleteResponse(rsp);
       tround = round(temp * 10.0) / 10.0;
-  }
+  } else {
+    // usbSerial.println("ERR: newRequest returned NULL");
+  } 
   rsp = notecard.requestAndResponse(notecard.newRequest("card.wireless"));
   if (rsp != NULL) {
       J *net = JGetObject(rsp, "net");
       if (net != NULL) {
           rssi = JGetNumber(net, "rssi");     
       }
+      notecard.deleteResponse(rsp);
+  } else {
+      // usbSerial.println("ERR: newRequest returned NULL");
   }
 
   // Clear buffer before triggering new sensor readings
@@ -114,14 +172,14 @@ void loop() {
   }
   delay(100);
   
-  String allData = "";
-  allData.reserve(256); // Pre-allocate memory to keep it fast
-
   // Request time from Notecard
   rsp = notecard.requestAndResponse(notecard.newRequest("card.time"));
-  uint32_t timestamp = JGetNumber(rsp, "time");
-  notecard.deleteResponse(rsp);
-
+  if (rsp != NULL) {
+      timestamp = JGetNumber(rsp, "time");
+      notecard.deleteResponse(rsp);
+  } else {
+      // usbSerial.println("ERR: newRequest returned NULL");
+  }
 // Trigger 20 sensor readings at one second intervals
   //usbSerial.println("Starting 20-sample burst...");
   
@@ -149,7 +207,7 @@ void loop() {
   // Search through the string for every 'R'
   while ((indexR = allData.indexOf('R', indexR + 1)) != -1 && count < 20) {
       // Grab the 4 characters after the 'R' (e.g., "0450")
-      String valStr = allData.substring(indexR + 1, indexR + 5);
+      valStr = allData.substring(indexR + 1, indexR + 5);
       
       // Convert to integer and store it
       readings[count] = valStr.toInt();
@@ -189,7 +247,6 @@ void loop() {
   }
   //
   // V - Battery Voltage
-  // C - Packet counter
   // R - Ultrasonic Range
   // M - Number of Correlated values out of the 20 measurements (optional)
 
@@ -201,38 +258,28 @@ void loop() {
       senavg = 0;
   }
   // Add this sensor packet to the array
-  buffer_index = (packet_count % interval) -1;
-  if (buffer_index == -1) {
-    buffer_index = interval-1;
-  }
   times[buffer_index] = timestamp;
   distances[buffer_index] = senavg;
-  packet_counts[buffer_index] = packet_count;
   correlations[buffer_index] = senbr;
+  buffer_index++;
   // Send all accumulated measurements as a single event to Notehub at the specified interval
-  //packet_count range is 1 - 180 - resets to 0 and incremented prior to next loop execution
-  if (packet_count % interval == 0) {
-      if (packet_count == 180) {
-          packet_count = 0;
-      }
+  if (one_minute_timer - last_send_timer_count >= interval) {
       J *batch = JCreateArray();
-      for (int i =0; i < interval; i++) {
+      for (int i =0; i < buffer_index; i++) {
         J *body = JCreateObject();
         JAddNumberToObject(body, "T", times[i]);
         JAddNumberToObject(body, "D", distances[i]);
-        JAddNumberToObject(body, "C", packet_counts[i]);
         JAddNumberToObject(body, "M", correlations[i]);
         JAddItemToArray(batch, body);
         //usbSerial.print("Time: "); usbSerial.print(times[i]);
         //usbSerial.print(" Distance: "); usbSerial.print(distances[i]);
-        //usbSerial.print(" Count: "); usbSerial.print(packet_counts[i]);
         //usbSerial.print(" Correlation: "); usbSerial.println(correlations[i]);
       }
       J *status = JCreateObject();
       JAddNumberToObject(status, "V", vround);
       JAddNumberToObject(status, "t", tround);
       JAddNumberToObject(status, "P", rssi);
-      JAddNumberToObject(status, "H", sensor_height);
+      JAddStringToObject(status, "S", sensor_id);
       J *note = notecard.newRequest("note.add");
       if (note != NULL) {
         JAddStringToObject(note, "file", "sensors.qo");
@@ -244,11 +291,22 @@ void loop() {
         //usbSerial.println(json_string);
         //free(json_string);
         notecard.sendRequest(note);
+      } else {
+        // usbSerial.println("ERR: newRequest returned NULL");
+        JDelete(batch);   
+        JDelete(status); 
       }
+
       //usbSerial.print(" Notehub sync at interval: "); usbSerial.println(interval);
       J *req = notecard.newRequest("hub.sync");
-      JAddBoolToObject(req, "allow", true); // Clears penalty boxes
-      notecard.sendRequest(req);
+      if (req != NULL) {
+          JAddBoolToObject(req, "allow", true); // Clears penalty boxes
+          notecard.sendRequest(req);
+      } else {
+        // usbSerial.println("ERR: newRequest returned NULL");
+      }
+      buffer_index = 0;
+      last_send_timer_count = one_minute_timer;
       delay(2000);
       LowPower.deepSleep(36375);
       //delay(38975);
@@ -261,6 +319,7 @@ void loop() {
       delay(500);
   }
 }
+
 void disable3V3Regulator() {
   digitalWrite(ENABLE_3V3, LOW);
   digitalWrite(DISCHARGE_3V3, ENABLE_DISCHARGING);
