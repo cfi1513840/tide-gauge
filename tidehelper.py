@@ -32,6 +32,8 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 from dotenv import load_dotenv, find_dotenv
 from twilio.rest import Client
 from email.message import EmailMessage
+from urllib.parse import urlparse
+
 
 class Constants:
     """
@@ -184,36 +186,11 @@ class Constants:
     FULL_TIDE = math.pi
     HALF_TIDE = math.pi/2
     HOSTNAME = socket.gethostname()
-#    INFLUXDB_COLUMN_NAMES = {
-#        "S": "sensor_num",
-#        "C": "message_count",
-#        "R": "sensor_measurement_mm",
-#        "M": "correlation_count",
-#        "V": "battery_milliVolts",
-#        "P": "signal_strength",
-#        "s": "solar_milliVolts",
-#        "t": "temperature"
-#        }
     with open('sensor_fields.json', 'r') as infile:
         INFLUXDB_NAMES = json.load(infile)
     RADIANS_PER_SECOND = math.pi*2/91080
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     
-#    tide_dictionary['FULL_TIDE'] = str(math.pi)
-#    tide_dictionary['HALF_TIDE'] = str(math.pi/2)
-#    tide_dictionary['HOSTNAME'] = socket.gethostname()
-#    tide_dictionary['INFLUXDB_COLUMN_NAMES'] = {
-#        "S": "sensor_num",
-#        "C": "message_count",
-#        "R": "sensor_measurement_mm",
-#        "M": "correlation_count",
-#        "V": "battery_milliVolts",
-#        "P": "signal_strength",
-#        "s": "solar_milliVolts"
-#        }
-#    tide_dictionary['RADIANS_PER_SECOND'] = str(math.pi*2/91080)
-#    tide_dictionary['TIME_FORMAT'] = "%Y-%m-%d %H:%M:%S"
-
 class TideState:
     """Store state variables"""
     def __init__(self):
@@ -431,6 +408,18 @@ class DailyVisitReport:
     APACHE_TIME_FORMAT = "%d/%b/%Y:%H:%M:%S %z"
     REPORT_DATE_FORMAT = "%B %d, %Y"
 
+    # tide.html auto-refreshes itself every 5 minutes. A repeat hit from the
+    # same host is treated as an auto refresh (rather than a fresh page load)
+    # only if BOTH hold: its Referer is the tide page itself, AND it lands
+    # within +/- AUTO_REFRESH_TOLERANCE_SECONDS of exactly
+    # AUTO_REFRESH_INTERVAL_SECONDS after that host's last tide.html hit.
+    # A manual reload landing by chance in that narrow window is considered
+    # negligibly unlikely.
+    AUTO_REFRESH_CATEGORY = "Tide & Weather"
+    AUTO_REFRESH_SOURCE_PATH = "/tide.html"
+    AUTO_REFRESH_INTERVAL_SECONDS = 300
+    AUTO_REFRESH_TOLERANCE_SECONDS = 5
+
     def __init__(self, log_path: str = "/var/log/apache2/access.log.1"):
         self.log_path = Path(log_path)
 
@@ -459,7 +448,12 @@ class DailyVisitReport:
         visitors: "OrderedDict[str, set[str]]" = OrderedDict(
             (label, set()) for label in self.CATEGORIES
         )
+        auto_refresh_counts = OrderedDict((label, 0) for label in self.CATEGORIES)
         report_date: Optional[datetime] = None
+
+        # Last-seen timestamp per host, for auto-refresh interval detection
+        # on the tide.html category only.
+        last_seen: dict[str, datetime] = {}
 
         for line in lines:
             if not line.strip():
@@ -469,8 +463,9 @@ class DailyVisitReport:
             if not match:
                 continue
 
+            line_time = self._parse_apache_time(match.group("time"))
             if report_date is None:
-                report_date = self._parse_apache_time(match.group("time"))
+                report_date = line_time
 
             status = int(match.group("status"))
             if status >= 400:
@@ -481,11 +476,43 @@ class DailyVisitReport:
                 continue
 
             label = self._path_to_category.get(path)
-            if label is not None:
-                counts[label] += 1
-                visitors[label].add(match.group("host"))
+            if label is None:
+                continue
 
-        return self._format_report(report_date, counts, visitors)
+            host = match.group("host")
+            counts[label] += 1
+            visitors[label].add(host)
+
+            if label == self.AUTO_REFRESH_CATEGORY:
+                if self._is_auto_refresh(host, line_time, match.group("referer"), last_seen):
+                    auto_refresh_counts[label] += 1
+                if line_time is not None:
+                    last_seen[host] = line_time
+
+        return self._format_report(report_date, counts, visitors, auto_refresh_counts)
+
+    def _is_auto_refresh(
+        self,
+        host: str,
+        line_time: Optional[datetime],
+        referer: str,
+        last_seen: "dict[str, datetime]",
+    ) -> bool:
+        """
+        True if this hit looks like tide.html's self-triggered 5-minute
+        refresh rather than a fresh page load: the Referer must be the tide
+        page itself, and the gap since this host's last tide.html hit must
+        fall within AUTO_REFRESH_TOLERANCE_SECONDS of exactly
+        AUTO_REFRESH_INTERVAL_SECONDS.
+        """
+        if line_time is None or host not in last_seen:
+            return False
+
+        if urlparse(referer).path != self.AUTO_REFRESH_SOURCE_PATH:
+            return False
+
+        gap = (line_time - last_seen[host]).total_seconds()
+        return abs(gap - self.AUTO_REFRESH_INTERVAL_SECONDS) <= self.AUTO_REFRESH_TOLERANCE_SECONDS
 
     def _extract_path(self, request_line: str) -> Optional[str]:
         """
@@ -509,6 +536,7 @@ class DailyVisitReport:
         report_date: Optional[datetime],
         counts: "OrderedDict[str, int]",
         visitors: "OrderedDict[str, set[str]]",
+        auto_refresh_counts: "OrderedDict[str, int]",
     ) -> str:
         if report_date is not None:
             date_str = report_date.strftime(self.REPORT_DATE_FORMAT)
@@ -518,12 +546,19 @@ class DailyVisitReport:
         lines = [f"Website Activity for {date_str}"]
         for label, count in counts.items():
             unique = len(visitors[label])
-            lines.append(f"{label}: {count} ({unique} visitor{'s' if unique != 1 else ''})")
+            line = f"{label}: {unique} Visitor{'s' if unique != 1 else ''} requesting {count} page load{'s' if count != 1 else ''}"
+
+            refreshes = auto_refresh_counts[label]
+            if label == self.AUTO_REFRESH_CATEGORY:
+                line += f" ({refreshes} auto refresh{'es' if refreshes != 1 else ''})"
+
+            lines.append(line)
 
         total_hits = sum(counts.values())
         total_unique = len(set().union(*visitors.values())) if visitors else 0
         lines.append(
-            f"Total: {total_hits} ({total_unique} visitor{'s' if total_unique != 1 else ''})"
+            f"Total: {total_unique} Visitor{'s' if total_unique != 1 else ''} "
+            f"requesting {total_hits} page load{'s' if total_hits != 1 else ''}"
         )
 
         return "\n".join(lines)
