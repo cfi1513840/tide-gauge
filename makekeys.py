@@ -3,7 +3,7 @@
 import os
 from cryptography.fernet import Fernet
 
-if os.path.exists('/var/www/html/kux'):
+if os.path.exists('ku'):
     answ = input ('Encryption keys already exist, overwrite? Y/N: ')
     if answ != 'y' and answ != 'Y':
         exit()
