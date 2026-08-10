@@ -306,7 +306,7 @@ class DbManage:
         try:
             result_table = self.influxdb_local_query_client.query(
               query=self.influx_query, language="sql")
-            records = result_table.to_pandas().to_dict('records')
+            records = result_table.to_pylist()
             for dbvalues in records:
                 timetag = dbvalues.get('time')
                 if newest_time is None or timetag > newest_time:
@@ -385,7 +385,7 @@ class DbManage:
         try:
             result_table = self.influxdb_local_query_client.query(
               query=sync_query, language="sql")
-            records = result_table.to_pandas().to_dict('records')
+            records = result_table.to_pylist()
         except Exception as errmsg:
             logging.warning('sync_influxdb_cloud query failed: '+str(errmsg))
             return
