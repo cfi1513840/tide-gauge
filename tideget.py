@@ -569,16 +569,54 @@ class ReadSensor:
                 return data_dict
             for field in packet:
                 if field != '' and field[0].isalpha():
-                    this_var = self.val.var_type(field[1:], int)
+                    code = field[0]
+                    raw_value = field[1:]
+                    this_var = self.val.var_type(raw_value, int)
                     if this_var == -99:
                         data_dict = {}
                         break
-                    if (field[0] == 'R' or field[0] == 'U') and this_var == 0:
+                    # Field-specific format/range checks -- catch corruption
+                    # WITHIN a field (a dropped or flipped digit), not just
+                    # entire fields missing from the packet. Checked against
+                    # the raw string (not the parsed int) so a value with
+                    # fewer digits than expected due to a lost leading
+                    # digit is still caught (int() would silently accept
+                    # "459" as 459, losing the length information).
+                    # C, s, t are optional depending on installation and get
+                    # no format check here.
+                    if code in ('V', 'R', 'U') and len(raw_value) != 4:
                         data_dict = {}
                         break
-                    data_dict[field[0]] = this_var
+                    if code == 'M' and (len(raw_value) != 2 or not (1 <= this_var <= 20)):
+                        data_dict = {}
+                        break
+                    if code == 'S' and not (1 <= this_var <= 3):
+                        data_dict = {}
+                        break
+                    if (code == 'R' or code == 'U') and this_var == 0:
+                        data_dict = {}
+                        break
+                    data_dict[code] = this_var
                 else:
                     continue
+            else:
+                # Loop completed without an early 'break' -- now confirm
+                # the required fields actually made it into the packet at
+                # all (a garbled transmission can drop a contiguous run of
+                # fields entirely, e.g. at low signal strength, while what
+                # DOES survive still individually passes the checks above).
+                # S/V/M are always required; C/s/t are optional depending
+                # on installation; distance (R or U) and signal strength
+                # (P or r) each need at least one of their alternates.
+                required_singly = {'S', 'V', 'M'}
+                has_distance = 'R' in data_dict or 'U' in data_dict
+                has_signal = 'P' in data_dict or 'r' in data_dict
+                if (not required_singly.issubset(data_dict.keys())
+                  or not has_distance or not has_signal):
+                    logging.warning(
+                      f'Discarding incomplete/garbled sensor packet '
+                      f'(fields present: {sorted(data_dict.keys())}): {packet}')
+                    data_dict = {}
             return data_dict
 
         except Exception as errmsg:
