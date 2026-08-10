@@ -193,8 +193,8 @@ class DbManage:
             point_command.time(message_time, WritePrecision.MS)
             write_api = self.influxdb_client.write_api(
               write_options=SYNCHRONOUS)
-            result = write_api.write(self.cons.INFLUXDB_BUCKET,
-              self.cons.INFLUXDB_ORG, point_command)
+            result = write_api.write(self.cons.INFLUXDB_LOCAL_DATABASE,
+              self.cons.ORG_FOR_LOCAL_WRITES, point_command)
 
         except Exception as errmsg:
             logging.warning('insert_tide: '+str(errmsg))            
