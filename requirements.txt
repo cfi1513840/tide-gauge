@@ -104,6 +104,17 @@ influxdb3-python    # InfluxDB 3 native query client (import name: influxdb_clie
                     # tables). Install may take noticeably longer on Raspberry Pi
                     # (arm64) than the other packages in this file -- this is
                     # expected, not a hang.
+pandas              # Required for converting InfluxDB 3 query results
+                    # (fetch_tide(), sync_influxdb_cloud() in tidedatabase.py):
+                    # InfluxDB 3 stores timestamps at nanosecond precision, and
+                    # pyarrow's own to_pylist() cannot safely convert nanosecond
+                    # timestamps to Python's microsecond-resolution datetime --
+                    # it raises rather than silently lose precision. pandas'
+                    # Timestamp type supports full nanosecond resolution, so
+                    # to_pandas().to_dict('records') is used instead. (An earlier
+                    # version of this code tried to avoid this dependency with
+                    # to_pylist() directly -- don't re-introduce that without
+                    # solving the nanosecond-precision problem some other way.)
 pytz               # Timezone handling (tidealerts.py, tidedatabase.py, tide.py, tideplot.py)
 requests           # HTTP calls to NDBC/OpenWeatherMap etc. (tideget.py, tidewxhtml.py)
 urllib3            # Directly imported in tideget.py (import urllib3.util.connection), not relied on merely as a transitive dependency of requests
