@@ -87,6 +87,11 @@ class Constants:
     BREVO_ADDRESS = secure_dict.get('BREVO_EMAIL_ADDRESS')
     BREVO_USERNAME = secure_dict.get('BREVO_EMAIL_USERNAME')
     BREVO_PASSWORD = secure_dict.get('BREVO_EMAIL_PASSWORD')
+    # Load tide.env early so INFLUXDB_CLOUD_ORG/BUCKET are available before
+    # constructing INFLUXDB_CLOUD_WRITE_CLIENT below (load_dotenv is safe to
+    # call again later, in the main tide.env block further down that loads
+    # everything else -- see 'envfile = find_dotenv(...)' below).
+    load_dotenv(find_dotenv('tide.env'))
     # --- Local InfluxDB 3 Core (primary write target; every node has its own) ---
     INFLUXDB_LOCAL_URL = secure_dict.get('INFLUXDB_LOCAL_URL')
     INFLUXDB_LOCAL_TOKEN = secure_dict.get('INFLUXDB_LOCAL_TOKEN')
@@ -94,12 +99,13 @@ class Constants:
     # --- InfluxDB Cloud Serverless (sync target; shared org/bucket across nodes) ---
     INFLUXDB_CLOUD_URL = secure_dict.get('INFLUXDB_CLOUD_URL')
     INFLUXDB_CLOUD_TOKEN = secure_dict.get('INFLUXDB_CLOUD_TOKEN')
-    INFLUXDB_CLOUD_ORG = secure_dict.get('INFLUXDB_CLOUD_ORG')
-    INFLUXDB_CLOUD_BUCKET = secure_dict.get('INFLUXDB_CLOUD_BUCKET')
+    # INFLUXDB_CLOUD_ORG/BUCKET moved to tide.env -- not secrets, just the
+    # standard TideGauge/TideData names shared across all nodes.
+    INFLUXDB_CLOUD_ORG = os.getenv('INFLUXDB_CLOUD_ORG')
+    INFLUXDB_CLOUD_BUCKET = os.getenv('INFLUXDB_CLOUD_BUCKET')
     # --- Point tag/field values shared by both local and cloud writes ---
-    INFLUXDB_MEASUREMENT = secure_dict.get('INFLUXDB_MEASUREMENT')
-    INFLUXDB_LOCATION = secure_dict.get('INFLUXDB_LOCATION')
-    INFLUXDB_SENSOR = secure_dict.get('INFLUXDB_SENSOR')
+    # (INFLUXDB_MEASUREMENT/LOCATION/SENSOR moved to tide.env -- not
+    # secrets, see the tide.env-derived block below)
     # NOTE: InfluxDB 3 Core has no "org" concept -- org is a v2/Cloud-only
     # construct. The v2-compatible write endpoint (/api/v2/write) that
     # InfluxDBClient targets accepts a blank org string against local
@@ -120,9 +126,9 @@ class Constants:
     OBSCAPE_USER = secure_dict.get('OBSCAPE_USER')
     OBSCAPE_KEY = secure_dict.get('OBSCAPE_KEY')
     NOTEHUB_SECRET = secure_dict.get('NOTEHUB_SECRET')
-    SMTP_SERVER = secure_dict.get('SMTP_SERVER')
+    # (SMTP_SERVER/SMTP_PORT moved to tide.env -- not secrets, see the
+    # tide.env-derived block below)
     BREVO_SMTP_SERVER = secure_dict.get('BREVO_SMTP_SERVER')
-    SMTP_PORT = secure_dict.get('SMTP_PORT')
     TWILIO_ACCOUNT_SID = secure_dict.get('TWILIO_ACCOUNT_SID')
     TWILIO_AUTH_TOKEN = secure_dict.get('TWILIO_AUTH_TOKEN')
     TWILIO_CLIENT = Client(TWILIO_ACCOUNT_SID,
@@ -182,6 +188,14 @@ class Constants:
         NWS_MARINE_GRIDPOINTS = os.getenv('NWS_MARINE_GRIDPOINTS')
         #INFLUXDB_NAMES = os.getenv('INFLUXDB_NAMES')
         TIME_ZONE = os.getenv('TIME_ZONE')
+        # Moved from tide_constants.json -- not secrets, and moving them
+        # here means site-specific edits no longer require the
+        # decrypt-edit-encrypt cycle.
+        INFLUXDB_MEASUREMENT = os.getenv('INFLUXDB_MEASUREMENT')
+        INFLUXDB_LOCATION = os.getenv('INFLUXDB_LOCATION')
+        INFLUXDB_SENSOR = os.getenv('INFLUXDB_SENSOR')
+        SMTP_SERVER = os.getenv('SMTP_SERVER')
+        SMTP_PORT = os.getenv('SMTP_PORT')
         NWS_RADAR = os.getenv('NWS_RADAR')
         TK_CANVAS_WIDTH = os.getenv('TK_CANVAS_WIDTH')
         TK_CANVAS_HEIGHT = os.getenv('TK_CANVAS_HEIGHT')
