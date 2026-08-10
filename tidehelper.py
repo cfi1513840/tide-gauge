@@ -93,11 +93,14 @@ class Constants:
     # everything else -- see 'envfile = find_dotenv(...)' below).
     load_dotenv(find_dotenv('tide.env'))
     # --- Local InfluxDB 3 Core (primary write target; every node has its own) ---
-    INFLUXDB_LOCAL_URL = secure_dict.get('INFLUXDB_LOCAL_URL')
+    # URL/DATABASE moved to tide.env -- not secrets, just endpoints/identifiers.
+    # Only the token itself is a real credential.
+    INFLUXDB_LOCAL_URL = os.getenv('INFLUXDB_LOCAL_URL')
     INFLUXDB_LOCAL_TOKEN = secure_dict.get('INFLUXDB_LOCAL_TOKEN')
-    INFLUXDB_LOCAL_DATABASE = secure_dict.get('INFLUXDB_LOCAL_DATABASE')
+    INFLUXDB_LOCAL_DATABASE = os.getenv('INFLUXDB_LOCAL_DATABASE')
     # --- InfluxDB Cloud Serverless (sync target; shared org/bucket across nodes) ---
-    INFLUXDB_CLOUD_URL = secure_dict.get('INFLUXDB_CLOUD_URL')
+    # URL moved to tide.env for the same reason.
+    INFLUXDB_CLOUD_URL = os.getenv('INFLUXDB_CLOUD_URL')
     INFLUXDB_CLOUD_TOKEN = secure_dict.get('INFLUXDB_CLOUD_TOKEN')
     # INFLUXDB_CLOUD_ORG/BUCKET moved to tide.env -- not secrets, just the
     # standard TideGauge/TideData names shared across all nodes.
