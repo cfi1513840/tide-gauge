@@ -288,7 +288,7 @@ class Notify:
         if self.cons.EMAIL_SERVICE != 'brevo':
             try:
                 session = smtplib.SMTP(self.cons.SMTP_SERVER,
-                self.cons.SMTP_PORT)
+                self.cons.SMTP_PORT, timeout=10)
                 session.ehlo()
                 session.starttls()
                 session.ehlo()
@@ -316,7 +316,7 @@ class Notify:
                 msg["To"] = email_recipient
                 msg["Subject"] = sub
                 msg.set_content(email_message)
-                with smtplib.SMTP(self.cons.BREVO_SMTP_SERVER, self.cons.SMTP_PORT) as server:
+                with smtplib.SMTP(self.cons.BREVO_SMTP_SERVER, self.cons.SMTP_PORT, timeout=10) as server:
                     server.starttls()
                     server.login(self.cons.BREVO_USERNAME, self.cons.BREVO_PASSWORD)
                     server.send_message(msg)

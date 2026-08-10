@@ -46,7 +46,7 @@ class GetWeather:
                     'format=json&units=e&'+
                     f'apiKey={self.cons.WEATHER_UNDERGROUND_API}')
             #print('requesting data from wx und url')
-            response = requests.get(wxundurl)
+            response = requests.get(wxundurl, timeout=10)
         except Exception as errmsg:
             if not self.wx_und_report_flag and self.wx_und_error_count > 2:
                 self.wx_und_report_flag = True
@@ -139,7 +139,7 @@ class GetWeather:
             wxurl = (f'{self.cons.WX_OPEN_URL}'+
               f'lat={self.cons.STATION_LATITUDE}&lon={self.cons.STATION_LONGITUDE}&'+
               f'units=imperial&appid={self.cons.OPEN_WEATHERMAP_API}')
-            response = requests.get(wxurl)
+            response = requests.get(wxurl, timeout=10)
             #print (str(response))
         except Exception as errmsg:
             if not self.wx_opn_report_flag and self.wx_opn_error_count > 2:
@@ -264,7 +264,7 @@ class GetWeather:
         wxlinkurl = "https://api.weatherlink.com/v2/current/{}?api-key={}&api-signature={}&t={}".format(parameters["station-id"],parameters["api-key"], apiSignature, parameters["t"])
         #print (wxlinkurl)
         try:
-            response = requests.get(wxlinkurl)
+            response = requests.get(wxlinkurl, timeout=10)
         except Exception as errmsg:
             if not self.wx_link_report_flag and self.wx_link_error_count > 2:
                 pline = ('Network read failure '+
@@ -506,7 +506,7 @@ class GetNOAA:
               "application=NOS.COOPS.TAC.WL"
               f"&begin_date={begin}&range=360&datum=MLLW"
               f"&station={stationid}&time_zone=lst_ldt&units=english&"
-              "interval=hilo&format=csv")   
+              "interval=hilo&format=csv", timeout=10)   
             datalist = response.content
             strdata = str(datalist)
             datastr = strdata.split('\\n')

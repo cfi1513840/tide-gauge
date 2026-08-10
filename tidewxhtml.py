@@ -45,7 +45,7 @@ class CreateWxHTML:
         self.outfile.write (f'<td colspan="{nbrcols}" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         headers = {'User-Agent': '(bbitide.org, tidealert@bbitide.org)'}
         fcurl = f"https://api.weather.gov/gridpoints/{self.local_points}/forecast"
-        response = requests.get(fcurl, headers=headers)
+        response = requests.get(fcurl, headers=headers, timeout=10)
         if str(response) != '<Response [200]>':
             print (curtimestr,'Error '+str(response)+' from api.weather.gov call')
             wxtime = iparams['wxtime']
@@ -164,7 +164,7 @@ class CreateWxHTML:
         self.outfile.write ('</tr>\n')
         headers = {'User-Agent': '(bbitide.org, tidealert@bbitide.org)'}
         fcurl = f"https://api.weather.gov/gridpoints/{self.marine_points}/" 
-        response = requests.get(fcurl, headers=headers)
+        response = requests.get(fcurl, headers=headers, timeout=10)
         if str(response) != '<Response [200]>':
             print (str(current_time),'Error response from api.weather.gov call')
             self.outfile.close()
