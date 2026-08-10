@@ -279,7 +279,7 @@ class Tide:
                     try:
                         valtime = datetime.strptime(valkey[0],'%Y-%m-%d %H:%M:%S.%f')
                     except (TypeError, ValueError) as errmsg:
-                        logging.warning('main: could not parse dtime for pending registration, skipping row: '+str(errmsg))
+                        logging.warning('main: could not parse dtime for pending registration, skipping row: '+str(errmsg), exc_info=True)
                         continue
                     if self.current_time >= valtime+timedelta(minutes=10):
                         db.update_userpass(valkey[1], valkey[2], valkey[3])
@@ -435,7 +435,7 @@ class Tide:
                 except Exception as errmsg:
                     pass
                     print (str(errmsg))
-                    logging.warning(str(errmsg))
+                    logging.warning(str(errmsg), exc_info=True)
 
             if self.display:
                 self.display.active_station_tk_var.set(str(self.stationid))

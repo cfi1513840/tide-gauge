@@ -126,7 +126,7 @@ class GetWeather:
                 self.last_bar = baro
             return weather
         except Exception as errmsg:
-            logging.warning(errmsg)
+            logging.warning(errmsg, exc_info=True)
 
     def open_weather_map(self, phase, tide_only):
         #print ('getting open_weather_map')
@@ -218,7 +218,7 @@ class GetWeather:
             if phase == 'day':
                 self.rain_24h = 0.0
         except ValueError as errmsg:
-            logging.warning('Error processing OpenWeatherMap response '+str(errmsg))
+            logging.warning('Error processing OpenWeatherMap response '+str(errmsg), exc_info=True)
             return {}
         weather['obs_time'] = datetime.strftime(datetime.fromtimestamp(dtime),'%b %d, %Y %H:%M')
         temperature = main['temp']
@@ -527,7 +527,7 @@ class GetNOAA:
                 noaa_data.append([this_time,self.val.var_type(line[1], float),line[2]])
             return noaa_data
         except Exception as errmsg:
-            logging.warning(' Error obtaining NOAA tide - '+str(errmsg))
+            logging.warning(' Error obtaining NOAA tide - '+str(errmsg), exc_info=True)
             return []
 class ReadSensor:
     """Read sensor reading from serial port"""
@@ -582,6 +582,6 @@ class ReadSensor:
             return data_dict
 
         except Exception as errmsg:
-            logging.warning('Invalid sensor data '+str(errmsg))
+            logging.warning('Invalid sensor data '+str(errmsg), exc_info=True)
             
 

@@ -34,7 +34,7 @@ class TidePredict:
                 logging.warning('predicted tide unavailable')
                 return None
         except Exception as errmsg:
-            logging.warning('Unable to fetch predicted tide '+str(errmsg))
+            logging.warning('Unable to fetch predicted tide '+str(errmsg), exc_info=True)
             return None
         for line in predicted_tides:
             this_time = line[0]

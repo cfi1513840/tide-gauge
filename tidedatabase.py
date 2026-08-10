@@ -169,7 +169,7 @@ class DbManage:
                   database_values)
                 self.sql_connection.commit()
             except Exception as errmsg:
-                logging.warning('sqlite3 db insertion failed: '+str(errmsg))
+                logging.warning('sqlite3 db insertion failed: '+str(errmsg), exc_info=True)
                 pass
             message_time = datetime.now(timezone.utc)
             if "T" in data_dict:
@@ -197,7 +197,7 @@ class DbManage:
               self.cons.ORG_FOR_LOCAL_WRITES, point_command)
 
         except Exception as errmsg:
-            logging.warning('insert_tide: '+str(errmsg))            
+            logging.warning('insert_tide: '+str(errmsg), exc_info=True)            
 
     def fetch_predicts(self, tide_start_time):
         try:        
@@ -207,7 +207,7 @@ class DbManage:
             return self.sql_cursor.fetchall()
 
         except Exception as errmsg:
-            logging.warning('fetch_predicts: '+str(errmsg))
+            logging.warning('fetch_predicts: '+str(errmsg), exc_info=True)
             return None            
  
     def fetch_iparams(self):
@@ -253,7 +253,7 @@ class DbManage:
             return ndbc_dict                
 
         except Exception as errmsg:
-            logging.warning('fetch_ndbc: '+str(errmsg))
+            logging.warning('fetch_ndbc: '+str(errmsg), exc_info=True)
             return None
 
     def fetch_tide(self, stationid, stationcal, duration):
@@ -347,7 +347,7 @@ class DbManage:
             return tide_list, field_list
             
         except Exception as errmsg:
-            logging.warning('fetch_tide: '+str(errmsg))
+            logging.warning('fetch_tide: '+str(errmsg), exc_info=True)
             return tide_list, field_list
 
     def sync_influxdb_cloud(self):
@@ -387,7 +387,7 @@ class DbManage:
               query=sync_query, language="sql")
             records = result_table.to_pylist()
         except Exception as errmsg:
-            logging.warning('sync_influxdb_cloud query failed: '+str(errmsg))
+            logging.warning('sync_influxdb_cloud query failed: '+str(errmsg), exc_info=True)
             return
 
         if not records:
@@ -416,7 +416,7 @@ class DbManage:
                 if newest_time is None or timetag > newest_time:
                     newest_time = timetag
         except Exception as errmsg:
-            logging.warning('sync_influxdb_cloud write failed: '+str(errmsg))
+            logging.warning('sync_influxdb_cloud write failed: '+str(errmsg), exc_info=True)
             return  # watermark NOT advanced -- retry from the same point next cycle
 
         if newest_time is not None:
@@ -425,7 +425,7 @@ class DbManage:
                     f.write(str(newest_time))
             except Exception as errmsg:
                 logging.warning(
-                  'sync_influxdb_cloud watermark write failed: '+str(errmsg))
+                  'sync_influxdb_cloud watermark write failed: '+str(errmsg), exc_info=True)
 
     def update_stationid(self, stationid):
         self.sql_cursor.execute(f"update iparams set stationid = {stationid}")

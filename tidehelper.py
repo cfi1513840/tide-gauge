@@ -255,7 +255,7 @@ class SunTime:
             db.update_datetime(display_date, display_sunrise, display_sunset)
             return display_date, display_sunrise, display_sunset, sunrise, sunset
         except Exception as errmsg:
-            logging.warning('Error processing sunrise/sunset - '+str(errmsg))
+            logging.warning('Error processing sunrise/sunset - '+str(errmsg), exc_info=True)
             return -1
 
 class Notify:
@@ -275,7 +275,7 @@ class Notify:
                     from_= self.cons.TWILIO_PHONE_SENDER,
                     body = text_message)
         except Exception as errmsg:
-            logging.warning(str(errmsg))
+            logging.warning(str(errmsg), exc_info=True)
 
     def send_email(self, email_recipient, email_headers, email_message, debug):
         """Method to send status or alert information via email message.
@@ -299,7 +299,7 @@ class Notify:
                 session.quit()
                 return True, None
             except Exception as errmsg:
-                logging.warning(str(errmsg))
+                logging.warning(str(errmsg), exc_info=True)
                 return False, str(errmsg)
         else:    
             try:
@@ -322,7 +322,7 @@ class Notify:
                     server.send_message(msg)
                 return True, None
             except Exception as errmsg:
-                logging.warning(str(errmsg))
+                logging.warning(str(errmsg), exc_info=True)
                 return False, str(errmsg)
 
     MAILSPOOL_DIR = '/var/www/html/mailspool/'
@@ -349,7 +349,7 @@ class Notify:
                 with open(filepath, 'r') as f:
                     request = json.load(f)
             except Exception as errmsg:
-                logging.warning(f'mailspool: could not read {filename}: {errmsg}')
+                logging.warning(f'mailspool: could not read {filename}: {errmsg}', exc_info=True)
                 continue
             full_headers = f"From: {self.cons.EMAIL_USERNAME}\r\n" + request['headers']
             if request['recipient'] == 'ADMIN':

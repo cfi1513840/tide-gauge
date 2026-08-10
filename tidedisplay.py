@@ -448,7 +448,7 @@ class TideDisplay:
             try:
                 hrmin = datetime.strftime(this_time, "%H:%M")
             except Exception as errmsg:
-                #logging.warning(entry[0]+str(errmsg))
+                #logging.warning(entry[0]+str(errmsg), exc_info=True)
                 continue
             linedate = datetime.strftime(this_time, "%d %b")  
             end_plot_x = (self.x_plot_start+entry[1]*
