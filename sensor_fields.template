@@ -1,42 +1,52 @@
 {
   "S": [
     "tag",
-    "sensor_num"
+    "sensor_num",
+    "int"
   ],
   "C": [
     "fld",
-    "message_count"
+    "message_count",
+    "int"
   ],
   "U": [
     "fld",
-    "sensor_measurement_mm"
+    "sensor_measurement_mm",
+    "int"
   ],
   "R": [
     "fld",
-    "sensor_measurement_mm"
+    "sensor_measurement_mm",
+    "int"
   ],
   "M": [
     "fld",
-    "correlation_count"
+    "correlation_count",
+    "int"
   ],
   "V": [
     "fld",
-    "battery_milliVolts"
+    "battery_milliVolts",
+    "int"
   ],
   "P": [
     "fld",
-    "signal_strength"
+    "signal_strength",
+    "int"
   ],
   "r": [
     "fld",
-    "signal_strength"
+    "signal_strength",
+    "int"
   ],
   "s": [
     "fld",
-    "solar_milliVolts"
+    "solar_milliVolts",
+    "int"
   ],
   "t": [
     "fld",
-    "temperature"
+    "temperature",
+    "int"
   ]
 }
