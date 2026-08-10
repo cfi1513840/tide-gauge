@@ -29,6 +29,7 @@ import pytz
 from cryptography.fernet import Fernet
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
+from influxdb_client_3 import InfluxDBClient3
 from dotenv import load_dotenv, find_dotenv
 from twilio.rest import Client
 from email.message import EmailMessage
@@ -86,19 +87,36 @@ class Constants:
     BREVO_ADDRESS = secure_dict.get('BREVO_EMAIL_ADDRESS')
     BREVO_USERNAME = secure_dict.get('BREVO_EMAIL_USERNAME')
     BREVO_PASSWORD = secure_dict.get('BREVO_EMAIL_PASSWORD')
-    INFLUXDB_TOKEN = secure_dict.get('INFLUXDB_TOKEN')
-    INFLUXDB_READ_TOKEN = secure_dict.get('INFLUXDB_READ_TOKEN')
-    INFLUXDB_WRITE_TOKEN = secure_dict.get('INFLUXDB_WRITE_TOKEN')
-    INFLUXDB_ORG = secure_dict.get('INFLUXDB_ORG')
-    INFLUXDB_BUCKET = secure_dict.get('INFLUXDB_BUCKET')
+    # --- Local InfluxDB 3 Core (primary write target; every node has its own) ---
+    INFLUXDB_LOCAL_URL = secure_dict.get('INFLUXDB_LOCAL_URL')
+    INFLUXDB_LOCAL_TOKEN = secure_dict.get('INFLUXDB_LOCAL_TOKEN')
+    INFLUXDB_LOCAL_DATABASE = secure_dict.get('INFLUXDB_LOCAL_DATABASE')
+    # --- InfluxDB Cloud Serverless (sync target; shared org/bucket across nodes) ---
+    INFLUXDB_CLOUD_URL = secure_dict.get('INFLUXDB_CLOUD_URL')
+    INFLUXDB_CLOUD_TOKEN = secure_dict.get('INFLUXDB_CLOUD_TOKEN')
+    INFLUXDB_CLOUD_ORG = secure_dict.get('INFLUXDB_CLOUD_ORG')
+    INFLUXDB_CLOUD_BUCKET = secure_dict.get('INFLUXDB_CLOUD_BUCKET')
+    # --- Point tag/field values shared by both local and cloud writes ---
     INFLUXDB_MEASUREMENT = secure_dict.get('INFLUXDB_MEASUREMENT')
     INFLUXDB_LOCATION = secure_dict.get('INFLUXDB_LOCATION')
     INFLUXDB_SENSOR = secure_dict.get('INFLUXDB_SENSOR')
-    INFLUXDB_READ_CLIENT = InfluxDBClient(url='http://localhost:8086',
-      token=INFLUXDB_READ_TOKEN, org=INFLUXDB_ORG)
-    INFLUXDB_WRITE_CLIENT = InfluxDBClient(url='http://localhost:8086',
-      token=INFLUXDB_WRITE_TOKEN, org=INFLUXDB_ORG)
-    INFLUXDB_QUERY_API = INFLUXDB_WRITE_CLIENT.query_api()
+    # NOTE: InfluxDB 3 Core has no "org" concept -- org is a v2/Cloud-only
+    # construct. The v2-compatible write endpoint (/api/v2/write) that
+    # InfluxDBClient targets accepts a blank org string against local
+    # InfluxDB 3 Core; ORG_FOR_LOCAL_WRITES exists only to make that
+    # explicit rather than passing '' inline at each call site.
+    ORG_FOR_LOCAL_WRITES = ''
+    # Writes (local and cloud) -- v2-compatible client, unchanged from
+    # pre-migration code apart from pointing at the new URL/token/org values.
+    INFLUXDB_WRITE_CLIENT = InfluxDBClient(url=INFLUXDB_LOCAL_URL,
+      token=INFLUXDB_LOCAL_TOKEN, org=ORG_FOR_LOCAL_WRITES)
+    INFLUXDB_CLOUD_WRITE_CLIENT = InfluxDBClient(url=INFLUXDB_CLOUD_URL,
+      token=INFLUXDB_CLOUD_TOKEN, org=INFLUXDB_CLOUD_ORG)
+    # Queries (local only -- cloud sync queries local, then writes to cloud;
+    # nothing currently queries the cloud copy back) -- InfluxDB 3 native
+    # client, required because InfluxDB 3 does not support Flux/v2 queries.
+    INFLUXDB_LOCAL_QUERY_CLIENT = InfluxDBClient3(host=INFLUXDB_LOCAL_URL,
+      token=INFLUXDB_LOCAL_TOKEN, database=INFLUXDB_LOCAL_DATABASE)
     OBSCAPE_USER = secure_dict.get('OBSCAPE_USER')
     OBSCAPE_KEY = secure_dict.get('OBSCAPE_KEY')
     NOTEHUB_SECRET = secure_dict.get('NOTEHUB_SECRET')

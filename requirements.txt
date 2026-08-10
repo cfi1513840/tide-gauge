@@ -43,8 +43,19 @@
 #     for the manual -- tunnel to expose the Pi's web server without
 #     port forwarding, DNS-only proxying, or something else?]
 #   - InfluxDB -- installed and configured separately; runs as its own
-#     service, not a pip package. See INFLUXDB_ORG / INFLUXDB_WRITE_CLIENT
-#     / INFLUXDB_QUERY_API usage in tidedatabase.py / tidehelper.py.
+#     service, not a pip package.
+#
+#     InfluxDB 3 MIGRATION (2026-08): each node now runs its own local
+#     InfluxDB 3 Core instance (systemd service, localhost-bound) as the
+#     primary write target, plus an InfluxDB Cloud Serverless account
+#     (org TideGauge, bucket TideData) that a periodic sync process
+#     pushes to. See INFLUXDB_LOCAL_* / INFLUXDB_CLOUD_* in
+#     tide_constants_template.json, and fetch_tide() /
+#     _sync_influxdb_cloud() in tidedatabase.py for read/write details.
+#     The old flat INFLUXDB_TOKEN / INFLUXDB_READ_TOKEN /
+#     INFLUXDB_READ_CLIENT fields were confirmed dead code (never
+#     referenced for any actual read or write) and were removed as
+#     part of this migration.
 #
 # REMOTE ACCESS:
 #   - TigerVNC (server + viewer) -- remote desktop access, replacing a
@@ -78,7 +89,21 @@ legacy-cgi==2.6.4
 argon2-cffi        # Password hashing (tidecrypto.py hash_password/verify_password) -- replaces Fernet encryption for the password field only (2026-07-13); email/phone remain Fernet-encrypted since those genuinely need to be recovered for sending mail/SMS, unlike passwords which only ever need verification
 cryptography       # Fernet encryption for k1/k2/ku keys (tidecrypto.py, tidehelper.py, encrypt_constants.py, makekeys.py); k3/PASSWORD_KEY is retained only for verifying/migrating legacy-encrypted passwords, see tidecrypto.py
 python-dotenv      # .env config file loading (tide.env) -- used across nearly every module
-influxdb-client    # InfluxDB time-series writes/queries (tidedatabase.py, tidehelper.py)
+influxdb-client    # InfluxDB v2-compatible write API -- used for ALL writes (local and
+                    # cloud), including the local write path in insert_tide()
+                    # (tidedatabase.py) and the InfluxDB Cloud sync push in
+                    # _sync_influxdb_cloud() (tidedatabase.py). InfluxDB 3's
+                    # /api/v2/write compatibility endpoint accepts this unchanged --
+                    # see InfluxDB 3 Migration note below.
+influxdb3-python    # InfluxDB 3 native query client (import name: influxdb_client_3) --
+                    # required for ALL queries against InfluxDB 3, local or cloud.
+                    # InfluxDB 3 does NOT support the Flux-based /api/v2/query
+                    # endpoint that influxdb-client uses for reads -- see
+                    # fetch_tide() and _sync_influxdb_cloud() in tidedatabase.py.
+                    # Pulls in pyarrow as a dependency (query results are Arrow
+                    # tables). Install may take noticeably longer on Raspberry Pi
+                    # (arm64) than the other packages in this file -- this is
+                    # expected, not a hang.
 pytz               # Timezone handling (tidealerts.py, tidedatabase.py, tide.py, tideplot.py)
 requests           # HTTP calls to NDBC/OpenWeatherMap etc. (tideget.py, tidewxhtml.py)
 urllib3            # Directly imported in tideget.py (import urllib3.util.connection), not relied on merely as a transitive dependency of requests

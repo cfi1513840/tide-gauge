@@ -1,7 +1,9 @@
+import os
 import sqlite3
 from datetime import datetime, timezone, timedelta
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
+from influxdb_client_3 import InfluxDBClient3
 import logging
 import pytz
 import tidecrypto
@@ -12,9 +14,14 @@ class DbManage:
         
         self.cons = cons
         self.sqlpath = cons.SQL_PATH
-        self.influxdb_org = cons.INFLUXDB_ORG
+        # Write client -- local InfluxDB 3 Core, v2-compatible write endpoint.
+        # Unchanged in behavior from pre-migration code; only the URL/token
+        # it's constructed with (in tidehelper.py) changed.
         self.influxdb_client = cons.INFLUXDB_WRITE_CLIENT
-        self.influxdb_query_api = cons.INFLUXDB_QUERY_API
+        # Query client -- InfluxDB 3 native client, required because InfluxDB 3
+        # does not support the Flux-based query API the old influxdb_query_api
+        # used. Queries local only; nothing currently reads the cloud copy back.
+        self.influxdb_local_query_client = cons.INFLUXDB_LOCAL_QUERY_CLIENT
         self.sql_connection = sqlite3.connect(f'{self.sqlpath}')
         self.sql_cursor = self.sql_connection.cursor()
         self.local_tz = pytz.timezone('US/Eastern')
@@ -22,6 +29,12 @@ class DbManage:
         self.initial_start = "-24h"
         self.last_time = None
         self.f1 = tidecrypto.EMAIL_KEY
+        # Cloud sync watermark: tracks the timestamp of the newest local row
+        # already pushed to InfluxDB Cloud, so _sync_influxdb_cloud() only
+        # sends what's new since the last successful sync. Stored in a flat
+        # file (not the database) so it survives tide.py restarts.
+        self.cloud_sync_watermark_path = os.path.join(
+          self.cons.HOME_DIRECTORY, '.cloud_sync_watermark')
 
    
     def insert_weather(self, weather):
@@ -244,69 +257,90 @@ class DbManage:
             return None
 
     def fetch_tide(self, stationid, stationcal, duration):
-        """Fetch the last 24 hours of tide measurements for plotting"""
+        """Fetch the last 24 hours of tide measurements for plotting.
+
+        InfluxDB 3 MIGRATION NOTE: rewritten from a Flux query (which
+        InfluxDB 3 cannot execute at all -- /api/v2/query does not work
+        against v3-stored data) to SQL against the InfluxDB 3 native query
+        client. The old Flux pivot() step is no longer needed: InfluxDB 3
+        already returns each point as a single wide row (all fields as
+        columns), rather than Flux's one-row-per-field format that pivot()
+        had to reassemble -- so this version is actually simpler than the
+        code it replaces, not just a syntax translation.
+
+        `duration` currently only ever arrives as '-24h' (see tide.py's
+        self.influx_duration) -- that is the only value handled explicitly
+        below. If some other Flux-style duration literal is ever passed,
+        it will fall through to the '-24h'-equivalent branch rather than
+        being parsed, which is a latent limitation carried over from
+        never being exercised in the original code either.
+
+        NOT YET VERIFIED against a live InfluxDB 3 instance -- test the
+        exact column names in the returned rows (tag columns vs. field
+        columns may not be named identically to the old Flux dbvalues
+        dict) before relying on this in production.
+        """
         tide_mm = ''
         batv = ''
         solarv = ''
         rssi = ''
         location = self.cons.INFLUXDB_LOCATION
         measurement = self.cons.INFLUXDB_MEASUREMENT
-        bucket = self.cons.INFLUXDB_BUCKET
         local_time  = ''
         if self.last_time is not None and duration != '-24h':
-            last_time_flux = f'time(v: "{(self.last_time + timedelta(microseconds=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")}")'
+            start_clause = (f"time > '"
+              f"{(self.last_time + timedelta(microseconds=1)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}'")
         else:
-            last_time_flux = duration
-        self.influx_query = (f'from(bucket:"{bucket}") '
-            f'|> range(start: {last_time_flux}, stop: now()) '
-            f'|> filter(fn:(r) => r._measurement == "{measurement}") '
-            f'|> filter(fn: (r) => r.location == "{location}") '
-            f'|> filter(fn: (r) => r.sensor_num == "{str(stationid)}") '
-            '|> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value") '
-            '|> sort(columns: ["_time"], desc: false)'
+            start_clause = "time > now() - INTERVAL '24 hours'"
+        self.influx_query = (
+            f'SELECT * FROM "{measurement}" '
+            f"WHERE {start_clause} "
+            f"AND location = '{location}' "
+            f"AND sensor_num = '{str(stationid)}' "
+            f'ORDER BY time ASC'
         )
         tide_list = []
         field_list = []
         field_dict = {}
         newest_time = None
         try:
-            query_result = self.influxdb_query_api.query(
-            org=self.influxdb_org, query=self.influx_query)
-            for table in query_result:
-                for record in table.records:
-                    timetag = record.get_time()             
-                    if newest_time is None or timetag > newest_time:
-                        newest_time = timetag                   
-                    dbvalues = record.values
-                    utc_time = record.get_time()
-                    local_time = utc_time.replace(
-                      tzinfo=pytz.utc).astimezone(self.local_tz)
-                    local_time = self.local_tz.normalize(local_time)
-                    local_time = datetime.strftime(
-                      local_time,"%Y-%m-%d %H:%M:%S")
-                    tide_mm = dbvalues.get(self.cons.INFLUXDB_NAMES.get('R')[1])
-                    batv = dbvalues.get(self.cons.INFLUXDB_NAMES.get('V')[1])
-                    solarv = dbvalues.get(self.cons.INFLUXDB_NAMES.get('s')[1])
-                    message_count = dbvalues.get(self.cons.INFLUXDB_NAMES.get('C')[1])
-                    correlation_count = dbvalues.get(self.cons.INFLUXDB_NAMES.get('M')[1])
-                    temperature = dbvalues.get(self.cons.INFLUXDB_NAMES.get('t')[1])
-                    rssi = dbvalues.get(self.cons.INFLUXDB_NAMES.get('P')[1])
-                    if tide_mm != None:
-                        #self.last_message_count = message_count
-                        tide = stationcal-tide_mm/304.8
-                        tide_list.append([local_time, tide, ''])
-                        field_dict = {
-                          "T": local_time,
-                          "S": stationid,
-                          "V": batv,
-                          "C": message_count,
-                          "R": tide_mm,
-                          "M": correlation_count,
-                          "s": solarv,
-                          "t": temperature,
-                          "P": rssi
-                        }
-                        field_list.append(field_dict)
+            result_table = self.influxdb_local_query_client.query(
+              query=self.influx_query, language="sql")
+            records = result_table.to_pandas().to_dict('records')
+            for dbvalues in records:
+                timetag = dbvalues.get('time')
+                if newest_time is None or timetag > newest_time:
+                    newest_time = timetag
+                utc_time = timetag
+                if getattr(utc_time, 'tzinfo', None) is None:
+                    utc_time = utc_time.replace(tzinfo=pytz.utc)
+                local_time = utc_time.astimezone(self.local_tz)
+                local_time = self.local_tz.normalize(local_time)
+                local_time = datetime.strftime(
+                  local_time,"%Y-%m-%d %H:%M:%S")
+                tide_mm = dbvalues.get(self.cons.INFLUXDB_NAMES.get('R')[1])
+                batv = dbvalues.get(self.cons.INFLUXDB_NAMES.get('V')[1])
+                solarv = dbvalues.get(self.cons.INFLUXDB_NAMES.get('s')[1])
+                message_count = dbvalues.get(self.cons.INFLUXDB_NAMES.get('C')[1])
+                correlation_count = dbvalues.get(self.cons.INFLUXDB_NAMES.get('M')[1])
+                temperature = dbvalues.get(self.cons.INFLUXDB_NAMES.get('t')[1])
+                rssi = dbvalues.get(self.cons.INFLUXDB_NAMES.get('P')[1])
+                if tide_mm != None:
+                    #self.last_message_count = message_count
+                    tide = stationcal-tide_mm/304.8
+                    tide_list.append([local_time, tide, ''])
+                    field_dict = {
+                      "T": local_time,
+                      "S": stationid,
+                      "V": batv,
+                      "C": message_count,
+                      "R": tide_mm,
+                      "M": correlation_count,
+                      "s": solarv,
+                      "t": temperature,
+                      "P": rssi
+                    }
+                    field_list.append(field_dict)
             if newest_time is not None:
                 self.last_time = newest_time
             #print (local_time+str(field_dict))
@@ -315,6 +349,83 @@ class DbManage:
         except Exception as errmsg:
             logging.warning('fetch_tide: '+str(errmsg))
             return tide_list, field_list
+
+    def sync_influxdb_cloud(self):
+        """Push local InfluxDB rows newer than the sync watermark to
+        InfluxDB Cloud (org TideGauge, bucket TideData). Called from
+        tide.py's main loop at main_loop_count == 9, gated to every 15
+        minutes (offset to :02 past the hour to avoid contending with
+        weather/NDBC processing at minute zero) -- see tide.py.
+
+        Local-first, decoupled design: this only ever reads from local
+        InfluxDB and writes to cloud. It never blocks or affects the
+        local write path in insert_tide(). On any failure (query or
+        write), the watermark is simply not advanced -- the next
+        scheduled cycle retries from the same point. No explicit
+        retry-count/backoff, by design (see design discussion).
+
+        NOT YET VERIFIED against live InfluxDB 3 Core + Cloud Serverless
+        instances -- test on TestBelfastTide before relying on this in
+        production on any node with real alert-critical data.
+        """
+        measurement = self.cons.INFLUXDB_MEASUREMENT
+        try:
+            with open(self.cloud_sync_watermark_path, 'r') as f:
+                watermark = f.read().strip()
+        except FileNotFoundError:
+            # First run on this node -- sync everything currently in
+            # local InfluxDB rather than assuming a start time.
+            watermark = '1970-01-01T00:00:00.000000Z'
+
+        sync_query = (
+            f'SELECT * FROM "{measurement}" '
+            f"WHERE time > '{watermark}' "
+            f'ORDER BY time ASC'
+        )
+        try:
+            result_table = self.influxdb_local_query_client.query(
+              query=sync_query, language="sql")
+            records = result_table.to_pandas().to_dict('records')
+        except Exception as errmsg:
+            logging.warning('sync_influxdb_cloud query failed: '+str(errmsg))
+            return
+
+        if not records:
+            return  # nothing new since the last sync -- watermark unchanged
+
+        cloud_client = self.cons.INFLUXDB_CLOUD_WRITE_CLIENT
+        write_api = cloud_client.write_api(write_options=SYNCHRONOUS)
+        newest_time = None
+        try:
+            for dbvalues in records:
+                timetag = dbvalues.pop('time')
+                point_command = Point(measurement)
+                for key, value in dbvalues.items():
+                    if value is None:
+                        continue
+                    # location/sensor_num are tags in the local write path
+                    # (insert_tide) -- preserve that distinction on the
+                    # cloud copy rather than writing everything as fields.
+                    if key in ('location', 'sensor_type', 'sensor_num'):
+                        point_command.tag(key, value)
+                    else:
+                        point_command.field(key, value)
+                point_command.time(timetag, WritePrecision.NS)
+                write_api.write(self.cons.INFLUXDB_CLOUD_BUCKET,
+                  self.cons.INFLUXDB_CLOUD_ORG, point_command)
+                if newest_time is None or timetag > newest_time:
+                    newest_time = timetag
+        except Exception as errmsg:
+            logging.warning('sync_influxdb_cloud write failed: '+str(errmsg))
+            return  # watermark NOT advanced -- retry from the same point next cycle
+
+        if newest_time is not None:
+            try:
+                with open(self.cloud_sync_watermark_path, 'w') as f:
+                    f.write(str(newest_time))
+            except Exception as errmsg:
+                logging.warning(
+                  'sync_influxdb_cloud watermark write failed: '+str(errmsg))
 
     def update_stationid(self, stationid):
         self.sql_cursor.execute(f"update iparams set stationid = {stationid}")

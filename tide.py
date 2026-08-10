@@ -84,6 +84,7 @@ class Tide:
         self.last_station2_time = self.current_time
         self.last_station3_time = self.current_time
         self.last_db_copy_time = self.current_time
+        self.last_cloud_sync_time = self.current_time
         self.main_loop_count = 0
         state.debug = 0
         self.tide1 = 0
@@ -341,6 +342,19 @@ class Tide:
             # mail themselves -- see process_mailspool() in tidehelper.py.
             #
             notify.process_mailspool(state.debug)
+
+        if (self.main_loop_count == 9 and self.current_time.minute % 15 == 2 and
+          self.current_time > self.last_cloud_sync_time):
+            #
+            # Sync unsynced local InfluxDB readings to InfluxDB Cloud every
+            # 15 minutes, offset to :02 past the hour (rather than :00) to
+            # avoid contending with weather/NDBC processing which also runs
+            # at minute zero. Local-first design: this never blocks or
+            # affects local writes -- see sync_influxdb_cloud() in
+            # tidedatabase.py for the retry/failure behavior.
+            #
+            self.last_cloud_sync_time = self.current_time
+            db.sync_influxdb_cloud()
 
         if self.main_loop_count >= 12:
 
