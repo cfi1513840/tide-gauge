@@ -173,7 +173,7 @@ class DbManage:
                 pass
             message_time = datetime.now(timezone.utc)
             if "T" in data_dict:
-                message_time = data_dict["T"]*1000
+                message_time = int(data_dict["T"]*1000)
             point_command = Point(f'{measurement}')
             point_command.tag("location", f"{location}")
             point_command.tag("sensor_type", f"{sensor}")
