@@ -188,6 +188,10 @@ class Constants:
         NWS_MARINE_GRIDPOINTS = os.getenv('NWS_MARINE_GRIDPOINTS')
         #INFLUXDB_NAMES = os.getenv('INFLUXDB_NAMES')
         TIME_ZONE = os.getenv('TIME_ZONE')
+        # HOME_DIRECTORY was documented in tide.env but never actually loaded
+        # into Constants before -- needed now by sync_influxdb_cloud()'s
+        # watermark file path (tidedatabase.py).
+        HOME_DIRECTORY = os.getenv('HOME_DIRECTORY')
         # Moved from tide_constants.json -- not secrets, and moving them
         # here means site-specific edits no longer require the
         # decrypt-edit-encrypt cycle.
