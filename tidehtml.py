@@ -32,12 +32,24 @@ class CreateHTML:
         self.lastidesams = [0 for x in range(0,5)]
         self.samcnt = 0
         self.wxexit = ''
-        envfile = find_dotenv('/var/www/html/tide.env')
+        envfile = find_dotenv(os.path.join(self.cons.HOME_DIRECTORY, 'tide.env'))
         if load_dotenv(envfile):
             self.NDBC_URL = os.getenv('NDBC_URL')
             self.WX_UND_URL = os.getenv('WX_UND_URL')
             self.STATION_NAME = os.getenv('STATION_NAME')
             self.NOAA_STATION_NAME = os.getenv('NOAA_STATION_NAME')
+        else:
+            # Fail loud rather than silently leaving these unset -- a
+            # previous version of this code left them unassigned entirely
+            # on load failure, causing an AttributeError far away in
+            # create() instead of a clear diagnostic here at the source.
+            logging.warning(
+              f'CreateHTML: could not load {envfile!r} -- '
+              f'NDBC_URL/WX_UND_URL/STATION_NAME/NOAA_STATION_NAME will be empty')
+            self.NDBC_URL = ''
+            self.WX_UND_URL = ''
+            self.STATION_NAME = ''
+            self.NOAA_STATION_NAME = ''
 
     def create(self, weather, ndbcdata, predicts, tidelist, iparams, sensor):
         self.wxexit = ''
