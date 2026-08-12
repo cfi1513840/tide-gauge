@@ -52,6 +52,11 @@ class NotehubHandler(BaseHTTPRequestHandler):
         rssi = status.get("P")
         voltage = status.get("V")
         temp = status.get("t")
+        # sensor_id is the Notecard firmware's own 3-char identity string
+        # (e.g. "BEL", "PRO"), reported in the event's status.S field. This
+        # is distinct from "S" below, which stays the numeric station
+        # number (1-3) to preserve existing legacy processing.
+        sensor_id = status.get("S")
         station = self.server.station
         records = []
         for m in event.get("measurements", []):
@@ -61,6 +66,7 @@ class NotehubHandler(BaseHTTPRequestHandler):
                 "M": m["M"],
                 "P": rssi,
                 "S": station,
+                "I": sensor_id,
                 "V": voltage,
                 "t": temp,
             })

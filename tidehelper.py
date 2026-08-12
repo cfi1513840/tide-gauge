@@ -213,6 +213,22 @@ class Constants:
         USB1_BAUDRATE = os.getenv('USB1_BAUDRATE')
         SENSOR_SOURCE = os.getenv('SENSOR_SOURCE')
 
+        # Station number -> Sensor ID lookup, built from the indexed
+        # STATIONn_NUM/SENSOR_ID/LOCATION groups in tide.env (up to 3
+        # stations). Used by tideget.py's read_sensor() to tag LoRa
+        # packets with a Sensor ID, since LoRa hardware doesn't transmit
+        # one natively the way Notecard sensors do. Blank/missing slots
+        # are skipped.
+        STATION_SENSOR_IDS = {}
+        STATION_LOCATIONS = {}
+        for _n in (1, 2, 3):
+            _num = os.getenv(f'STATION{_n}_NUM')
+            _sid = os.getenv(f'STATION{_n}_SENSOR_ID')
+            _loc = os.getenv(f'STATION{_n}_LOCATION')
+            if _num and _sid:
+                STATION_SENSOR_IDS[int(_num)] = _sid
+                STATION_LOCATIONS[int(_num)] = _loc or ''
+
     else:
         print ('Unable to load Environment file')
 

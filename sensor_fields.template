@@ -4,6 +4,11 @@
     "sensor_num",
     "int"
   ],
+  "I": [
+    "tag",
+    "sensor_id",
+    "str"
+  ],
   "C": [
     "fld",
     "message_count",

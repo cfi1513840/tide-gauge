@@ -617,6 +617,14 @@ class ReadSensor:
                       f'Discarding incomplete/garbled sensor packet '
                       f'(fields present: {sorted(data_dict.keys())}): {packet}')
                     data_dict = {}
+                elif 'S' in data_dict:
+                    # LoRa packets have no native Sensor ID field -- look
+                    # one up from the station-number table (STATIONn_NUM/
+                    # SENSOR_ID/LOCATION in tide.env, parsed into
+                    # self.cons.STATION_SENSOR_IDS) so LoRa records get the
+                    # same "I" tag Notecard records already carry natively.
+                    data_dict['I'] = self.cons.STATION_SENSOR_IDS.get(
+                      data_dict['S'], '')
             return data_dict
 
         except Exception as errmsg:

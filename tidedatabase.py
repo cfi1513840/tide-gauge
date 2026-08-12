@@ -184,6 +184,8 @@ class DbManage:
                             data_dict[name] = int(data_dict.get(name)*1000)
                         else:
                             data_dict[name] = int(data_dict.get(name))
+                    elif value[2] == 'str':
+                        data_dict[name] = str(data_dict.get(name))
                     else:
                         data_dict[name] = float(data_dict.get(name))
                     if value[0] == 'fld':
