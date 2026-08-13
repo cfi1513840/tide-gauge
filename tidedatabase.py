@@ -174,6 +174,24 @@ class DbManage:
             message_time = datetime.now(timezone.utc)
             if "T" in data_dict:
                 message_time = int(data_dict["T"]*1000)
+            # Attach the sensor height above MLLW (feet, 2 decimal places)
+            # for this record's station, sourced from the station<n>cal
+            # parameter in the sqlite3 iparams table. This makes the raw
+            # sensor_measurement_mm distance-above-water reading meaningful
+            # on its own (transformable to feet MLLW) and self-correcting
+            # if the sensor is ever relocated to a different height.
+            try:
+                station_num = data_dict.get('S')
+                if station_num is not None:
+                    self.sql_cursor.execute(
+                      f"select station{int(station_num)}cal from iparams")
+                    cal_row = self.sql_cursor.fetchone()
+                    if cal_row and cal_row[0] is not None:
+                        data_dict['H'] = cal_row[0]
+            except Exception as errmsg:
+                logging.warning(
+                  'insert_tide: sensor height (station cal) lookup '
+                  'failed: '+str(errmsg), exc_info=True)
             point_command = Point(f'{measurement}')
             point_command.tag("location", f"{location}")
             point_command.tag("sensor_type", f"{sensor}")

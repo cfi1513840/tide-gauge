@@ -9,6 +9,11 @@
     "sensor_id",
     "str"
   ],
+  "H": [
+    "fld",
+    "sensor_height_ft",
+    "float"
+  ],
   "C": [
     "fld",
     "message_count",
