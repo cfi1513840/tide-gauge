@@ -58,6 +58,10 @@ class NotehubHandler(BaseHTTPRequestHandler):
         # number (1-3) to preserve existing legacy processing.
         sensor_id = status.get("S")
         station = self.server.station
+        # Sensor height above MLLW, from tide.py's already-cached
+        # stationNcal values (set fresh each poll() call as
+        # self.server.station_cal), not a fresh sqlite3 query per record.
+        height_ft = getattr(self.server, 'station_cal', {}).get(station)
         records = []
         for m in event.get("measurements", []):
             records.append({
@@ -67,6 +71,7 @@ class NotehubHandler(BaseHTTPRequestHandler):
                 "P": rssi,
                 "S": station,
                 "I": sensor_id,
+                "H": height_ft,
                 "V": voltage,
                 "t": temp,
             })
