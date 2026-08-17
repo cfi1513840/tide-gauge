@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import time
 from datetime import datetime, timezone, timedelta
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -111,6 +112,9 @@ class DbManage:
             self.sql_connection.commit()
 
     def insert_tide(self, data_dict):
+        # --- TEMPORARY DIAGNOSTIC: remove once the per-call slowness is
+        # isolated. ---
+        t_start = time.time()
         try:
             now = datetime.now()
             database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
@@ -167,8 +171,12 @@ class DbManage:
                 self.sql_cursor.execute(
                   f"INSERT INTO sensors VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                   database_values)
+                t_before_commit = time.time()
                 self.sql_connection.commit()
+                t_after_sqlite = time.time()
             except Exception as errmsg:
+                t_after_sqlite = time.time()
+                t_before_commit = t_after_sqlite
                 logging.warning('sqlite3 db insertion failed: '+str(errmsg), exc_info=True)
                 pass
             message_time = datetime.now(timezone.utc)
@@ -202,8 +210,16 @@ class DbManage:
             point_command.time(message_time, WritePrecision.MS)
             write_api = self.influxdb_client.write_api(
               write_options=SYNCHRONOUS)
+            t_before_influx = time.time()
             result = write_api.write(self.cons.INFLUXDB_LOCAL_DATABASE,
               self.cons.ORG_FOR_LOCAL_WRITES, point_command)
+            t_end = time.time()
+            print(
+              f"[INSERT_TIDE TIMING] prep={t_before_commit-t_start:.3f}s "
+              f"sqlite_commit={t_after_sqlite-t_before_commit:.3f}s "
+              f"prep2={t_before_influx-t_after_sqlite:.3f}s "
+              f"influx_write={t_end-t_before_influx:.3f}s "
+              f"TOTAL={t_end-t_start:.3f}s")
 
         except Exception as errmsg:
             logging.warning('insert_tide: '+str(errmsg), exc_info=True)            
