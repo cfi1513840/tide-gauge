@@ -33,17 +33,12 @@ class NotehubHandler(BaseHTTPRequestHandler):
     timeout = 5
 
     def do_POST(self):
-        # --- TEMPORARY DIAGNOSTIC: remove once the Notehub delay is
-        # isolated. Prints a timing breakdown for every POST handled. ---
-        t_start = time.time()
         if self.headers.get("X-Auth") != self.server.secret:
             self._reply(401, b"unauthorized")
             return
         try:
             length = int(self.headers.get("Content-Length", 0))
-            t_before_read = time.time()
             event = json.loads(self.rfile.read(length))
-            t_after_read = time.time()
             records = self._normalize(event)
         except (ValueError, KeyError, TypeError):
             self._reply(400, b"bad request")
@@ -51,15 +46,7 @@ class NotehubHandler(BaseHTTPRequestHandler):
         for record in records:
             # print(record)
             self.server.db.insert_tide(record)
-        t_after_inserts = time.time()
         self._reply(200, b"ok")
-        t_end = time.time()
-        print(
-          f"[NOTEHUB TIMING] auth_check={t_before_read-t_start:.3f}s "
-          f"read_body={t_after_read-t_before_read:.3f}s "
-          f"insert_tide_x{len(records)}={t_after_inserts-t_after_read:.3f}s "
-          f"reply={t_end-t_after_inserts:.3f}s "
-          f"TOTAL_do_POST={t_end-t_start:.3f}s")
 
     def _normalize(self, event):
         status = event.get("status", {})
@@ -126,14 +113,10 @@ class NotehubReceiver:
         self.server.station = station
         handled = 0
         while handled < max_requests and self._has_pending():
-            t_handle_start = time.time()
             try:
                 self.server.handle_request()
             except OSError:
                 break
-            # TEMPORARY DIAGNOSTIC -- remove alongside the do_POST timing.
-            print(f"[NOTEHUB TIMING] handle_request() total="
-                  f"{time.time()-t_handle_start:.3f}s (station {station})")
             handled += 1
         return handled
 

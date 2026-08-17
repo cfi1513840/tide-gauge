@@ -115,17 +115,21 @@ class Constants:
     # InfluxDB 3 Core; ORG_FOR_LOCAL_WRITES exists only to make that
     # explicit rather than passing '' inline at each call site.
     ORG_FOR_LOCAL_WRITES = ''
-    # Writes (local and cloud) -- v2-compatible client, unchanged from
-    # pre-migration code apart from pointing at the new URL/token/org values.
-    INFLUXDB_WRITE_CLIENT = InfluxDBClient(url=INFLUXDB_LOCAL_URL,
-      token=INFLUXDB_LOCAL_TOKEN, org=ORG_FOR_LOCAL_WRITES)
+    # Writes (cloud only, still v2-compatible) -- local writes now go
+    # through INFLUXDB_LOCAL_QUERY_CLIENT below via the native v3
+    # write_lp API, which measured roughly 2x faster than the v2
+    # compatibility endpoint on TestBelfastTide.
     INFLUXDB_CLOUD_WRITE_CLIENT = InfluxDBClient(url=INFLUXDB_CLOUD_URL,
       token=INFLUXDB_CLOUD_TOKEN, org=INFLUXDB_CLOUD_ORG)
-    # Queries (local only -- cloud sync queries local, then writes to cloud;
-    # nothing currently queries the cloud copy back) -- InfluxDB 3 native
-    # client, required because InfluxDB 3 does not support Flux/v2 queries.
+    # Queries AND local writes -- InfluxDB 3 native client. Queries are
+    # required to go this way since InfluxDB 3 does not support Flux/v2
+    # queries; write_use_v2_api=False routes local writes through the
+    # native /api/v3/write_lp endpoint instead of the v2-compatible
+    # /api/v2/write endpoint, which was found to be roughly 2x slower
+    # for local (same-host) writes.
     INFLUXDB_LOCAL_QUERY_CLIENT = InfluxDBClient3(host=INFLUXDB_LOCAL_URL,
-      token=INFLUXDB_LOCAL_TOKEN, database=INFLUXDB_LOCAL_DATABASE)
+      token=INFLUXDB_LOCAL_TOKEN, database=INFLUXDB_LOCAL_DATABASE,
+      write_use_v2_api=False)
     OBSCAPE_USER = secure_dict.get('OBSCAPE_USER')
     OBSCAPE_KEY = secure_dict.get('OBSCAPE_KEY')
     NOTEHUB_SECRET = secure_dict.get('NOTEHUB_SECRET')
