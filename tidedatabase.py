@@ -200,11 +200,21 @@ class DbManage:
                     else:
                         point_command.tag(value[1], data_dict.get(name))
             point_command.time(message_time, WritePrecision.MS)
+            # --- TEMPORARY DIAGNOSTIC: bypasses logging entirely to get
+            # an unambiguous, direct answer. Remove once resolved. ---
+            print(f"[WRITE DEBUG] about to call write(), line="
+                  f"{point_command.to_line_protocol()}", flush=True)
             self.influxdb_local_query_client.write(
               record=point_command,
               database=self.cons.INFLUXDB_LOCAL_DATABASE)
+            print("[WRITE DEBUG] write() returned normally, no exception",
+                  flush=True)
 
         except Exception as errmsg:
+            print(f"[WRITE DEBUG] EXCEPTION CAUGHT: {type(errmsg).__name__}: "
+                  f"{errmsg}", flush=True)
+            import traceback
+            traceback.print_exc()
             logging.warning('insert_tide: '+str(errmsg), exc_info=True)            
 
     def fetch_predicts(self, tide_start_time):
