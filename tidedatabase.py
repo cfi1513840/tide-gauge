@@ -1,5 +1,7 @@
 import os
 import sqlite3
+import queue
+import threading
 from datetime import datetime, timezone, timedelta
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -14,10 +16,19 @@ class DbManage:
         
         self.cons = cons
         self.sqlpath = cons.SQL_PATH
-        # Write client removed -- local writes now go through
-        # self.influxdb_local_query_client (native v3 write_lp API, set
-        # up below); cloud writes still use cons.INFLUXDB_CLOUD_WRITE_CLIENT
-        # directly in sync_influxdb_cloud().
+        # Local write client -- v2-compatible endpoint (reverted from the
+        # native v3 write_lp API; see tidehelper.py for why). Writes are
+        # dispatched through a background thread (self._write_worker) so
+        # a slow/blocked write can never stall the Tk main loop or delay
+        # a Notehub HTTP response -- insert_tide() only builds the Point
+        # and enqueues it, returning immediately.
+        self.influxdb_client = cons.INFLUXDB_WRITE_CLIENT
+        self._influxdb_write_api = self.influxdb_client.write_api(
+          write_options=SYNCHRONOUS)
+        self._write_queue = queue.Queue()
+        self._write_thread = threading.Thread(
+          target=self._write_worker, daemon=True)
+        self._write_thread.start()
         # Query client -- InfluxDB 3 native client, required because InfluxDB 3
         # does not support the Flux-based query API the old influxdb_query_api
         # used. Queries local only; nothing currently reads the cloud copy back.
@@ -36,7 +47,27 @@ class DbManage:
         self.cloud_sync_watermark_path = os.path.join(
           self.cons.HOME_DIRECTORY, '.cloud_sync_watermark')
 
-   
+    def _write_worker(self):
+        """Background thread: pulls Points off self._write_queue and
+        writes them to local InfluxDB one at a time, off the Tk main
+        thread. Runs for the life of the process (daemon thread, so it
+        doesn't block interpreter shutdown). A slow or stuck write here
+        never blocks main(), sensor reads, or Notehub HTTP responses --
+        it only delays how quickly OTHER queued points get written.
+        """
+        while True:
+            point_command = self._write_queue.get()
+            try:
+                self._influxdb_write_api.write(
+                  self.cons.INFLUXDB_LOCAL_DATABASE,
+                  self.cons.ORG_FOR_LOCAL_WRITES, point_command)
+            except Exception as errmsg:
+                logging.warning(
+                  'insert_tide (background write thread): '+str(errmsg),
+                  exc_info=True)
+            finally:
+                self._write_queue.task_done()
+
     def insert_weather(self, weather):
         now = datetime.now()
         database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
@@ -200,21 +231,13 @@ class DbManage:
                     else:
                         point_command.tag(value[1], data_dict.get(name))
             point_command.time(message_time, WritePrecision.MS)
-            # --- TEMPORARY DIAGNOSTIC: bypasses logging entirely to get
-            # an unambiguous, direct answer. Remove once resolved. ---
-            print(f"[WRITE DEBUG] about to call write(), line="
-                  f"{point_command.to_line_protocol()}", flush=True)
-            self.influxdb_local_query_client.write(
-              record=point_command,
-              database=self.cons.INFLUXDB_LOCAL_DATABASE)
-            print("[WRITE DEBUG] write() returned normally, no exception",
-                  flush=True)
+            # Hand off to the background write thread (see
+            # _write_worker) instead of writing synchronously here --
+            # this call returns immediately regardless of how long the
+            # actual InfluxDB write takes.
+            self._write_queue.put(point_command)
 
         except Exception as errmsg:
-            print(f"[WRITE DEBUG] EXCEPTION CAUGHT: {type(errmsg).__name__}: "
-                  f"{errmsg}", flush=True)
-            import traceback
-            traceback.print_exc()
             logging.warning('insert_tide: '+str(errmsg), exc_info=True)            
 
     def fetch_predicts(self, tide_start_time):

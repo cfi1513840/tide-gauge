@@ -115,27 +115,24 @@ class Constants:
     # InfluxDB 3 Core; ORG_FOR_LOCAL_WRITES exists only to make that
     # explicit rather than passing '' inline at each call site.
     ORG_FOR_LOCAL_WRITES = ''
-    # Writes (cloud only, still v2-compatible) -- local writes now go
-    # through INFLUXDB_LOCAL_QUERY_CLIENT below via the native v3
-    # write_lp API, which measured roughly 2x faster than the v2
-    # compatibility endpoint on TestBelfastTide.
+    # Writes (local and cloud) -- v2-compatible client. Reverted from the
+    # native v3 write_lp endpoint after finding it does not reliably
+    # auto-create tables (confirmed: a table name that previously had
+    # heavy write history, once deleted, permanently fails to
+    # auto-recreate via native v3 writes, while brand-new names work
+    # fine -- likely an InfluxDB 3 Core catalog bug) and fails
+    # completely silently in that case (write() returns normally, no
+    # exception, even with write_accept_partial=False set). The v2
+    # endpoint's per-write latency is addressed via a background write
+    # thread in tidedatabase.py instead of switching write APIs.
+    INFLUXDB_WRITE_CLIENT = InfluxDBClient(url=INFLUXDB_LOCAL_URL,
+      token=INFLUXDB_LOCAL_TOKEN, org=ORG_FOR_LOCAL_WRITES)
     INFLUXDB_CLOUD_WRITE_CLIENT = InfluxDBClient(url=INFLUXDB_CLOUD_URL,
       token=INFLUXDB_CLOUD_TOKEN, org=INFLUXDB_CLOUD_ORG)
-    # Queries AND local writes -- InfluxDB 3 native client. Queries are
-    # required to go this way since InfluxDB 3 does not support Flux/v2
-    # queries; write_use_v2_api=False routes local writes through the
-    # native /api/v3/write_lp endpoint instead of the v2-compatible
-    # /api/v2/write endpoint, which was found to be roughly 2x slower
-    # for local (same-host) writes. write_accept_partial=False is
-    # important: the client's own default (True) lets a write "succeed"
-    # from Python's point of view even when InfluxDB rejects some or all
-    # of the data server-side, with no exception raised -- this caused a
-    # real, silent multi-hour data gap on TestBelfastTide. With it False,
-    # any rejected write raises InfluxDBPartialWriteError (with per-line
-    # detail) instead, which insert_tide()'s existing except block logs.
+    # Queries only (local) -- InfluxDB 3 native client, required since
+    # InfluxDB 3 does not support Flux/v2 queries.
     INFLUXDB_LOCAL_QUERY_CLIENT = InfluxDBClient3(host=INFLUXDB_LOCAL_URL,
-      token=INFLUXDB_LOCAL_TOKEN, database=INFLUXDB_LOCAL_DATABASE,
-      write_use_v2_api=False, write_accept_partial=False)
+      token=INFLUXDB_LOCAL_TOKEN, database=INFLUXDB_LOCAL_DATABASE)
     OBSCAPE_USER = secure_dict.get('OBSCAPE_USER')
     OBSCAPE_KEY = secure_dict.get('OBSCAPE_KEY')
     NOTEHUB_SECRET = secure_dict.get('NOTEHUB_SECRET')
