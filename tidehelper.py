@@ -126,10 +126,16 @@ class Constants:
     # queries; write_use_v2_api=False routes local writes through the
     # native /api/v3/write_lp endpoint instead of the v2-compatible
     # /api/v2/write endpoint, which was found to be roughly 2x slower
-    # for local (same-host) writes.
+    # for local (same-host) writes. write_accept_partial=False is
+    # important: the client's own default (True) lets a write "succeed"
+    # from Python's point of view even when InfluxDB rejects some or all
+    # of the data server-side, with no exception raised -- this caused a
+    # real, silent multi-hour data gap on TestBelfastTide. With it False,
+    # any rejected write raises InfluxDBPartialWriteError (with per-line
+    # detail) instead, which insert_tide()'s existing except block logs.
     INFLUXDB_LOCAL_QUERY_CLIENT = InfluxDBClient3(host=INFLUXDB_LOCAL_URL,
       token=INFLUXDB_LOCAL_TOKEN, database=INFLUXDB_LOCAL_DATABASE,
-      write_use_v2_api=False)
+      write_use_v2_api=False, write_accept_partial=False)
     OBSCAPE_USER = secure_dict.get('OBSCAPE_USER')
     OBSCAPE_KEY = secure_dict.get('OBSCAPE_KEY')
     NOTEHUB_SECRET = secure_dict.get('NOTEHUB_SECRET')
