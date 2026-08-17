@@ -1,0 +1,27 @@
+[Unit]
+Description=InfluxDB 3 (local) for TideData
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=tide
+Group=tide
+ExecStart=/usr/local/bin/influxdb3 serve --node-id=testbelfasttide --http-bind=127.0.0.1:8181 --object-store=file --data-dir=/home/tide/influxdb3/data --plugin-dir=/home/tide/influxdb3/plugins
+Restart=always
+RestartSec=5
+# Cap restart attempts so a truly broken install doesn't spin forever;
+# adjust StartLimitIntervalSec/StartLimitBurst if you want a different
+# tolerance.
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+# Send stdout/stderr to the journal so `journalctl -u influxdb3` shows
+# crash logs -- this is what was missing before, since the plain
+# background process had nowhere reliable for its output to go.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=influxdb3
+
+[Install]
+WantedBy=multi-user.target
