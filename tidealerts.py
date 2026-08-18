@@ -29,6 +29,7 @@ class TideAlerts:
         # bad value can drag arbitrarily far off), then against the MEAN
         # once the full 20-sample window is established (steady state).
         self.tide_average = []
+        self._last_stationid = None
         self.OUTLIER_MAX_DEVIATION_FT = 1
         self.OUTLIER_BOOTSTRAP_UNCONDITIONAL = 4
         self.OUTLIER_WINDOW_SIZE = 20
@@ -39,7 +40,22 @@ class TideAlerts:
         self.f1 = tidecrypto.EMAIL_KEY
         self.f2 = tidecrypto.PHONE_KEY
        
-    def check_alerts(self, tide, weather, ndbc_data, sunrise, sunset, debug):
+    def check_alerts(self, tide, weather, ndbc_data, sunrise, sunset, debug,
+      stationid=None):
+        # tide_average is a single shared buffer for whichever station is
+        # currently selected -- it isn't keyed per sensor the way
+        # insert_tide()'s outlier buffers are. If the active station
+        # changes (manual iparams change, or the automatic failover
+        # logic in tide.py's main()), the two sensors' calibrated
+        # readings may not agree closely enough to both sit inside the
+        # existing 1 ft window, even when neither is malfunctioning --
+        # so treat a station change exactly like a fresh restart: reset
+        # the buffer and let it re-bootstrap against the new sensor,
+        # rather than judging its readings against a baseline that no
+        # longer applies.
+        if stationid is not None and stationid != self._last_stationid:
+            self.tide_average = []
+            self._last_stationid = stationid
         current_time = datetime.now()
         message_time = datetime.strftime(current_time, self.cons.TIME_FORMAT)
 

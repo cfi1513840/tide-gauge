@@ -509,7 +509,8 @@ class Tide:
                     self.last_station3_time = self.current_time
                 if self.tide_ft != 99:
                     alerts.check_alerts(self.tide_ft, self.weather,
-                      self.ndbc_data, self.sunrise, self.sunset, state.debug)
+                      self.ndbc_data, self.sunrise, self.sunset, state.debug,
+                      self.stationid)
         except Exception as errmsg:
             logging.warning('main() loop body: '+str(errmsg), exc_info=True)
 
