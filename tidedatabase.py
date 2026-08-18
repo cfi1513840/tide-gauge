@@ -3,6 +3,7 @@ import sqlite3
 import queue
 import threading
 from datetime import datetime, timezone, timedelta
+from statistics import median
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from influxdb_client_3 import InfluxDBClient3
@@ -33,6 +34,15 @@ class DbManage:
         # does not support the Flux-based query API the old influxdb_query_api
         # used. Queries local only; nothing currently reads the cloud copy back.
         self.influxdb_local_query_client = cons.INFLUXDB_LOCAL_QUERY_CLIENT
+        # Outlier rejection: same design as tidealerts.py's alert-side
+        # check (see there for the full rationale), applied here to the
+        # database write path instead, since alerts operate on live
+        # in-memory data and never touch insert_tide() -- a reading bad
+        # enough to trip the alert check could otherwise still land in
+        # both databases untouched. Keyed per sensor_id (the record's "I"
+        # field), since multiple distinct physical sensors share this one
+        # write path and each needs its own independent window.
+        self._outlier_buffers = {}
         self.sql_connection = sqlite3.connect(f'{self.sqlpath}')
         self.sql_cursor = self.sql_connection.cursor()
         self.local_tz = pytz.timezone('US/Eastern')
@@ -141,7 +151,62 @@ class DbManage:
         if db_commit:
             self.sql_connection.commit()
 
+    def _check_outlier(self, sensor_id, candidate_ft):
+        """Same design as tidealerts.py's alert-side check (see there for
+        full rationale) -- applied here so a bad reading can't land in
+        either database at all, not just skip one alert cycle. Keyed per
+        sensor_id since multiple physical sensors share this write path.
+        Returns True to accept (write it), False to skip the write --
+        either because it failed the check, or because it's one of the
+        first few bootstrap samples used only to seed the buffer (a
+        deliberate, small data gap of a few minutes after every startup
+        or restart, in exchange for never writing anything unfiltered).
+        """
+        OUTLIER_MAX_DEVIATION_FT = 1
+        OUTLIER_BOOTSTRAP_UNCONDITIONAL = 4
+        OUTLIER_WINDOW_SIZE = 20
+        buf = self._outlier_buffers.setdefault(sensor_id, [])
+        n = len(buf)
+        if n < OUTLIER_BOOTSTRAP_UNCONDITIONAL:
+            # Seed the buffer, but don't write -- not enough history yet
+            # to judge this reading, so it's discarded rather than
+            # written unfiltered.
+            buf.append(candidate_ft)
+            return False
+        elif n < OUTLIER_WINDOW_SIZE:
+            check_tide = median(buf)
+            if (candidate_ft > check_tide + OUTLIER_MAX_DEVIATION_FT or
+              candidate_ft < check_tide - OUTLIER_MAX_DEVIATION_FT):
+                logging.warning(
+                  f'insert_tide: rejecting outlier for sensor {sensor_id}: '
+                  f'{candidate_ft} versus running median {check_tide}')
+                return False
+            buf.append(candidate_ft)
+            return True
+        check_tide = sum(buf) / OUTLIER_WINDOW_SIZE
+        if (candidate_ft > check_tide + OUTLIER_MAX_DEVIATION_FT or
+          candidate_ft < check_tide - OUTLIER_MAX_DEVIATION_FT):
+            logging.warning(
+              f'insert_tide: rejecting outlier for sensor {sensor_id}: '
+              f'{candidate_ft} versus 20-sample average {check_tide}')
+            return False
+        self._outlier_buffers[sensor_id] = buf[1:] + [candidate_ft]
+        return True
+
     def insert_tide(self, data_dict):
+        # Reject an implausible reading before it reaches either database
+        # (sqlite3 or InfluxDB). Only possible when both a sensor_id and
+        # a computable tide-in-feet value are present; if either is
+        # missing (e.g. sensor height not yet calibrated), fall through
+        # to the existing unfiltered behavior rather than blocking writes
+        # entirely on a config gap.
+        sensor_id = data_dict.get('I')
+        raw_mm = data_dict.get('R', data_dict.get('U'))
+        height_ft = data_dict.get('H')
+        if sensor_id is not None and raw_mm is not None and height_ft is not None:
+            candidate_ft = height_ft - raw_mm / 304.8
+            if not self._check_outlier(sensor_id, candidate_ft):
+                return
         try:
             now = datetime.now()
             database_time = datetime.strftime(now, self.cons.TIME_FORMAT)

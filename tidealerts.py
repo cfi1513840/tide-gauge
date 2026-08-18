@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime
+from statistics import median
 import time
 import pytz
 import logging
@@ -14,10 +15,25 @@ class TideAlerts:
         self.sql_connection = sqlite3.connect(self.cons.SQL_PATH)
         self.sql_cursor = self.sql_connection.cursor()
         self.save_alert_list = []
-        self.tide_average = [0 for x in range(0,20)]
+        # Validated 20-minute rolling window of tide levels, used both to
+        # flag an implausible reading (deviates > OUTLIER_MAX_DEVIATION_FT
+        # from the window) and to detect rising/falling phase. Starts
+        # empty rather than pre-seeded with 20 zeros: a candidate is only
+        # added once it has passed the check below, so a bad reading
+        # during startup (or ever) can't corrupt the baseline it's being
+        # judged against. The first few samples are accepted outright
+        # (nothing to meaningfully compare against yet); from there,
+        # candidates are checked against the MEDIAN of what's validated
+        # so far while the window is still filling (median stays robust
+        # with only a handful of samples, unlike a mean, which a single
+        # bad value can drag arbitrarily far off), then against the MEAN
+        # once the full 20-sample window is established (steady state).
+        self.tide_average = []
+        self.OUTLIER_MAX_DEVIATION_FT = 1
+        self.OUTLIER_BOOTSTRAP_UNCONDITIONAL = 4
+        self.OUTLIER_WINDOW_SIZE = 20
         self.last_average = 0
         self.average = 0
-        self.tide_count = 0
         self.phase = ''
         self.wind_samples = [0 for x in range(0,30)]
         self.f1 = tidecrypto.EMAIL_KEY
@@ -102,19 +118,37 @@ class TideAlerts:
                           save_entry['water_temp_status']
                         alert_list[index]['event_repeat'] = \
                           save_entry['event_repeat']
-        #self.tide_count += 1
-        #self.tide_average = self.tide_average[1:]+[tide_level]
-        if self.tide_count < 20:
-            self.tide_count += 1
-            self.tide_average = self.tide_average[1:]+[tide_level]
-            return                
-        self.tide_average = self.tide_average[1:]+[tide_level]
-        check_tide = sum(self.tide_average)/20
-        if tide_level > check_tide+1 or tide_level < check_tide-1:
+        n = len(self.tide_average)
+        if n < self.OUTLIER_BOOTSTRAP_UNCONDITIONAL:
+            # Not enough samples yet to meaningfully judge a candidate --
+            # accept it outright.
+            self.tide_average.append(tide_level)
+            return
+        elif n < self.OUTLIER_WINDOW_SIZE:
+            # Still filling the window: check against the median of what
+            # has been validated so far (robust to the few outliers that
+            # might already be mixed in), then add if it passes.
+            check_tide = median(self.tide_average)
+            if (tide_level > check_tide + self.OUTLIER_MAX_DEVIATION_FT or
+              tide_level < check_tide - self.OUTLIER_MAX_DEVIATION_FT):
+                logging.warning(message_time+' invalid tide level: '+
+                  str(tide_level)+' versus running median: '+str(check_tide))
+                return
+            self.tide_average.append(tide_level)
+            return
+        # Steady state: full 20-sample window established. Check against
+        # the mean of the current window BEFORE adding the candidate, so
+        # a rejected reading never enters the window at all (previously,
+        # the candidate was added first and could still skew the average
+        # for the following 19 cycles even when the alert cycle itself
+        # was skipped for it).
+        check_tide = sum(self.tide_average)/self.OUTLIER_WINDOW_SIZE
+        if (tide_level > check_tide + self.OUTLIER_MAX_DEVIATION_FT or
+          tide_level < check_tide - self.OUTLIER_MAX_DEVIATION_FT):
             logging.warning (message_time+' invalid tide level: '+
               str(tide_level)+' versus 20 minute average: '+str(check_tide))
             return
-        #self.tide_count += 1
+        self.tide_average = self.tide_average[1:]+[tide_level]
         self.average = sum(self.tide_average[10:])/10
         self.last_average = sum(self.tide_average[:10])/10
         if self.average > self.last_average + 0.05:
