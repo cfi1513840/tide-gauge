@@ -23,7 +23,7 @@ Example:
 from __future__ import annotations
 
 import re
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict, deque
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -83,6 +83,11 @@ class DailyVisitReport:
     AUTO_REFRESH_SOURCE_PATH = "/tide.html"
     AUTO_REFRESH_INTERVAL_SECONDS = 300
     AUTO_REFRESH_TOLERANCE_SECONDS = 5
+    # How many of a host's most recent tide.html hits to check a new hit
+    # against (not just the single most recent). 3 comfortably covers a
+    # visitor with two or three tabs/windows open at once without
+    # growing unbounded for a host that's been hammering the page.
+    AUTO_REFRESH_RECENT_HITS = 3
 
     def __init__(self, log_path: str = "/var/log/apache2/access.log.1"):
         self.log_path = Path(log_path)
@@ -115,9 +120,17 @@ class DailyVisitReport:
         auto_refresh_counts = OrderedDict((label, 0) for label in self.CATEGORIES)
         report_date: Optional[datetime] = None
 
-        # Last-seen timestamp per host, for auto-refresh interval detection
-        # on the tide.html category only.
-        last_seen: dict[str, datetime] = {}
+        # Recent hit timestamps per host (not just the single most recent),
+        # for auto-refresh interval detection on the tide.html category.
+        # A visitor with more than one tab/window open to the page runs
+        # multiple independent 300-second refresh cycles under the same
+        # host -- interleaved, those look nothing like a clean 300-second
+        # gap against only the single most-recent hit, even though every
+        # one of them is still a genuine auto refresh. Checking against
+        # the last few hits (not just the last one) recognizes each
+        # interleaved cycle independently.
+        recent_seen: "dict[str, deque[datetime]]" = defaultdict(
+          lambda: deque(maxlen=self.AUTO_REFRESH_RECENT_HITS))
 
         for line in lines:
             if not line.strip():
@@ -148,10 +161,10 @@ class DailyVisitReport:
             visitors[label].add(host)
 
             if label == self.AUTO_REFRESH_CATEGORY:
-                if self._is_auto_refresh(host, line_time, match.group("referer"), last_seen):
+                if self._is_auto_refresh(host, line_time, match.group("referer"), recent_seen):
                     auto_refresh_counts[label] += 1
                 if line_time is not None:
-                    last_seen[host] = line_time
+                    recent_seen[host].append(line_time)
 
         return self._format_report(report_date, counts, visitors, auto_refresh_counts)
 
@@ -160,23 +173,30 @@ class DailyVisitReport:
         host: str,
         line_time: Optional[datetime],
         referer: str,
-        last_seen: "dict[str, datetime]",
+        recent_seen: "dict[str, deque[datetime]]",
     ) -> bool:
         """
         True if this hit looks like tide.html's self-triggered 5-minute
         refresh rather than a fresh page load: the Referer must be the tide
-        page itself, and the gap since this host's last tide.html hit must
-        fall within AUTO_REFRESH_TOLERANCE_SECONDS of exactly
-        AUTO_REFRESH_INTERVAL_SECONDS.
+        page itself, and the gap since ANY of this host's recent tide.html
+        hits (not just the most recent one) must fall within
+        AUTO_REFRESH_TOLERANCE_SECONDS of exactly
+        AUTO_REFRESH_INTERVAL_SECONDS. Checking multiple recent hits (see
+        AUTO_REFRESH_RECENT_HITS) correctly recognizes a visitor running
+        more than one independently-refreshing tab/window from the same
+        host, which a single-last-seen-timestamp check cannot.
         """
-        if line_time is None or host not in last_seen:
+        if line_time is None or host not in recent_seen:
             return False
 
         if urlparse(referer).path != self.AUTO_REFRESH_SOURCE_PATH:
             return False
 
-        gap = (line_time - last_seen[host]).total_seconds()
-        return abs(gap - self.AUTO_REFRESH_INTERVAL_SECONDS) <= self.AUTO_REFRESH_TOLERANCE_SECONDS
+        return any(
+          abs((line_time - prior).total_seconds() - self.AUTO_REFRESH_INTERVAL_SECONDS)
+          <= self.AUTO_REFRESH_TOLERANCE_SECONDS
+          for prior in recent_seen[host]
+        )
 
     def _extract_path(self, request_line: str) -> Optional[str]:
         """
