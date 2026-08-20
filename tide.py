@@ -154,7 +154,7 @@ class Tide:
               display_date_and_time[0]+" "+chr(8211)+" Sunrise: "+display_date_and_time[1]+
               " "+chr(8211)+" Sunset: "+display_date_and_time[2])
             self.main()
-        text = f'{cons.HOSTNAME} Tide Station startup at {self.message_time}'
+        text = f'Tide Station startup at {self.message_time}'
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:
                 continue
@@ -487,7 +487,7 @@ class Tide:
                         self.stationid = alt_station
                         db.update_stationid(alt_station)
                         msgsuff = f', switching to Station {str(alt_station)}'
-                    text = (self.message_time+f' {cons.HOSTNAME} Station {cur_station} has not reported in '+
+                    text = (self.message_time+f' Station {cur_station} has not reported in '+
                       f'over 5 minutes{msgsuff}')
                     for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
                         if twilio_phone_recipient == None:
@@ -530,7 +530,7 @@ class Tide:
 
         self.visit = True
         visits_text = visits.get_daily_report()
-        email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+        email_message = (self.message_time+
           "\n"+visits_text)
         for email_recip in cons.ADMIN_EMAIL:
             if email_recip == None:
@@ -544,7 +544,7 @@ class Tide:
             notify.send_email(email_recipient, email_headers,
               email_message, state.debug,)
 
-        text_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+        text_message = (self.message_time+
           "\n"+visits_text)
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:

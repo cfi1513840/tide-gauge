@@ -339,11 +339,11 @@ class GetWeather:
         """Generate email and text notification for weather read errors"""
         for email_recipient in self.cons.ADMIN_EMAIL:
             email_headers = ["From: " + self.cons.EMAIL_USERNAME,
-                    f"Subject: {self.cons.HOSTNAME} {source} Failure",
+                    f"Subject: {source} Failure",
                     "To: "+email_recipient,"MIME-Versiion:1.0",
                     "Content-Type:text/html"]
             email_headers = "\r\n".join(email_headers)
-            text_message = ("From "+self.cons.HOSTNAME+": "+
+            text_message = (
             self.message_time+
             f" - 5 consecutive failures requesting {source} data")
             logging.debug (email_headers+' '+text_message)
@@ -357,12 +357,11 @@ class GetWeather:
         for email_recipient in self.cons.ADMIN_EMAIL:
             email_headers = [
               "From: " + self.cons.EMAIL_USERNAME,
-              f"Subject: {self.cons.HOSTNAME} {source} Restored",
+              f"Subject: {source} Restored",
               "To: "+email_recipient,"MIME-Versiion:1.0",
               "Content-Type:text/html"]
             email_headers = "\r\n".join(email_headers)
             text_message = (
-              "From "+self.cons.HOSTNAME+": "+
               self.message_time+
               f" - {source} query successful "+
               f"following {str(count)} consecutive failures")
