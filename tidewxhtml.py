@@ -608,13 +608,13 @@ class CreateWxHTML:
         self.outfile.write ('<tr valign="middle">\n')
         self.outfile.write (f'<td class="day-time">\n')
         self.outfile.write (f'{rowHeader[5]}</td>\n')
-       #for waveperiod in wavePeriodOut:
-       #   self.outfile.write (f'<td class="day-name">\n')
-       #   self.outfile.write (f'{waveperiod}</td>\n')
-       #self.outfile.write ('</tr>\n')
-       #self.outfile.write ('<tr valign="middle">\n')
-       #self.outfile.write (f'<td class="day-time">\n')
-       #self.outfile.write (f'{rowHeader[6]}</td>\n')
+        for waveperiod in wavePeriodOut:
+           self.outfile.write (f'<td class="day-name">\n')
+           self.outfile.write (f'{waveperiod}</td>\n')
+        self.outfile.write ('</tr>\n')
+        self.outfile.write ('<tr valign="middle">\n')
+        self.outfile.write (f'<td class="day-time">\n')
+        self.outfile.write (f'{rowHeader[6]}</td>\n')
         for weather in weatherOut:
             self.outfile.write (f'<td class="day-name">\n')
             self.outfile.write (f'{weather}</td>\n')
