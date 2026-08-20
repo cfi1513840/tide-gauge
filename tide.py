@@ -158,7 +158,7 @@ class Tide:
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:
                 continue
-            notify.send_SMS(twilio_phone_recipient, text, state.debug)
+            notify.send_SMS(twilio_phone_recipient, text, state.debug, cons.STATION_LOCATION)
         for email_recip in cons.ADMIN_EMAIL:
             if email_recip == None:
                 continue
@@ -492,7 +492,7 @@ class Tide:
                     for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
                         if twilio_phone_recipient == None:
                             continue
-                        notify.send_SMS(twilio_phone_recipient, text, state.debug)
+                        notify.send_SMS(twilio_phone_recipient, text, state.debug, cons.STATION_LOCATION)
                     for email_recip in cons.ADMIN_EMAIL:
                         if email_recip == None:
                             continue
@@ -549,7 +549,7 @@ class Tide:
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:
                 continue
-            notify.send_SMS(twilio_phone_recipient, text_message, state.debug)
+            notify.send_SMS(twilio_phone_recipient, text_message, state.debug, cons.STATION_LOCATION)
 #
 # Start the ball rolling
 #

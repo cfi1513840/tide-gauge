@@ -287,8 +287,15 @@ class Notify:
     def __init__(self, cons):
         self.cons = cons
 
-    def send_SMS(self, twilio_phone_recipient, text_message, debug):
-        """Method to send status or alert information via SMS text message"""
+    def send_SMS(self, twilio_phone_recipient, text_message, debug, header=None):
+        """Method to send status or alert information via SMS text message.
+        Optional header (typically the station's location) is prepended
+        to identify the source -- SMS has no equivalent to email's
+        From/Subject headers, so this is the only way to carry that
+        identity once it's no longer baked into the message body itself.
+        """
+        if header:
+            text_message = f"{header}: {text_message}"
         if debug:
             print ('SMS notify to '+ twilio_phone_recipient+'\n'+text_message)
             return

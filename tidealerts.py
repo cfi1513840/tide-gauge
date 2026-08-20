@@ -219,7 +219,7 @@ class TideAlerts:
                               email_headers, text_message, debug)
                             if len(telnbr) != 0:
                                 self.notify.send_SMS(telnbr,
-                                  text_message, debug) 
+                                  text_message, debug, self.cons.STATION_LOCATION) 
 
                 elif status == 0 and self.phase == 'Falling':          
                     if (tide_level <= db_level and
@@ -237,7 +237,7 @@ class TideAlerts:
                               email_headers, text_message, debug)
                             if len(telnbr) != 0:
                                 self.notify.send_SMS(telnbr,
-                              text_message, debug) 
+                              text_message, debug, self.cons.STATION_LOCATION) 
 
                 elif status == 1 and self.phase == 'Rising':
                     if (tide_level >= db_level and
@@ -255,7 +255,7 @@ class TideAlerts:
                               email_headers, text_message, debug)
                             if len(telnbr) != 0:
                                 self.notify.send_SMS(telnbr,
-                                  text_message, debug) 
+                                  text_message, debug, self.cons.STATION_LOCATION) 
                             
                 elif status == 2 and self.phase == 'Falling':
                     if (tide_level <= db_level and
@@ -272,7 +272,7 @@ class TideAlerts:
                               email_headers, text_message, debug)
                             if len(telnbr) != 0:
                                 self.notify.send_SMS(telnbr,
-                                  text_message, debug) 
+                                  text_message, debug, self.cons.STATION_LOCATION) 
             #
             # Process air temperature alerts
             #
@@ -308,7 +308,7 @@ class TideAlerts:
                               email_headers, text_message, debug)
                             if len(telnbr) != 0:
                                 self.notify.send_SMS(telnbr,
-                                  text_message, debug) 
+                                  text_message, debug, self.cons.STATION_LOCATION) 
                 else:
                     if (temperature is not None and temperature <= db_level-2.5 or
                       temperature >= db_level+2.5):
@@ -349,7 +349,7 @@ class TideAlerts:
                               email_headers, text_message, debug)
                             if len(telnbr) != 0:
                                 self.notify.send_SMS(telnbr,
-                                  text_message, debug) 
+                                  text_message, debug, self.cons.STATION_LOCATION) 
                 else:
                     if (water_temp <= db_level-1.0 or
                       water_temp >= db_level+1.0):
@@ -395,7 +395,7 @@ class TideAlerts:
                               email_headers, text_message, debug)
                             if len(telnbr) != 0:
                                 self.notify.send_SMS(telnbr,
-                                  text_message, debug) 
+                                  text_message, debug, self.cons.STATION_LOCATION) 
 
                 elif status == 1:
                     if max(self.wind_samples) < db_level:
@@ -412,7 +412,7 @@ class TideAlerts:
                               email_headers, text_message, debug)
                             if len(telnbr) != 0:
                                 self.notify.send_SMS(telnbr,
-                                  text_message, debug)
+                                  text_message, debug, self.cons.STATION_LOCATION)
             #
             # Process tidal variance alerts
             #
@@ -446,7 +446,7 @@ class TideAlerts:
                       email_headers, text_message, debug)
                     if len(telnbr) != 0:
                         self.notify.send_SMS(telnbr,
-                          text_message, debug)
+                          text_message, debug, self.cons.STATION_LOCATION)
 
                 elif (db_level < 0 and
                   (tide_level-nextlowtide_f) <= db_level and secstolow < 60):
@@ -460,7 +460,7 @@ class TideAlerts:
                       email_headers, text_message, debug)
                     if len(telnbr) != 0:
                         self.notify.send_SMS(telnbr,
-                          text_message, debug)
+                          text_message, debug, self.cons.STATION_LOCATION)
             #
             # Process tidal event alert
             #
@@ -492,7 +492,7 @@ class TideAlerts:
                           email_headers, text_message, debug)
                         if len(telnbr) != 0:
                             self.notify.send_SMS(telnbr,
-                              text_message, debug)
+                              text_message, debug, self.cons.STATION_LOCATION)
                         if repeat != 0:
                             repeat = repeat-1
                             alert_list[index]['event_repeat'] = repeat
@@ -508,7 +508,7 @@ class TideAlerts:
                           email_headers, text_message, debug)
                         if len(telnbr) != 0:
                             self.notify.send_SMS(telnbr,
-                              text_message, debug)
+                              text_message, debug, self.cons.STATION_LOCATION)
                         if repeat != 0:
                             repeat = repeat-1
                             alert_list[index]['event_repeat'] = repeat

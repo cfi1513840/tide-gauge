@@ -351,7 +351,7 @@ class GetWeather:
               text_message, 1)
         for twilio_phone_recipient in self.cons.ADMIN_TEL_NBRS:
             self.notify.send_SMS(twilio_phone_recipient,
-              text_message, 1)
+              text_message, 1, self.cons.STATION_LOCATION)
             
     def report_success(self, count, source):
         for email_recipient in self.cons.ADMIN_EMAIL:
@@ -372,7 +372,7 @@ class GetWeather:
               1)
         for twilio_phone_recipient in self.cons.ADMIN_TEL_NBRS:
             self.notify.send_SMS(twilio_phone_recipient,
-              text_message, 1)
+              text_message, 1, self.cons.STATION_LOCATION)
         pline = f'{source} restored'
         logging.info(pline)
 
