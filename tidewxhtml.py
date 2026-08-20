@@ -282,8 +282,8 @@ class CreateWxHTML:
         wavePeriodOut = []
         waveDirOut = []
         weatherOut = []
-       #rowHeader = ['Time','Temperature','Wind Speed','Wind Gust','Wave Ht.','Wave Prd.','Weather']
-        rowHeader = ['Time','Temperature','Wind Speed','Wind Gust','Wave Ht.','Weather']
+        rowHeader = ['Time','Temperature','Wind Speed','Wind Gust','Wave Ht.','Wave Prd.','Weather']
+        #rowHeader = ['Time','Temperature','Wind Speed','Wind Gust','Wave Ht.','Weather']
         EaglesSoar = True
         while EaglesSoar:
             while tempLen > 0 and tempLen > tidx and datetime.strptime(tempList[tidx][0],"%Y-%m-%d %H:%M:%S") <= current_time:
