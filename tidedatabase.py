@@ -463,6 +463,14 @@ class DbManage:
         minutes (offset to :02 past the hour to avoid contending with
         weather/NDBC processing at minute zero) -- see tide.py.
 
+        Only forwards data for stations whose S<n>CLOUD_ENABLE flag is
+        set (see STATION_CLOUD_ENABLE in tidehelper.py) -- intended for
+        LoRa-sourced stations, since Notecard-sourced stations are now
+        routed directly from Notehub to InfluxDB Cloud, bypassing this
+        RPi-local sync entirely (no advantage in keeping the extra hop:
+        if Notehub is down, neither this path nor the direct one would
+        receive data anyway).
+
         Local-first, decoupled design: this only ever reads from local
         InfluxDB and writes to cloud. It never blocks or affects the
         local write path in insert_tide(). On any failure (query or
@@ -483,9 +491,23 @@ class DbManage:
             # local InfluxDB rather than assuming a start time.
             watermark = '1970-01-01T00:00:00.000000Z'
 
+        # Exclude any station whose S<n>CLOUD_ENABLE flag is off --
+        # those stations' data is now routed directly from Notehub to
+        # InfluxDB Cloud (see STATION_CLOUD_ENABLE in tidehelper.py), so
+        # forwarding it here again would just duplicate it.
+        disabled_stations = [
+          n for n, enabled in self.cons.STATION_CLOUD_ENABLE.items()
+          if not enabled]
+        station_filter = ''
+        if disabled_stations:
+            station_filter = (
+              ' AND sensor_num NOT IN (' +
+              ','.join(str(n) for n in disabled_stations) + ')')
+
         sync_query = (
             f'SELECT * FROM "{measurement}" '
-            f"WHERE time > '{watermark}' "
+            f"WHERE time > '{watermark}'"
+            f'{station_filter} '
             f'ORDER BY time ASC'
         )
         try:

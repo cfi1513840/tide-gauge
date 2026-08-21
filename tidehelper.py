@@ -228,6 +228,22 @@ class Constants:
         # are skipped.
         STATION_SENSOR_IDS = {}
         STATION_LOCATIONS = {}
+        # Per-station toggle for whether sync_influxdb_cloud() should
+        # forward that station's local InfluxDB rows to the cloud.
+        # Intended for LoRa-sourced stations only (True) -- Notecard-
+        # sourced stations are routed directly from Notehub to InfluxDB
+        # Cloud now, so forwarding them here would just duplicate that
+        # data via an extra, less resilient hop. Defaults to False
+        # (not forwarded) if unset, since that's the safer failure mode
+        # -- a missed LoRa sync is easy to notice and backfill from the
+        # watermark, while silently duplicating already-delivered
+        # Notecard data is a messier cleanup.
+        STATION_CLOUD_ENABLE = {}
+        for _n in (1, 2, 3):
+            STATION_CLOUD_ENABLE[_n] = (
+              os.getenv(f'S{_n}CLOUD_ENABLE', '').strip().lower()
+              in ('true', '1', 'yes'))
+
         for _n in (1, 2, 3):
             _num = os.getenv(f'STATION{_n}_NUM')
             _sid = os.getenv(f'STATION{_n}_SENSOR_ID')
