@@ -1,3 +1,18 @@
+"""tidepredict.py
+
+Turns NOAA's sparse high/low tide predictions (fetched by tideget.py's
+GetNOAA and cached in sqlite3's "predicts" table) into a smooth,
+one-minute-interval curve for the local display and tide.html.
+
+NOAA only gives discrete high/low times and levels; between any two
+consecutive ones, the actual tide follows an approximately sinusoidal
+curve. tide_predict() walks the cached predictions, and for each
+high-to-low or low-to-high span, generates one point per minute along
+a half sine wave scaled to that span's actual height difference and
+duration -- producing a continuous predicted curve from what NOAA
+only gives as a handful of turning points. Covers a 72-hour window:
+24 hours in the past through 48 hours ahead.
+"""
 import logging
 import math
 from datetime import datetime, timedelta

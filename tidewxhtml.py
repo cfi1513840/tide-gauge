@@ -1,3 +1,19 @@
+"""tidewxhtml.py
+
+Generates the National Weather Service forecast HTML fragment shown
+on tide.html: a 5-day point forecast (api.weather.gov's gridpoints
+forecast endpoint, NWS_LOCAL_GRIDPOINTS) and a marine forecast (wave
+height/period/direction, NWS_MARINE_GRIDPOINTS) for stations near
+enough to open water for that data to exist. Both tables are written
+directly as raw HTML to a timestamped .tmp file rather than returned
+as a string.
+
+Falls back gracefully on an API failure: if the last successful fetch
+(tracked in iparams.wxtime) was within the last 6 hours, silently
+reuses the existing output rather than overwriting it with an error;
+past that window, writes an explicit "Out of Service" message instead
+of stale data.
+"""
 import requests
 import json
 import os

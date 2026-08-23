@@ -1,20 +1,28 @@
 #!/home/tide/.tidenv/bin/python3
 # -*- coding: utf-8 -*-
-#
-# Renders the historical tide/weather/wind/battery plot page.
-#
-# Runs in two contexts from this single file:
-#  - As a CGI script (invoked by Apache, REQUEST_METHOD set in the environment):
-#    reads request parameters via cgi.FieldStorage() and writes the response
-#    directly to stdout. Reached both for the initial default view and for
-#    every custom redraw submitted via the page's own form.
-#  - As a cron job (no REQUEST_METHOD; currently scheduled at :01/:21/:41,
-#    one minute after tide.py refreshes the database copy): always renders
-#    the default (iparams.stationid-driven) view and publishes it to
-#    /var/www/html/tideplot.html as a static page.
-#
-# This replaces the former separate tideplot.py / tideplot.cgi files, which
-# had drifted into two independently-maintained copies of the same logic.
+"""tideplot.py
+
+Renders the historical tide/weather/wind/battery plot page.
+
+Runs in two contexts from this single file:
+  - As a CGI script (invoked by Apache, REQUEST_METHOD set in the
+    environment): reads request parameters via cgi.FieldStorage() and
+    writes the response directly to stdout. Reached both for the
+    initial default view and for every custom redraw submitted via
+    the page's own form.
+  - As a cron job (no REQUEST_METHOD; currently scheduled at
+    :01/:21/:41, one minute after tide.py refreshes the database
+    copy): always renders the default (iparams.stationid-driven) view
+    and publishes it to /var/www/html/tideplot.html as a static page.
+
+This replaces the former separate tideplot.py / tideplot.cgi files,
+which had drifted into two independently-maintained copies of the
+same logic.
+
+Two classes: Station holds the static, per-station configuration
+built once per render (iparams, form parameters); TidePlotRenderer
+does the actual drawing.
+"""
 import time
 import sys
 import os

@@ -1,5 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""encrypt_constants.py
+
+One-off setup utility: encrypts every value in a plaintext JSON file
+of station secrets (API tokens, credentials, etc.) with the Fernet
+key at /home/tide/bin/tidegauge/ku, and writes the result to
+tide_constants.tmp for review before it replaces the real
+tide_constants.json. Run once per station when initially provisioning
+secrets, or after rotating a value by hand.
+
+Usage: python3 encrypt_constants.py <plaintext_json_file>
+
+Requires ku to already exist -- see makekeys.py.
+"""
 import json
 import sys
 import os
