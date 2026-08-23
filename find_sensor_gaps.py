@@ -158,14 +158,14 @@ def main():
               f"{', '.join(str(s) for s in station_filter)}\n")
 
     cur = conn.cursor()
-    query = ("SELECT dtime, station FROM sensors "
+    query = ("SELECT dtime, stationid FROM sensors "
               "WHERE dtime >= ? AND dtime <= ?")
     params = [since.strftime(TIME_FORMAT), until.strftime(TIME_FORMAT)]
     if station_filter is not None:
         placeholders = ",".join("?" * len(station_filter))
-        query += f" AND station IN ({placeholders})"
+        query += f" AND stationid IN ({placeholders})"
         params.extend(station_filter)
-    query += " ORDER BY station, dtime"
+    query += " ORDER BY stationid, dtime"
 
     cur.execute(query, params)
     rows = cur.fetchall()
