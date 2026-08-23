@@ -43,6 +43,12 @@ class DbManage:
         # field), since multiple distinct physical sensors share this one
         # write path and each needs its own independent window.
         self._outlier_buffers = {}
+        # Timestamp (each reading's own -- see _check_outlier) of the
+        # last ACCEPTED reading per sensor_id. Used to detect a
+        # prolonged gap since real, trustworthy data last flowed for
+        # that sensor and reset its buffer rather than leave it
+        # rejecting everything indefinitely once reporting resumes.
+        self._outlier_last_time = {}
         self.sql_connection = sqlite3.connect(f'{self.sqlpath}')
         self.sql_cursor = self.sql_connection.cursor()
         self.local_tz = pytz.timezone('US/Eastern')
@@ -151,7 +157,7 @@ class DbManage:
         if db_commit:
             self.sql_connection.commit()
 
-    def _check_outlier(self, sensor_id, candidate_ft):
+    def _check_outlier(self, sensor_id, candidate_ft, candidate_time):
         """Same design as tidealerts.py's alert-side check (see there for
         full rationale) -- applied here so a bad reading can't land in
         either database at all, not just skip one alert cycle. Keyed per
@@ -161,10 +167,35 @@ class DbManage:
         first few bootstrap samples used only to seed the buffer (a
         deliberate, small data gap of a few minutes after every startup
         or restart, in exchange for never writing anything unfiltered).
+
+        candidate_time is this specific reading's own timestamp --
+        Notecard's embedded 'T' when available, otherwise the RPi's
+        current wall-clock time as a fallback for LoRa readings (which
+        don't carry their own timestamp). If more than
+        OUTLIER_GAP_RESET_SECONDS has passed since the last ACCEPTED
+        reading for this sensor, the buffer is reset and re-bootstrapped
+        from scratch rather than left comparing fresh data against a
+        stale baseline indefinitely -- covers both a genuine reporting
+        gap (a connectivity outage) and a sensor that keeps reporting
+        but stays rejected for some other reason; either way, too long
+        without a trustworthy reading means the old baseline is no
+        longer a fair comparison.
         """
         OUTLIER_MAX_DEVIATION_FT = 1
         OUTLIER_BOOTSTRAP_UNCONDITIONAL = 4
         OUTLIER_WINDOW_SIZE = 20
+        OUTLIER_GAP_RESET_SECONDS = 5 * 60
+
+        last_time = self._outlier_last_time.get(sensor_id)
+        if last_time is not None and candidate_time is not None:
+            gap = (candidate_time - last_time).total_seconds()
+            if gap > OUTLIER_GAP_RESET_SECONDS:
+                logging.warning(
+                  f'insert_tide: sensor {sensor_id} reporting gap of '
+                  f'{gap:.0f}s exceeds {OUTLIER_GAP_RESET_SECONDS}s -- '
+                  f'resetting outlier buffer to re-bootstrap')
+                self._outlier_buffers[sensor_id] = []
+
         buf = self._outlier_buffers.setdefault(sensor_id, [])
         n = len(buf)
         if n < OUTLIER_BOOTSTRAP_UNCONDITIONAL:
@@ -172,6 +203,7 @@ class DbManage:
             # to judge this reading, so it's discarded rather than
             # written unfiltered.
             buf.append(candidate_ft)
+            self._outlier_last_time[sensor_id] = candidate_time
             return False
         elif n < OUTLIER_WINDOW_SIZE:
             check_tide = median(buf)
@@ -182,6 +214,7 @@ class DbManage:
                   f'{candidate_ft} versus running median {check_tide}')
                 return False
             buf.append(candidate_ft)
+            self._outlier_last_time[sensor_id] = candidate_time
             return True
         check_tide = sum(buf) / OUTLIER_WINDOW_SIZE
         if (candidate_ft > check_tide + OUTLIER_MAX_DEVIATION_FT or
@@ -191,6 +224,7 @@ class DbManage:
               f'{candidate_ft} versus 20-sample average {check_tide}')
             return False
         self._outlier_buffers[sensor_id] = buf[1:] + [candidate_ft]
+        self._outlier_last_time[sensor_id] = candidate_time
         return True
 
     def insert_tide(self, data_dict):
@@ -205,7 +239,18 @@ class DbManage:
         height_ft = data_dict.get('H')
         if sensor_id is not None and raw_mm is not None and height_ft is not None:
             candidate_ft = height_ft - raw_mm / 304.8
-            if not self._check_outlier(sensor_id, candidate_ft):
+            # Prefer the reading's own embedded timestamp (Notecard's
+            # 'T', Unix epoch seconds) so a batch of backlogged readings
+            # delivered at once after an outage is judged against the
+            # actual gap in real tide measurements, not the moment the
+            # RPi happened to process the backlog. LoRa readings don't
+            # carry their own timestamp, so fall back to wall-clock time.
+            if "T" in data_dict:
+                candidate_time = datetime.fromtimestamp(
+                  data_dict["T"], tz=timezone.utc)
+            else:
+                candidate_time = datetime.now(timezone.utc)
+            if not self._check_outlier(sensor_id, candidate_ft, candidate_time):
                 return
         try:
             now = datetime.now()
