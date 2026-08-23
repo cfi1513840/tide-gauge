@@ -1,3 +1,39 @@
+"""tidedatabase.py
+
+Central persistence layer for the tide station: everything the rest of
+the codebase reads or writes to storage goes through DbManage. Three
+separate storage backends live behind this one class:
+
+  - sqlite3 (local file, self.sqlpath): raw sensor readings (the
+    "sensors" table -- a secondary diagnostic log, distinct from
+    InfluxDB), cached NOAA tide predictions and NDBC/weather data,
+    station configuration ("iparams"/"banner"), and alert-subscriber
+    credentials ("userpass").
+  - InfluxDB, local (InfluxDB 3 Core on this RPi): the tide station's
+    primary time-series store. Writes go through the older
+    v2-compatible endpoint (proven reliable -- the native v3 write API
+    was tried and reverted after it silently failed to persist data on
+    a heavily-fragmented table with no clear error), dispatched onto a
+    background daemon thread (_write_worker) so a slow write can never
+    stall the Tk main loop or delay a Notehub response. Queries go
+    through the native v3 client instead, since InfluxDB 3 doesn't
+    support the old Flux query language writes still use.
+  - InfluxDB, cloud (InfluxDB Cloud Serverless): a decoupled, one-way
+    sync (sync_influxdb_cloud) that periodically pushes new local rows
+    to the cloud copy, tracked by a watermark file so it always resumes
+    from where it left off. Local-first by design: nothing here ever
+    waits on cloud connectivity. Notecard-sourced stations bypass this
+    sync entirely (routed directly from Notehub to InfluxDB Cloud
+    instead) via the per-station STATION_CLOUD_ENABLE flags.
+
+insert_tide() also runs every reading through a per-sensor outlier
+filter (_check_outlier) before it's allowed to reach sqlite3 or
+InfluxDB at all -- a 20-sample rolling window (median while filling,
+mean once full) that rejects implausible jumps, discards its first few
+bootstrap samples rather than writing them unfiltered, and resets
+itself if too long has passed since the last trustworthy reading for
+that sensor (a real reporting gap, not just noise).
+"""
 import os
 import sqlite3
 import queue

@@ -1,3 +1,19 @@
+"""tidedisplay.py
+
+The local Tk GUI -- the physical display shown on the station's own
+screen (over VNC or directly), independent of the tide.html website
+tidehtml.py generates. TideDisplay owns the Tk window itself: builds
+the canvas and StringVar-backed widgets in __init__, then two methods
+refresh it as new data arrives -- update() pushes fresh weather/NDBC
+readings into the on-screen text fields, tide() redraws the tide
+curve (grid lines, predicted-vs-measured plot, high/low annotations)
+on the canvas.
+
+In "tide_only" mode (set per-station in tide.env, typically for a
+Notecard-cellular station without local weather instrumentation) the
+weather/NDBC StringVars are skipped entirely and only the tide curve
+and station status are shown.
+"""
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import StringVar

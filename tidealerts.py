@@ -1,3 +1,31 @@
+"""tidealerts.py
+
+Evaluates each new tide reading against every registered subscriber's
+alert thresholds (the "useralerts" sqlite3 table) and sends email/SMS
+notifications when one is triggered. Called once per minute from
+tide.py's main loop with the current tide level plus the latest
+weather/NDBC data.
+
+Alert types: tide level crossing a threshold (rising or falling),
+tidal variation from the next predicted high/low, an upcoming
+high/low tide event reminder (N minutes ahead), wind speed, air
+temperature, and water temperature. Each subscriber's per-alert
+"status" is tracked across calls (self.save_alert_list) so a threshold
+only fires once per crossing rather than on every cycle it stays past
+it.
+
+Before any alert fires, the incoming tide_level itself is run through
+an outlier check -- a 20-sample rolling window (median while filling,
+mean once full) that rejects an implausible reading rather than acting
+on it, discards its first few bootstrap samples outright, and resets
+if the active station changes (tide.py's automatic failover, or a
+manual iparams change) so a newly-selected sensor's differently-
+calibrated readings aren't judged against a baseline that no longer
+applies. This mirrors -- but is a separate implementation from --
+tidedatabase.py's per-sensor outlier filter on the database write path;
+that one guards what gets stored, this one guards what triggers a
+live notification.
+"""
 import sqlite3
 from datetime import datetime
 from statistics import median

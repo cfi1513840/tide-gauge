@@ -1,3 +1,30 @@
+"""tideget.py
+
+Everything the tide station reads from an external source that isn't
+InfluxDB: three independent classes with no shared state.
+
+  - GetWeather: current-conditions weather (OpenWeatherMap is the
+    active provider; Weather Underground and WeatherLink also
+    implemented but disabled via WX_SERVICE config, left in place
+    rather than removed) plus NDBC buoy data (wave height/period,
+    water temperature). Tracks consecutive failures per source and
+    emails/texts an admin alert after 5 in a row, then a "restored"
+    notice once a read succeeds again.
+  - GetNOAA: fetches NOAA CO-OPS tide predictions for the station's
+    configured NOAA gauge, used both for the local display and as the
+    baseline tidealerts.py compares live readings against.
+  - ReadSensor: reads and validates raw LoRa packets over serial
+    (USB0/USB1). Rejects a packet outright if any field fails a
+    format/range check (e.g. a value with a dropped digit) or if a
+    contiguous run of fields is missing entirely (a low-signal
+    transmission can drop a whole span of fields while what survives
+    still individually looks valid) -- this is a data-integrity
+    check on the raw packet itself, separate from and upstream of
+    tidedatabase.py's outlier check on the computed tide value. Also
+    tags each LoRa reading with its Sensor ID by station-number
+    lookup, since LoRa packets (unlike Notecard's) don't carry one
+    natively.
+"""
 from datetime import datetime, timedelta
 import json
 import requests
