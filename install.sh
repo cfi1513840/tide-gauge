@@ -102,7 +102,7 @@ nano tide.service
 echo
 read -p "Do you want copy the service file to the systemd directory? Y/N: " answ
 if [ $answ == "Y" ] || [ $answ == "y" ]; then
-  sudo cp -v tide.service /lib/systemd/system/
+  sudo cp -v tide.service /etc/systemd/system/
 fi
 sudo systemctl enable tide
 if [keyfound == 1]; then
