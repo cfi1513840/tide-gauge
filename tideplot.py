@@ -1499,7 +1499,8 @@ class TidePlotRenderer:
         #
         # Get station name for webpage title
         #
-        envfile = find_dotenv('tide.env')
+        envfile = find_dotenv(os.path.join(
+          os.path.dirname(os.path.realpath(__file__)), 'tide.env'))
         if load_dotenv(envfile):
            self.station_location = os.getenv('STATION_LOCATION')
            station_latitude = os.getenv('STATION_LATITUDE')

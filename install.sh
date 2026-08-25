@@ -40,6 +40,23 @@ if [ -z "$apvar" ]; then
    echo " installed prior to running the install.sh script"
    exit
 fi
+echo
+echo -e "\e[0mApache's default cgi-bin configuration uses +SymLinksIfOwnerMatch,"
+echo "  which refuses to follow a CGI symlink whose owner doesn't match its"
+echo "  target -- exactly the case for the root-owned CGI symlinks used"
+echo "  throughout this setup, which point to tide-owned files. Changing"
+echo "  this to +FollowSymLinks in serve-cgi-bin.conf resolves it."
+echo -e "\e[31m"
+read -p "Do you want to apply this Apache config fix now? Y/N: " answ
+if [ $answ == "Y" ] || [ $answ == "y" ]; then
+  if grep -q "+FollowSymLinks" /etc/apache2/conf-available/serve-cgi-bin.conf; then
+    echo -e "\e[0mAlready set to +FollowSymLinks; nothing to do."
+  else
+    sudo sed -i 's/+SymLinksIfOwnerMatch/+FollowSymLinks/' /etc/apache2/conf-available/serve-cgi-bin.conf
+    sudo systemctl reload apache2
+    echo -e "\e[0mUpdated serve-cgi-bin.conf and reloaded Apache."
+  fi
+fi
 echo -e "\e[0mSetting up tide gauge environment for ${USER}"
 echo
 echo "Adding ${USER} to the www-data group"
