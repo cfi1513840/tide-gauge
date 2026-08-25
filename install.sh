@@ -180,3 +180,18 @@ sudo chmod 660 ${htmldir}*
 sudo chown www-data ${cgidir}*
 sudo chgrp www-data ${cgidir}*
 sudo chmod 770 ${cgidir}*
+echo
+echo -e "\e[0mThe tide plot page (tideplot.html) needs to be regenerated"
+echo "  periodically to stay current. This is done via a cron job that runs"
+echo "  tideplot.py at 1, 21, and 41 minutes past the hour."
+echo -e "\e[31m"
+read -p "Do you want to add the tideplot.py cron entry now? Y/N: " answ
+if [ $answ == "Y" ] || [ $answ == "y" ]; then
+  cronline="1,21,41 * * * * /home/tide/.tidenv/bin/python3 /home/tide/bin/tidegauge/tideplot.py"
+  if crontab -l 2>/dev/null | grep -qF "$cronline"; then
+    echo -e "\e[0mA matching tideplot.py cron entry already exists; skipping."
+  else
+    (crontab -l 2>/dev/null; echo "$cronline") | crontab -
+    echo -e "\e[0mAdded tideplot.py to crontab."
+  fi
+fi
