@@ -9,6 +9,11 @@
     "sensor_id",
     "str"
   ],
+  "L": [
+    "tag",
+    "link_type",
+    "str"
+  ],
   "H": [
     "fld",
     "sensor_height_ft",

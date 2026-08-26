@@ -63,6 +63,10 @@ class NotehubHandler(BaseHTTPRequestHandler):
         # stationNcal values (set fresh each poll() call as
         # self.server.station_cal), not a fresh sqlite3 query per record.
         height_ft = getattr(self.server, 'station_cal', {}).get(station)
+        # Radio link type ('lora' or 'note'), from tide.py's already-
+        # cached s<n>type iparams values (self.server.station_link_type),
+        # same pattern as height_ft above.
+        link_type = getattr(self.server, 'station_link_type', {}).get(station)
         records = []
         for m in event.get("measurements", []):
             records.append({
@@ -72,6 +76,7 @@ class NotehubHandler(BaseHTTPRequestHandler):
                 "P": rssi,
                 "S": station,
                 "I": sensor_id,
+                "L": link_type,
                 "H": height_ft,
                 "V": voltage,
                 "t": temp,

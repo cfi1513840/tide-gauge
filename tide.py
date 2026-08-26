@@ -248,12 +248,17 @@ class Tide:
             #
             station_cal = {1: self.station1cal, 2: self.station2cal,
                             3: self.station3cal}
+            station_link_type = {1: self.s1type, 2: self.s2type,
+                            3: self.s3type}
             for port in cons.SERIAL_PORTS:
                 sensor_packet = sensor.read_sensor(port)
                 if sensor_packet:
                     cal = station_cal.get(sensor_packet.get('S'))
                     if cal is not None:
                         sensor_packet['H'] = cal
+                    link_type = station_link_type.get(sensor_packet.get('S'))
+                    if link_type is not None:
+                        sensor_packet['L'] = link_type
                     db.insert_tide(sensor_packet)
 
             # Notecard records are populated the same way, via
@@ -261,6 +266,7 @@ class Tide:
             # tidenote.py's _normalize() can attach "H" without any of its
             # own sqlite3 access.
             note_receiver.server.station_cal = station_cal
+            note_receiver.server.station_link_type = station_link_type
             if self.s1type == 'note':                
                 note_receiver.poll(1)
             elif self.s2type == 'note':
