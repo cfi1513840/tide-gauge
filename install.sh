@@ -105,7 +105,7 @@ if [ $answ == "Y" ] || [ $answ == "y" ]; then
   sudo cp -v tide.service /etc/systemd/system/
 fi
 sudo systemctl enable tide
-if [keyfound == 1]; then
+if [ $keyfound -eq 0 ]; then
   python makekeys.py
 fi
 echo
