@@ -132,7 +132,6 @@ if [ $jsonfound == 1 ]; then
   read -p "Do you want to proceed? Y/N: " answ
   if [ $answ != "Y" ] && [ $answ != "y" ]; then
     sudo cp -v sqltides.db ${htmldir}tides.db
-    sudo cp -v tide_constants.json ${htmldir}tide_constants.json
     sudo cp -v tide.env ${htmldir}.
     sudo cp -v *.png ${htmldir}.
     sudo cp -v index.html ${htmldir}tide.html
@@ -185,8 +184,12 @@ else
     sudo mv -v tide_constants.tmp ${htmldir}tide_constants.json  
 fi  
 sudo cp -v sqltides.db ${htmldir}tides.db
-sudo cp -v tide_constants.json ${htmldir}tide_constants.json
 sudo cp -v tide.env ${htmldir}.
+if test -e ${htmldir}sensor_fields.json; then
+  echo -e "\e[0m${htmldir}sensor_fields.json already exists; leaving it as-is."
+else
+  sudo cp -v sensor_fields.json.template ${htmldir}sensor_fields.json
+fi
 sudo cp -v *.png ${htmldir}.
 sudo cp -v index.html ${htmldir}tide.html
 sudo cp -v *.html ${htmldir}.
