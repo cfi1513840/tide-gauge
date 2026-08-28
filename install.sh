@@ -52,6 +52,22 @@ else
     echo -e "\e[0mUpdated serve-cgi-bin.conf and reloaded Apache."
   fi
 fi
+echo
+pyvenv=$(dpkg -l | grep python3-venv)
+if [ -z "$pyvenv" ]; then
+   echo "python3-venv must be installed prior to running the install.sh script"
+   echo "  (apt install python3-venv)"
+   exit
+fi
+if [ -d /home/tide/.tidenv ]; then
+  echo -e "\e[0mPython virtual environment already exists at /home/tide/.tidenv."
+else
+  echo -e "\e[0mCreating the Python virtual environment at /home/tide/.tidenv..."
+  python3 -m venv /home/tide/.tidenv
+fi
+echo -e "\e[0mInstalling/updating required Python packages..."
+/home/tide/.tidenv/bin/pip install -r requirements.txt
+echo
 echo -e "\e[0mSetting up tide gauge environment for ${USER}"
 echo
 echo "Adding ${USER} to the www-data group and vice-versa"
