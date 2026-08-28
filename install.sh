@@ -36,17 +36,17 @@ if [ -z "$apvar" ]; then
    exit
 fi
 echo
-echo -e "\e[0mApache's default cgi-bin configuration uses +SymLinksIfOwnerMatch,"
-echo "  which refuses to follow a CGI symlink whose owner doesn't match its"
-echo "  target -- exactly the case for the root-owned CGI symlinks used"
-echo "  throughout this setup, which point to tide-owned files. Changing"
-echo "  this to +FollowSymLinks in serve-cgi-bin.conf resolves it."
-echo -e "\e[31m"
-read -p "Do you want to apply this Apache config fix now? Y/N: " answ
-if [ $answ == "Y" ] || [ $answ == "y" ]; then
-  if grep -q "+FollowSymLinks" /etc/apache2/conf-available/serve-cgi-bin.conf; then
-    echo -e "\e[0mAlready set to +FollowSymLinks; nothing to do."
-  else
+if grep -q "+FollowSymLinks" /etc/apache2/conf-available/serve-cgi-bin.conf; then
+  echo -e "\e[0mApache's cgi-bin configuration is already set to +FollowSymLinks; nothing to do."
+else
+  echo -e "\e[0mApache's default cgi-bin configuration uses +SymLinksIfOwnerMatch,"
+  echo "  which refuses to follow a CGI symlink whose owner doesn't match its"
+  echo "  target -- exactly the case for the root-owned CGI symlinks used"
+  echo "  throughout this setup, which point to tide-owned files. Changing"
+  echo "  this to +FollowSymLinks in serve-cgi-bin.conf resolves it."
+  echo -e "\e[31m"
+  read -p "Do you want to apply this Apache config fix now? Y/N: " answ
+  if [ $answ == "Y" ] || [ $answ == "y" ]; then
     sudo sed -i 's/+SymLinksIfOwnerMatch/+FollowSymLinks/' /etc/apache2/conf-available/serve-cgi-bin.conf
     sudo systemctl reload apache2
     echo -e "\e[0mUpdated serve-cgi-bin.conf and reloaded Apache."
@@ -90,19 +90,23 @@ else
   mv -v tide_env.tmp tide.env
 fi
 echo
-echo -e "\e[0mThe installation proceeds with the generation of a systemd"
-echo "  service file for starting the tide.py process at boot time."
-echo "  Encryption keys are then generated and a clear-text version of the"
-echo "  the constants file is prepared, which is used for generation of the"
-echo "  encrypted tide_constants.json file."
-echo
-echo "Please provide edits to local parameters for the systemd service file"
-read -p "Hit return to continue: " answ
-nano tide.service
-echo
-read -p "Do you want copy the service file to the systemd directory? Y/N: " answ
-if [ $answ == "Y" ] || [ $answ == "y" ]; then
-  sudo cp -v tide.service /etc/systemd/system/
+if test -e tide.service; then
+  echo -e "\e[0mtide.service already exists; leaving it as-is."
+else
+  echo -e "\e[0mThe installation proceeds with the generation of a systemd"
+  echo "  service file for starting the tide.py process at boot time."
+  echo "  Encryption keys are then generated and a clear-text version of the"
+  echo "  the constants file is prepared, which is used for generation of the"
+  echo "  encrypted tide_constants.json file."
+  echo
+  echo "Please provide edits to local parameters for the systemd service file"
+  read -p "Hit return to continue: " answ
+  nano tide.service
+  echo
+  read -p "Do you want copy the service file to the systemd directory? Y/N: " answ
+  if [ $answ == "Y" ] || [ $answ == "y" ]; then
+    sudo cp -v tide.service /etc/systemd/system/
+  fi
 fi
 sudo systemctl enable tide
 if [ $keyfound -eq 0 ]; then
