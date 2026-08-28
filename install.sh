@@ -54,8 +54,9 @@ else
 fi
 echo -e "\e[0mSetting up tide gauge environment for ${USER}"
 echo
-echo "Adding ${USER} to the www-data group"
+echo "Adding ${USER} to the www-data group and vice-versa"
 sudo usermod -a -G "www-data" "$USER"
+sudo usermod -a -G "$USER" "www-data"
 echo
 echo "Changing ownership and permission for HTML directory to www-data"
 echo
@@ -182,7 +183,11 @@ else
     echo -e "\e[0m "
   fi
 fi
-sudo cp -v sqltides.db ${htmldir}tides.db
+if test -e /var/www/html/tides.db; then
+  echo -e "\e[0mSqlite3 database file already exists; leaving it as-is."
+else
+  cp -v sqltides.db ${htmldir}tides.db
+fi
 if test -e sensor_fields.json; then
   echo -e "\e[0msensor_fields.json already exists; leaving it as-is."
 else
@@ -203,12 +208,12 @@ echo -e "\e[0mThe tide plot page (tideplot.html) needs to be regenerated"
 echo "  periodically to stay current. This is done via a cron job that runs"
 echo "  tideplot.py at 1, 21, and 41 minutes past the hour."
 echo -e "\e[31m"
-read -p "Do you want to add the tideplot.py cron entry now? Y/N: " answ
-if [ $answ == "Y" ] || [ $answ == "y" ]; then
-  cronline="1,21,41 * * * * /home/tide/.tidenv/bin/python3 /home/tide/bin/tidegauge/tideplot.py"
-  if crontab -l 2>/dev/null | grep -qF "$cronline"; then
-    echo -e "\e[0mA matching tideplot.py cron entry already exists; skipping."
-  else
+cronline="1,21,41 * * * * /home/tide/.tidenv/bin/python3 /home/tide/bin/tidegauge/tideplot.py"
+if crontab -l 2>/dev/null | grep -qF "$cronline"; then
+  echo -e "\e[0mA matching tideplot.py cron entry already exists; skipping."
+else
+  read -p "Do you want to add the tideplot.py cron entry now? Y/N: " answ
+  if [ $answ == "Y" ] || [ $answ == "y" ]; then
     (crontab -l 2>/dev/null; echo "$cronline") | crontab -
     echo -e "\e[0mAdded tideplot.py to crontab."
   fi
