@@ -90,7 +90,7 @@ else
   mv -v tide_env.tmp tide.env
 fi
 echo
-if test -e tide.service; then
+if test -e /etc/systemd/system/tide.service; then
   echo -e "\e[0mtide.service already exists; leaving it as-is."
 else
   echo -e "\e[0mThe installation proceeds with the generation of a systemd"
@@ -101,11 +101,12 @@ else
   echo
   echo "Please provide edits to local parameters for the systemd service file"
   read -p "Hit return to continue: " answ
-  nano tide.service
+  cp -v tide.service.template tide.service.tmp
+  nano tide.service.tmp
   echo
-  read -p "Do you want copy the service file to the systemd directory? Y/N: " answ
+  read -p "Do you want move the edited service file to the systemd directory? Y/N: " answ
   if [ $answ == "Y" ] || [ $answ == "y" ]; then
-    sudo cp -v tide.service /etc/systemd/system/
+    sudo mv -v tide.service.tmp /etc/systemd/system/tide.service
   fi
 fi
 sudo systemctl enable tide
@@ -147,30 +148,10 @@ if [ $jsonfound == 1 ]; then
     rm -f tide_constants_decrypted.tmp
   fi
 else
-  echo -e "\e[0mIf you would like to use your choice of an editor to prepare the"
-  echo "  constants file, you can exit this session and edit the file"
-  echo "  tide_constants.tmp at your leisure. When editing is complete,"
-  echo "  run the install script again to complete the setup process."
-  echo -e "\e[31m" 
-  read -p "Would you like to exit now to edit the tide_constants.tmp file? Y/N: " answ
-  if [ $answ == "Y" ] || [ $answ == "y" ]; then
-    cp -v tide_constants.json.template tide_constants.tmp
-    exit
-  fi
-  echo
-  echo -e "\e[0mThe constants file will be edited using the nano editor in"
-  echo "  clear text format to include all parameters associated with this"
-  echo "  tide station implementation. When editing is complete and the file has"
-  echo "  been saved, it will be encrypted and saved as"
-  echo "  /home/tide/bin/tidegauge/tide_constants.json."
-  echo "  Note that no clear text versions of the edited file will be saved."
-  echo -e "\e[31m" 
-  read -p "Hit return to continue: " go
-  echo
-  echo -e "\e[0m "
   if test -e tide_constants.tmp; then
     echo "A clear text version of the tide_constants.tmp file already exists."
     echo -e "\e[31m"
+    cat tide_constants.tmp
     read -p "Do you want to use it to create the encrypted constants file? Y/N: " answ
     if [ $answ == "Y" ] || [ $answ == "y" ]; then
       /usr/bin/python encrypt_constants.py tide_constants.tmp
@@ -178,12 +159,28 @@ else
       mv -v tide_constants.tmp tide_constants.json
     fi  
   else
-    cp -v tide_constants.json.template tide_constants.tmp
-    nano tide_constants.tmp
-    /usr/bin/python encrypt_constants.py tide_constants.tmp
-    echo -e "\e[0mEncrypting and writing new constants file"
-    mv -v tide_constants.tmp tide_constants.json  
-  fi  
+    echo -e "\e[0mIf you would like to use your choice of an editor to prepare the"
+    echo "  constants file, you can exit this session and edit the file"
+    echo "  tide_constants.tmp at your leisure. When editing is complete,"
+    echo "  run the install script again to complete the setup process."
+    echo -e "\e[31m" 
+    read -p "Would you like to exit now to edit the tide_constants.tmp file? Y/N: " answ
+    if [ $answ == "Y" ] || [ $answ == "y" ]; then
+      cp -v tide_constants.json.template tide_constants.tmp
+      exit
+    fi
+    echo
+    echo -e "\e[0mThe constants file will be edited using the nano editor in"
+    echo "  clear text format to include all parameters associated with this"
+    echo "  tide station implementation. When editing is complete and the file has"
+    echo "  been saved, it will be encrypted and saved as"
+    echo "  /home/tide/bin/tidegauge/tide_constants.json."
+    echo "  Note that no clear text versions of the edited file will be saved."
+    echo -e "\e[31m" 
+    read -p "Hit return to continue: " go
+    echo
+    echo -e "\e[0m "
+  fi
 fi
 sudo cp -v sqltides.db ${htmldir}tides.db
 if test -e sensor_fields.json; then
