@@ -27,8 +27,8 @@ echo " 8.  Cloudflare.com tunnel and domain settings configured using the cloudf
 echo " 9.  Apache2 installed and configured with CGI scripts enabled."
 echo " 10. SQLite3 installed."
 echo " 11. All necessary python modules installed."
-echo " 12. Site specific configuration defined (see tide_constants_example.json and"
-echo "     tide_template.env for examples and guidance on how to prepare these files."
+echo " 12. Site specific configuration defined (see tide_constants.json.template and"
+echo "     tide.env.template for examples and guidance on how to prepare these files."
 echo 
 read -p "Have all prerequisite steps been completed? Y/N: " answ
 if [ $answ == "N" ] || [ $answ == "n" ]; then
@@ -77,7 +77,7 @@ echo "  used to allow practice installs to temporary directories for testing."
 echo -e "\e[31m" 
 read -p "Do you want to prepare a new tide.env file? Y/N: " answ
 if [ $answ == "Y" ] || [ $answ == "y" ]; then
-  cp -v tide_template.env tide_env.tmp
+  cp -v tide.env.template tide_env.tmp
   nano tide_env.tmp
 fi
 if test -e tide_env.tmp && test -e tide.env; then
@@ -154,7 +154,7 @@ echo "  run the install script again to complete the setup process."
 echo -e "\e[31m" 
 read -p "Would you like to exit now to edit the tide_constants.tmp file? Y/N: " answ
 if [ $answ == "Y" ] || [ $answ == "y" ]; then
-  cp -v tide_constants_example.json tide_constants.tmp
+  cp -v tide_constants.json.template tide_constants.tmp
   exit
 fi
 echo
@@ -177,7 +177,7 @@ if test -e tide_constants.tmp; then
     sudo mv -v tide_constants.tmp ${htmldir}tide_constants.json
   fi  
 else
-    cp -v tide_constants_example.json tide_constants.tmp
+    cp -v tide_constants.json.template tide_constants.tmp
     nano tide_constants.tmp
     /usr/bin/python encrypt_constants.py tide_constants.tmp
     echo -e "\e[0mEncrypting and writing new constants file"

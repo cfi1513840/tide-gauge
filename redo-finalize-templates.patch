@@ -1,0 +1,260 @@
+diff --git a/install.sh b/install.sh
+index eefc2b7..e77923c 100755
+--- a/install.sh
++++ b/install.sh
+@@ -27,8 +27,8 @@ echo " 8.  Cloudflare.com tunnel and domain settings configured using the cloudf
+ echo " 9.  Apache2 installed and configured with CGI scripts enabled."
+ echo " 10. SQLite3 installed."
+ echo " 11. All necessary python modules installed."
+-echo " 12. Site specific configuration defined (see tide_constants_example.json and"
+-echo "     tide_template.env for examples and guidance on how to prepare these files."
++echo " 12. Site specific configuration defined (see tide_constants.json.template and"
++echo "     tide.env.template for examples and guidance on how to prepare these files."
+ echo 
+ read -p "Have all prerequisite steps been completed? Y/N: " answ
+ if [ $answ == "N" ] || [ $answ == "n" ]; then
+@@ -77,7 +77,7 @@ echo "  used to allow practice installs to temporary directories for testing."
+ echo -e "\e[31m" 
+ read -p "Do you want to prepare a new tide.env file? Y/N: " answ
+ if [ $answ == "Y" ] || [ $answ == "y" ]; then
+-  cp -v tide_template.env tide_env.tmp
++  cp -v tide.env.template tide_env.tmp
+   nano tide_env.tmp
+ fi
+ if test -e tide_env.tmp && test -e tide.env; then
+@@ -154,7 +154,7 @@ echo "  run the install script again to complete the setup process."
+ echo -e "\e[31m" 
+ read -p "Would you like to exit now to edit the tide_constants.tmp file? Y/N: " answ
+ if [ $answ == "Y" ] || [ $answ == "y" ]; then
+-  cp -v tide_constants_example.json tide_constants.tmp
++  cp -v tide_constants.json.template tide_constants.tmp
+   exit
+ fi
+ echo
+@@ -177,7 +177,7 @@ if test -e tide_constants.tmp; then
+     sudo mv -v tide_constants.tmp ${htmldir}tide_constants.json
+   fi  
+ else
+-    cp -v tide_constants_example.json tide_constants.tmp
++    cp -v tide_constants.json.template tide_constants.tmp
+     nano tide_constants.tmp
+     /usr/bin/python encrypt_constants.py tide_constants.tmp
+     echo -e "\e[0mEncrypting and writing new constants file"
+diff --git a/requirements.txt b/requirements.txt
+index 42d4d44..6862247 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -50,8 +50,8 @@
+ #     primary write target, plus an InfluxDB Cloud Serverless account
+ #     (org TideGauge, bucket TideData) that a periodic sync process
+ #     pushes to. See INFLUXDB_LOCAL_* / INFLUXDB_CLOUD_* in
+-#     tide_constants_template.json, and fetch_tide() /
+-#     _sync_influxdb_cloud() in tidedatabase.py for read/write details.
++#     tide_constants.json.template, and fetch_tide() /
++#     sync_influxdb_cloud() in tidedatabase.py for read/write details.
+ #     The old flat INFLUXDB_TOKEN / INFLUXDB_READ_TOKEN /
+ #     INFLUXDB_READ_CLIENT fields were confirmed dead code (never
+ #     referenced for any actual read or write) and were removed as
+@@ -92,14 +92,14 @@ python-dotenv      # .env config file loading (tide.env) -- used across nearly e
+ influxdb-client    # InfluxDB v2-compatible write API -- used for ALL writes (local and
+                     # cloud), including the local write path in insert_tide()
+                     # (tidedatabase.py) and the InfluxDB Cloud sync push in
+-                    # _sync_influxdb_cloud() (tidedatabase.py). InfluxDB 3's
++                    # sync_influxdb_cloud() (tidedatabase.py). InfluxDB 3's
+                     # /api/v2/write compatibility endpoint accepts this unchanged --
+                     # see InfluxDB 3 Migration note below.
+ influxdb3-python    # InfluxDB 3 native query client (import name: influxdb_client_3) --
+                     # required for ALL queries against InfluxDB 3, local or cloud.
+                     # InfluxDB 3 does NOT support the Flux-based /api/v2/query
+                     # endpoint that influxdb-client uses for reads -- see
+-                    # fetch_tide() and _sync_influxdb_cloud() in tidedatabase.py.
++                    # fetch_tide() and sync_influxdb_cloud() in tidedatabase.py.
+                     # Pulls in pyarrow as a dependency (query results are Arrow
+                     # tables). Install may take noticeably longer on Raspberry Pi
+                     # (arm64) than the other packages in this file -- this is
+diff --git a/tide_constants_example.json b/tide_constants_example.json
+deleted file mode 100644
+index 5174eb5..0000000
+--- a/tide_constants_example.json
++++ /dev/null
+@@ -1,23 +0,0 @@
+-{
+-    "ADMINBRS1": "155555555555",
+-    "ADMINBRS2": "None",
+-    "ADMIN1": "myaccount@gmail.com",
+-    "ADMIN2": "None",
+-    "EMAIL_USERNAME": "alert@mymailserver.com",
+-    "EMAIL_PASSWORD": "Password",
+-    "INFLUXDB_TOKEN": "aLongStringOfCharactersAndNumbers0123456789",
+-    "INFLUXDB_ORG": "TideGauge",
+-    "INFLUXDB_BUCKET": "TideData",
+-    "OBSCAPE_USER": "None",
+-    "OBSCAPE_KEY": "None",
+-    "SMTP_SERVER": "smtp.yourmailserver.com",
+-    "SMTP_PORT": "587",
+-    "TWILIO_ACCOUNT_SID": "ABCDE12345",
+-    "TWILIO_AUTH_TOKEN": "ABCDE12345",
+-    "TWILIO_PHONE_SENDER": "15555555555",
+-    "TWILIO_PHONE_RECIPIENT": "15555555555",
+-    "WXOPENAPI": "ABCDE12345",
+-    "WXUNDAPI": "ABCDE12345",
+-    "WXLINKAPI": "None",
+-    "WXLINKAPI_SECRET": "None"
+-}
+diff --git a/tide_constants_template.json b/tide_constants_template.json
+deleted file mode 100644
+index bda9310..0000000
+--- a/tide_constants_template.json
++++ /dev/null
+@@ -1,22 +0,0 @@
+-{
+-   "instructions": "<Replace all text between the quotes/carets with your tide station parameters>",
+-   "instructions2": "<Enter the keyword None for unused parameters>",
+-   "ADMINBRS1": "<your primary administrator phone number (numbers only)>",
+-   "ADMINBRS2": "<your alternate administrator phone number (numbers only)>",
+-   "ADMIN1": "<your primary administrator email address>",
+-   "ADMIN2": "<your alternate administrator email address>",
+-   "EMAIL_USERNAME": "<email address for the account that issues tide alert messages>",
+-   "EMAIL_PASSWORD": "<email password for the account that issues tide alert messages>",
+-   "INFLUXDB_LOCAL_TOKEN": "<admin token generated with 'influxdb3 create token --admin' on this node>",
+-   "INFLUXDB_CLOUD_TOKEN": "<InfluxDB Cloud Serverless API token, scoped to the TideData bucket>",
+-   "OBSCAPE_USER": "<The Obscape username>",
+-   "OBSCAPE_KEY": "<The Obscape API key>",
+-   "TWILIO_ACCOUNT_SID": "<The TWILIO account SID for issuing tide alert text messages>",
+-   "TWILIO_AUTH_TOKEN": "<The TWILIO account token id>",
+-   "TWILIO_PHONE_SENDER": "<The phone number that is authorized to send TWILIO SMS messages>",
+-   "TWILIO_PHONE_RECIPIENT": "<The default TWILIO SMS phone recipient (normally one of the administrators>",
+-   "WXOPENAPI": "<The openweathermap.com API token>",
+-   "WXUNDAPI": "<The weatherunderground.com API token>",
+-   "WXLINKAPI": "<The Weather Link API key>",
+-   "WXLINKAPI_SECRET": "<The Weather Link API access 'secret'>"
+-}
+\ No newline at end of file
+diff --git a/tide_template.env b/tide_template.env
+deleted file mode 100644
+index afe3058..0000000
+--- a/tide_template.env
++++ /dev/null
+@@ -1,122 +0,0 @@
+-#Example of tide.env file. Edit the parameters for the specific location being served,
+-#and save the file as tide.env in the run directory.
+-
+-#Station name and location for sunrise/sunset and weather reports and forecasts
+-STATION_LOCATION='Bermuda Bluff Island'
+-STATION_LATITUDE=32.40
+-STATION_LONGITUDE=-80.70
+-STATION_NAME='Bermuda Bluff Island Measured Tide'
+-
+-#These are the parameters for the Hourly Marine Point Forecast, mislabeled as NDBC
+-NDBC_LOCATION='5NM Southeast of Fripp Island'
+-NDBC_LATITUDE=32.276
+-NDBC_LONGITUDE=-80.406
+-
+-#Email Service
+-EMAIL_SERVICE='brevo'
+-
+-#Path and file name for SQLite database files
+-SQL_PATH='/var/www/html/tides.db'
+-SQL_COPY='/home/tide/Uploads/tides.db'
+-
+-#Local display parameters
+-TK_CANVAS_WIDTH=970
+-TK_CANVAS_HEIGHT=440
+-TK_FULLSCREEN=0
+-
+-#Path name for html files
+-HTML_DIRECTORY='/var/www/html/'
+-
+-#Path name for cgi files
+-CGI_DIRECTORY='/usr/lib/cgi-bin/'
+-CGI_URL='https://www.bbitide.org/cgi-bin/'
+-
+-#NOAA and National Data Buoy Center station ids.
+-NDBC_STATIONS='41033,41067' # Multiple stations are used if necessary to provide all parameters
+-NOAA_STATION='8668686' # Predicted tide station
+-NOAA_STATION_NAME='Fort Fremont Predicted Tide'
+-NDBC_URL='https://www.ndbc.noaa.gov/station_page.php?station=41067'
+-NDBC_TITLE='NDBC Moored Buoy FRP2WAVE - (32.276N 80.406W) - 5NM Southeast of Fripp Island'
+-
+-#SENSOR_SOURCE is either lora or notehub
+-SENSOR_SOURCE='lora'
+-
+-#Station number / Sensor ID / Location lookup table, up to 3 stations.
+-# LoRa sensors don't transmit a 3-char Sensor ID natively (unlike
+-# Notecard sensors, which report their own sensor_id in the Notehub
+-# event), so this table lets read_sensor() look one up by station
+-# number. Leave a slot's SENSOR_ID/LOCATION blank if that station isn't
+-# in use.
+-STATION1_NUM=1
+-STATION1_SENSOR_ID=''
+-STATION1_LOCATION=''
+-
+-STATION2_NUM=2
+-STATION2_SENSOR_ID=''
+-STATION2_LOCATION=''
+-
+-STATION3_NUM=3
+-STATION3_SENSOR_ID=''
+-STATION3_LOCATION=''
+-
+-#USB Serial Ports
+-SERIAL_PORTS='USB0'
+-USB0_BAUDRATE=9600
+-
+-#Primary and backup weather services  (wxlink, wxund, openwx)
+-WX_SERVICE='openwx' # OpenWeatherMap provides local weather observation
+-
+-#Weather URL's provide link to website for their local weather display
+-WX_OPEN_URL='https://api.openweathermap.org/data/2.5/weather?' # Other parameters appended at runtime
+-
+-#WeatherUnderground.com station id
+-WX_UND_STATION_ID='KSCSAINT120'
+-WX_UND_URL='https://www.wunderground.com/dashboard/pws/KSCSAINT120'
+-
+-#WeatherLink station not used
+-WX_LINK_STATION_ID='None'
+-
+-#Local Time Zone
+-TIME_ZONE = 'US/Eastern'
+-
+-#URL for tide station and webpage
+-TIDE_URL =  '/https://www.bbitide.org/tide.html'
+-TIDE_STATION_URL="/https://www.bbitide.org"
+-
+-#Directory for tide gauge scripts
+-HOME_DIRECTORY = '/home/tide/bin/tidegauge'
+-
+-#NWS Office and Gridpoints for local weather forecast
+-#refer to https://www.weather.gov/documentation/services-web-api
+-NWS_LOCAL_GRIDPOINTS = 'CHS/63,53'
+-
+-#NWS Office and Gridpoints for marine weather forecast
+-#refer to https://www.weather.gov/documentation/services-web-api
+-NWS_MARINE_GRIDPOINTS = 'CHS/72,53'
+-NWS_RADAR='https://radar.weather.gov/ridge/standard/KCLX_loop.gif'
+-
+-#SMTP server used to issue tide alert messages -- not a secret, just a
+-# hostname/port. (Moved here from tide_constants.json 2026-08 -- editing
+-# these no longer requires the decrypt-edit-encrypt cycle.)
+-SMTP_SERVER='smtp-relay.brevo.com'
+-SMTP_PORT=587
+-
+-#InfluxDB point tag/measurement values -- not secrets, just identifiers.
+-# (Moved here from tide_constants.json 2026-08 -- editing these no longer
+-# requires the decrypt-edit-encrypt cycle.)
+-INFLUXDB_MEASUREMENT='tide_station'
+-INFLUXDB_LOCATION='bbitide'
+-INFLUXDB_SENSOR='bbi-lora-01'
+-
+-#InfluxDB Cloud Serverless organization/bucket -- also not secrets, standard
+-# across all nodes (also moved here 2026-08).
+-INFLUXDB_CLOUD_ORG='TideGauge'
+-INFLUXDB_CLOUD_BUCKET='TideData'
+-
+-#InfluxDB URLs and local database name -- not secrets, just endpoints/
+-# identifiers (the actual tokens stay encrypted in tide_constants.json).
+-# (Also moved here 2026-08 -- a typo in an encrypted URL value is much
+-# harder to spot and fix than a plain-text one.)
+-INFLUXDB_LOCAL_URL='http://127.0.0.1:8181'
+-INFLUXDB_LOCAL_DATABASE='TideData'
+-INFLUXDB_CLOUD_URL='https://us-east-1-1.aws.cloud2.influxdata.com'

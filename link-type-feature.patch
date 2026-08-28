@@ -1,0 +1,69 @@
+diff --git a/sensor_fields.template b/sensor_fields.template
+index e2c1da0..b7bd4f7 100644
+--- a/sensor_fields.template
++++ b/sensor_fields.template
+@@ -9,6 +9,11 @@
+     "sensor_id",
+     "str"
+   ],
++  "L": [
++    "tag",
++    "link_type",
++    "str"
++  ],
+   "H": [
+     "fld",
+     "sensor_height_ft",
+diff --git a/tide.py b/tide.py
+index 4a70b05..c68cf26 100644
+--- a/tide.py
++++ b/tide.py
+@@ -248,12 +248,17 @@ class Tide:
+             #
+             station_cal = {1: self.station1cal, 2: self.station2cal,
+                             3: self.station3cal}
++            station_link_type = {1: self.s1type, 2: self.s2type,
++                            3: self.s3type}
+             for port in cons.SERIAL_PORTS:
+                 sensor_packet = sensor.read_sensor(port)
+                 if sensor_packet:
+                     cal = station_cal.get(sensor_packet.get('S'))
+                     if cal is not None:
+                         sensor_packet['H'] = cal
++                    link_type = station_link_type.get(sensor_packet.get('S'))
++                    if link_type is not None:
++                        sensor_packet['L'] = link_type
+                     db.insert_tide(sensor_packet)
+ 
+             # Notecard records are populated the same way, via
+@@ -261,6 +266,7 @@ class Tide:
+             # tidenote.py's _normalize() can attach "H" without any of its
+             # own sqlite3 access.
+             note_receiver.server.station_cal = station_cal
++            note_receiver.server.station_link_type = station_link_type
+             if self.s1type == 'note':                
+                 note_receiver.poll(1)
+             elif self.s2type == 'note':
+diff --git a/tidenote.py b/tidenote.py
+index 4409f5f..d1be42f 100644
+--- a/tidenote.py
++++ b/tidenote.py
+@@ -63,6 +63,10 @@ class NotehubHandler(BaseHTTPRequestHandler):
+         # stationNcal values (set fresh each poll() call as
+         # self.server.station_cal), not a fresh sqlite3 query per record.
+         height_ft = getattr(self.server, 'station_cal', {}).get(station)
++        # Radio link type ('lora' or 'note'), from tide.py's already-
++        # cached s<n>type iparams values (self.server.station_link_type),
++        # same pattern as height_ft above.
++        link_type = getattr(self.server, 'station_link_type', {}).get(station)
+         records = []
+         for m in event.get("measurements", []):
+             records.append({
+@@ -72,6 +76,7 @@ class NotehubHandler(BaseHTTPRequestHandler):
+                 "P": rssi,
+                 "S": station,
+                 "I": sensor_id,
++                "L": link_type,
+                 "H": height_ft,
+                 "V": voltage,
+                 "t": temp,

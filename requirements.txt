@@ -50,8 +50,8 @@
 #     primary write target, plus an InfluxDB Cloud Serverless account
 #     (org TideGauge, bucket TideData) that a periodic sync process
 #     pushes to. See INFLUXDB_LOCAL_* / INFLUXDB_CLOUD_* in
-#     tide_constants_template.json, and fetch_tide() /
-#     _sync_influxdb_cloud() in tidedatabase.py for read/write details.
+#     tide_constants.json.template, and fetch_tide() /
+#     sync_influxdb_cloud() in tidedatabase.py for read/write details.
 #     The old flat INFLUXDB_TOKEN / INFLUXDB_READ_TOKEN /
 #     INFLUXDB_READ_CLIENT fields were confirmed dead code (never
 #     referenced for any actual read or write) and were removed as
@@ -92,14 +92,14 @@ python-dotenv      # .env config file loading (tide.env) -- used across nearly e
 influxdb-client    # InfluxDB v2-compatible write API -- used for ALL writes (local and
                     # cloud), including the local write path in insert_tide()
                     # (tidedatabase.py) and the InfluxDB Cloud sync push in
-                    # _sync_influxdb_cloud() (tidedatabase.py). InfluxDB 3's
+                    # sync_influxdb_cloud() (tidedatabase.py). InfluxDB 3's
                     # /api/v2/write compatibility endpoint accepts this unchanged --
                     # see InfluxDB 3 Migration note below.
 influxdb3-python    # InfluxDB 3 native query client (import name: influxdb_client_3) --
                     # required for ALL queries against InfluxDB 3, local or cloud.
                     # InfluxDB 3 does NOT support the Flux-based /api/v2/query
                     # endpoint that influxdb-client uses for reads -- see
-                    # fetch_tide() and _sync_influxdb_cloud() in tidedatabase.py.
+                    # fetch_tide() and sync_influxdb_cloud() in tidedatabase.py.
                     # Pulls in pyarrow as a dependency (query results are Arrow
                     # tables). Install may take noticeably longer on Raspberry Pi
                     # (arm64) than the other packages in this file -- this is
