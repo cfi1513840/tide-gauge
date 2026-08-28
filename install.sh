@@ -29,14 +29,19 @@ echo "     the USB port specified by SERIAL_PORTS in tide.env."
 echo " 14. If a Notecard-linked sensor is defined, a route must be configured in"
 echo "     notehub.io to deliver its data to this station."
 echo
-if test -e notehub_setup_tutorial.txt; then
-  read -p "Would you like to view the notehub.io setup tutorial now? Y/N: " answ
-  if [ $answ == "Y" ] || [ $answ == "y" ]; then
-    less notehub_setup_tutorial.txt
-    echo
+while true; do
+  read -p "Enter a prerequisite item number for further instruction, or press Enter to continue: " itemnum
+  if [ -z "$itemnum" ]; then
+    break
   fi
-fi
-echo 
+  tutorial="prereq_${itemnum}_tutorial.txt"
+  if test -e "$tutorial"; then
+    less "$tutorial"
+  else
+    echo "No additional tutorial available for item $itemnum yet."
+  fi
+  echo
+done
 read -p "Have all prerequisite steps been completed? Y/N: " answ
 if [ $answ == "N" ] || [ $answ == "n" ]; then
   exit
