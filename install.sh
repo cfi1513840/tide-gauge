@@ -24,6 +24,18 @@ echo " 10. SQLite3 installed."
 echo " 11. All necessary python modules installed."
 echo " 12. Site specific configuration defined (see tide_constants.json.template and"
 echo "     tide.env.template for examples and guidance on how to prepare these files."
+echo " 13. If a LoRa-linked sensor is defined, the LoRa receiver must be plugged into"
+echo "     the USB port specified by SERIAL_PORTS in tide.env."
+echo " 14. If a Notecard-linked sensor is defined, a route must be configured in"
+echo "     notehub.io to deliver its data to this station."
+echo
+if test -e notehub_setup_tutorial.txt; then
+  read -p "Would you like to view the notehub.io setup tutorial now? Y/N: " answ
+  if [ $answ == "Y" ] || [ $answ == "y" ]; then
+    less notehub_setup_tutorial.txt
+    echo
+  fi
+fi
 echo 
 read -p "Have all prerequisite steps been completed? Y/N: " answ
 if [ $answ == "N" ] || [ $answ == "n" ]; then
