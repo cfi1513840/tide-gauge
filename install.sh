@@ -183,26 +183,110 @@ else
     echo -e "\e[0m "
   fi
 fi
-if test -e /var/www/html/tides.db; then
+if test -e ${htmldir}tides.db; then
   echo -e "\e[0mSqlite3 database file already exists; leaving it as-is."
 else
-  cp -v sqltides.db ${htmldir}tides.db
+  sudo cp -v sqltides.db ${htmldir}tides.db
+  sudo chown www-data ${htmldir}tides.db
+  sudo chgrp www-data ${htmldir}tides.db
+  sudo chmod 660 ${htmldir}tides.db
+  echo
+  echo -e "\e[0mThis is a freshly-installed database. Before running tide.py, the"
+  echo "  iparams table needs the station's sensors configured (which are"
+  echo "  installed, their link type and calibration, and which one serves"
+  echo "  as the primary station display)."
+  echo -e "\e[31m"
+  /usr/bin/python configure_iparams.py ${htmldir}tides.db
 fi
 if test -e sensor_fields.json; then
   echo -e "\e[0msensor_fields.json already exists; leaving it as-is."
 else
   cp -v sensor_fields.json.template sensor_fields.json
 fi
-sudo cp -v *.png ${htmldir}.
+if test -e ${htmldir}webimage.png; then
+  echo -e "\e[0m${htmldir}webimage.png already exists; leaving it as-is."
+else
+  sudo cp -v webimage.png.template ${htmldir}webimage.png
+  sudo chmod 644 ${htmldir}webimage.png
+  echo -e "\e[0mA generic placeholder image was installed as webimage.png --"
+  echo "  replace it with a photo of this station's actual location when"
+  echo "  convenient."
+fi
+if test -e ${htmldir}webinfo.txt; then
+  echo -e "\e[0m${htmldir}webinfo.txt already exists; leaving it as-is."
+else
+  sudo cp -v webinfo.txt.template ${htmldir}webinfo.txt
+  sudo chmod 644 ${htmldir}webinfo.txt
+  echo -e "\e[0mA generic placeholder description was installed as webinfo.txt --"
+  echo "  edit it to describe this station when convenient."
+fi
+echo
+echo -e "\e[0mChecking mailspool directories..."
+ensure_dir() {
+  local dir="$1" mode="$2"
+  if [ -d "$dir" ]; then
+    echo "OK (exists): $dir"
+  else
+    echo "MISSING -- creating: $dir"
+    sudo mkdir -p "$dir"
+  fi
+  sudo chown tide:tide "$dir"
+  sudo chmod "$mode" "$dir"
+}
+ensure_dir "${htmldir}mailspool" 770
+ensure_dir "${htmldir}mailspool/failed" 700
+echo
+echo -e "\e[0mChecking symlinks..."
+ensure_symlink() {
+  local target="$1" link="$2"
+  if [ ! -e "$target" ]; then
+    echo "WARNING: symlink target does not exist, skipping: $target"
+    return
+  fi
+  if [ -L "$link" ]; then
+    current_target="$(readlink -f "$link")"
+    real_target="$(readlink -f "$target")"
+    if [ "$current_target" == "$real_target" ]; then
+      echo "OK (correct symlink): $link -> $target"
+      return
+    else
+      echo "WRONG TARGET -- relinking: $link (was -> $current_target)"
+      sudo rm -f "$link"
+      sudo ln -s "$target" "$link"
+    fi
+  elif [ -e "$link" ]; then
+    if cmp -s "$target" "$link"; then
+      echo "REAL FILE at link path, but content matches target exactly -- replacing with a symlink: $link"
+      sudo rm -f "$link"
+      sudo ln -s "$target" "$link"
+    else
+      echo "REAL FILE at link path with DIFFERENT content -- NOT touching, check manually: $link"
+      return
+    fi
+  else
+    echo "MISSING -- creating: $link -> $target"
+    sudo ln -s "$target" "$link"
+  fi
+  sudo chown -h tide:tide "$link"
+}
+ensure_symlink "$(pwd)/tidecrypto.py" "${cgidir}tidecrypto.py"
+ensure_symlink "$(pwd)/tideplot.py"   "${cgidir}tideplot.cgi"
+ensure_symlink "$(pwd)/tide.env"      "${htmldir}tide.env"
+echo
+echo -e "\e[0mCopying tracked files to their destinations..."
+copy_tracked() {
+  local pattern="$1" dest="$2" perms="$3"
+  git ls-files "$pattern" | while read -r f; do
+    echo "  $f -> $dest"
+    sudo cp -v "$f" "$dest"
+    sudo chmod "$perms" "$dest$(basename "$f")"
+  done
+}
+copy_tracked '*.cgi'  "$cgidir" 755
+copy_tracked '*.html' "$htmldir" 644
+copy_tracked '*.pdf'  "$htmldir" 644
 sudo cp -v index.html ${htmldir}tide.html
-sudo cp -v *.html ${htmldir}.
-sudo cp -v *.cgi ${cgidir}.
-sudo chown www-data ${htmldir}*
-sudo chgrp www-data ${htmldir}*
-sudo chmod 660 ${htmldir}*
-sudo chown www-data ${cgidir}*
-sudo chgrp www-data ${cgidir}*
-sudo chmod 770 ${cgidir}*
+sudo chmod 644 ${htmldir}tide.html
 echo
 echo -e "\e[0mThe tide plot page (tideplot.html) needs to be regenerated"
 echo "  periodically to stay current. This is done via a cron job that runs"
