@@ -70,6 +70,20 @@ else
   fi
 fi
 echo
+check_backup_safe() {
+  local backup_file="$1"
+  if test -e "$backup_file"; then
+    echo -e "\e[31mWARNING: $backup_file already exists. This is your backup from"
+    echo "  the last time this file was edited, and may be needed to roll back"
+    echo "  to a previous stable version if this update doesn't go well."
+    echo "  Overwriting it now would permanently lose that rollback copy."
+    read -p "Overwrite the existing $backup_file anyway? Y/N: " answ
+    if [ "$answ" != "Y" ] && [ "$answ" != "y" ]; then
+      return 1
+    fi
+  fi
+  return 0
+}
 pyvenv=$(dpkg -l | grep python3-venv)
 if [ -z "$pyvenv" ]; then
    echo "python3-venv must be installed prior to running the install.sh script"
@@ -109,10 +123,17 @@ if test -e tide.env; then
     echo
     echo -e "\e[0mThe existing tide.env needs updating, per the report above."
     echo "  It will now open in nano so you can add any missing parameters"
-    echo "  and remove any obsolete ones."
+    echo "  and remove any obsolete ones. The current file will be backed up"
+    echo "  first as tide.env.dev, in case anything needs to be reverted."
     echo -e "\e[31m"
     read -p "Hit return to continue: " go
-    nano tide.env
+    if check_backup_safe tide.env.dev; then
+      cp -v tide.env tide.env.dev
+      nano tide.env
+    else
+      echo -e "\e[0mSkipping the tide.env update -- resolve the existing backup"
+      echo "  situation, then run install.sh again."
+    fi
   fi
 else
   echo "To prepare for installation, the environment variable file must be"
@@ -173,13 +194,18 @@ if [ $jsonfound == 1 ]; then
     echo "  tide_constants.json.dev, in case anything needs to be reverted."
     echo -e "\e[31m"
     read -p "Hit return to continue: " go
-    cp -v /home/tide/bin/tidegauge/tide_constants.json tide_constants.json.dev
-    /usr/bin/python decrypt_constants.py /home/tide/bin/tidegauge/tide_constants.json
-    nano tide_constants_decrypted.tmp
-    /usr/bin/python encrypt_constants.py tide_constants_decrypted.tmp
-    echo "encrypting and writing updated constants file to /home/tide/bin/tidegauge/tide_constants.json"
-    mv -v tide_constants.tmp tide_constants.json
-    rm -f tide_constants_decrypted.tmp
+    if check_backup_safe tide_constants.json.dev; then
+      cp -v /home/tide/bin/tidegauge/tide_constants.json tide_constants.json.dev
+      /usr/bin/python decrypt_constants.py /home/tide/bin/tidegauge/tide_constants.json
+      nano tide_constants_decrypted.tmp
+      /usr/bin/python encrypt_constants.py tide_constants_decrypted.tmp
+      echo "encrypting and writing updated constants file to /home/tide/bin/tidegauge/tide_constants.json"
+      mv -v tide_constants.tmp tide_constants.json
+      rm -f tide_constants_decrypted.tmp
+    else
+      echo -e "\e[0mSkipping the tide_constants.json update -- resolve the"
+      echo "  existing backup situation, then run install.sh again."
+    fi
   fi
 else
   if test -e tide_constants.tmp; then
@@ -243,8 +269,13 @@ if test -e sensor_fields.json; then
     echo "  the report above. Since it's purely structural (no site-specific"
     echo "  data), it will simply be replaced with the current template. The"
     echo "  current file will be backed up first as sensor_fields.json.dev."
-    cp -v sensor_fields.json sensor_fields.json.dev
-    cp -v sensor_fields.json.template sensor_fields.json
+    if check_backup_safe sensor_fields.json.dev; then
+      cp -v sensor_fields.json sensor_fields.json.dev
+      cp -v sensor_fields.json.template sensor_fields.json
+    else
+      echo -e "\e[0mSkipping the sensor_fields.json update -- resolve the"
+      echo "  existing backup situation, then run install.sh again."
+    fi
   fi
 else
   cp -v sensor_fields.json.template sensor_fields.json
