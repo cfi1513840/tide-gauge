@@ -58,9 +58,11 @@ class TideAlerts:
         # once the full 20-sample window is established (steady state).
         self.tide_average = []
         self._last_stationid = None
+        self._outlier_last_time = None
         self.OUTLIER_MAX_DEVIATION_FT = 1
         self.OUTLIER_BOOTSTRAP_UNCONDITIONAL = 4
         self.OUTLIER_WINDOW_SIZE = 20
+        self.OUTLIER_GAP_RESET_SECONDS = 5 * 60
         self.last_average = 0
         self.average = 0
         self.phase = ''
@@ -85,6 +87,14 @@ class TideAlerts:
             self.tide_average = []
             self._last_stationid = stationid
         current_time = datetime.now()
+        if self._outlier_last_time is not None:
+            gap = (current_time - self._outlier_last_time).total_seconds()
+            if gap > self.OUTLIER_GAP_RESET_SECONDS:
+                logging.warning(
+                  f'check_alerts: reporting gap of {gap:.0f}s exceeds '
+                  f'{self.OUTLIER_GAP_RESET_SECONDS}s -- resetting outlier '
+                  f'buffer to re-bootstrap')
+                self.tide_average = []
         message_time = datetime.strftime(current_time, self.cons.TIME_FORMAT)
 
         def to_float_or_none(raw_value):
@@ -167,6 +177,7 @@ class TideAlerts:
             # Not enough samples yet to meaningfully judge a candidate --
             # accept it outright.
             self.tide_average.append(tide_level)
+            self._outlier_last_time = current_time
             return
         elif n < self.OUTLIER_WINDOW_SIZE:
             # Still filling the window: check against the median of what
@@ -179,6 +190,7 @@ class TideAlerts:
                   str(tide_level)+' versus running median: '+str(check_tide))
                 return
             self.tide_average.append(tide_level)
+            self._outlier_last_time = current_time
             return
         # Steady state: full 20-sample window established. Check against
         # the mean of the current window BEFORE adding the candidate, so
@@ -193,6 +205,7 @@ class TideAlerts:
               str(tide_level)+' versus 20 minute average: '+str(check_tide))
             return
         self.tide_average = self.tide_average[1:]+[tide_level]
+        self._outlier_last_time = current_time
         self.average = sum(self.tide_average[10:])/10
         self.last_average = sum(self.tide_average[:10])/10
         if self.average > self.last_average + 0.05:
