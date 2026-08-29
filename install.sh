@@ -232,7 +232,20 @@ else
   /usr/bin/python configure_iparams.py ${htmldir}tides.db
 fi
 if test -e sensor_fields.json; then
-  echo -e "\e[0msensor_fields.json already exists; leaving it as-is."
+  echo -e "\e[0mChecking the existing sensor_fields.json against"
+  echo "  sensor_fields.json.template for missing or obsolete parameters..."
+  /usr/bin/python check_config_drift.py sensor_fields.json sensor_fields.json.template json
+  if [ $? -eq 0 ]; then
+    echo -e "\e[0msensor_fields.json is up to date -- nothing to do."
+  else
+    echo
+    echo -e "\e[0mThe existing sensor_fields.json differs from the template, per"
+    echo "  the report above. Since it's purely structural (no site-specific"
+    echo "  data), it will simply be replaced with the current template. The"
+    echo "  current file will be backed up first as sensor_fields.json.dev."
+    cp -v sensor_fields.json sensor_fields.json.dev
+    cp -v sensor_fields.json.template sensor_fields.json
+  fi
 else
   cp -v sensor_fields.json.template sensor_fields.json
 fi
