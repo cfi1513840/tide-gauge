@@ -1,0 +1,54 @@
+The radio link used to report sensor measurements can be either of
+two options: the Blues Notecard cellular link, or the Heltec
+CubeCell LoRa link. This tutorial covers the Blues Notecard link.
+
+The Blues Notecard device is normally paired with a companion
+microprocessor, which formats raw sensor measurements for
+transmission via the cellular link to the notehub.io network. The
+Blues Notecard purchase is bundled with a 500MB data allocation,
+which can be refreshed as required. Transmissions of "notes" to the
+network service are categorized as "events." Blues charges for
+these events at a rate of approximately $10.00 per 15,000 events.
+The notehub.io account used to service this link should be set up
+with automatic payment renewal, to ensure sufficient data and event
+coverage.
+
+The Notecard link requires an account established at the Blues
+network server, notehub.io. Once logged into the notehub.io account,
+the device information provided with the Blues Notecard is added to
+the account, enabling the routing of Notecard information (notes)
+from the device to the notehub.io network. The notehub.io service
+provides for follow-on processing and routing of the received
+measurements.
+
+The notehub.io account can support multiple sensors, each uniquely
+identified by a three-letter station identifier, coded as the "S"
+parameter in the notehub report. The station identifier is used for
+downstream processing, either by the Tide Station software or,
+alternately, by the InfluxDB Cloud database directly.
+
+In the notehub.io wizard, a "fleet" and a "route" are both
+configured to determine the method and destination by which
+Notecard data is forwarded. A notehub.io fleet defines the
+destination; the device's own configuration includes its fleet
+assignment. A route is then created to the Tide Station URL, using
+the HTTPS Post option. As part of the route configuration, a
+randomly generated token provides HTTPS Post authentication. This
+token is defined in both the notehub.io route configuration and the
+Tide Station configuration, via the NOTEHUB_SECRET parameter in
+tide_constants.json, which must match the notehub.io token exactly.
+
+When creating the route, the Tide Station URL used by notehub is in
+the format "https://note.bbitide.org/ingest" (substitute this
+station's own domain). An X-Auth header value is also entered,
+matching the NOTEHUB_SECRET value. The Linux command
+`openssl rand -hex 32` can be used to generate the token. Save the
+generated value temporarily in a secure location, for use when
+configuring the notehub.io route. Later, during install.sh's editing
+of tide_constants.json, you will have the opportunity to enter this
+same value as NOTEHUB_SECRET.
+
+It should also be noted that it is possible to configure a
+notehub.io route that bypasses the Tide Station entirely, sending
+reports directly to the InfluxDB Cloud database. This configuration
+will be discussed in a future addition to this tutorial.
