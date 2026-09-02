@@ -27,12 +27,12 @@ separate storage backends live behind this one class:
     instead) via the per-station STATION_CLOUD_ENABLE flags.
 
 insert_tide() also runs every reading through a per-sensor outlier
-filter (_check_outlier) before it's allowed to reach sqlite3 or
-InfluxDB at all -- a 20-sample rolling window (median while filling,
-mean once full) that rejects implausible jumps, discards its first few
-bootstrap samples rather than writing them unfiltered, and resets
-itself if too long has passed since the last trustworthy reading for
-that sensor (a real reporting gap, not just noise).
+filter (_check_outlier), delegated to the shared tidehelper.OutlierTracker,
+before it's allowed to reach sqlite3 or InfluxDB at all -- a single
+tracked baseline value (not an average) that rejects implausible
+jumps, and resets itself if too long has passed since the last
+trustworthy reading for that sensor (a real reporting gap, not just
+noise).
 """
 import os
 import sqlite3
@@ -40,13 +40,13 @@ import queue
 import threading
 import time
 from datetime import datetime, timezone, timedelta
-from statistics import median
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from influxdb_client_3 import InfluxDBClient3
 import logging
 import pytz
 import tidecrypto
+import tidehelper
 
 class DbManage:
     """Manages access to the sqlite3 and InfluxDB databases"""
@@ -72,20 +72,15 @@ class DbManage:
         # used. Queries local only; nothing currently reads the cloud copy back.
         self.influxdb_local_query_client = cons.INFLUXDB_LOCAL_QUERY_CLIENT
         # Outlier rejection: same design as tidealerts.py's alert-side
-        # check (see there for the full rationale), applied here to the
-        # database write path instead, since alerts operate on live
-        # in-memory data and never touch insert_tide() -- a reading bad
-        # enough to trip the alert check could otherwise still land in
-        # both databases untouched. Keyed per sensor_id (the record's "I"
-        # field), since multiple distinct physical sensors share this one
-        # write path and each needs its own independent window.
-        self._outlier_buffers = {}
-        # Timestamp (each reading's own -- see _check_outlier) of the
-        # last ACCEPTED reading per sensor_id. Used to detect a
-        # prolonged gap since real, trustworthy data last flowed for
-        # that sensor and reset its buffer rather than leave it
-        # rejecting everything indefinitely once reporting resumes.
-        self._outlier_last_time = {}
+        # check (see tidehelper.OutlierTracker for the full rationale),
+        # applied here to the database write path instead, since alerts
+        # operate on live in-memory data and never touch insert_tide() --
+        # a reading bad enough to trip the alert check could otherwise
+        # still land in both databases untouched. Keyed per sensor_id
+        # (the record's "I" field), since multiple distinct physical
+        # sensors share this one write path and each needs its own
+        # independent tracker.
+        self._outlier_trackers = {}
         self.sql_connection = sqlite3.connect(f'{self.sqlpath}')
         self.sql_cursor = self.sql_connection.cursor()
         self.local_tz = pytz.timezone('US/Eastern')
@@ -195,74 +190,32 @@ class DbManage:
             self.sql_connection.commit()
 
     def _check_outlier(self, sensor_id, candidate_ft, candidate_time):
-        """Same design as tidealerts.py's alert-side check (see there for
-        full rationale) -- applied here so a bad reading can't land in
-        either database at all, not just skip one alert cycle. Keyed per
-        sensor_id since multiple physical sensors share this write path.
-        Returns True to accept (write it), False to skip the write --
-        either because it failed the check, or because it's one of the
-        first few bootstrap samples used only to seed the buffer (a
-        deliberate, small data gap of a few minutes after every startup
-        or restart, in exchange for never writing anything unfiltered).
+        """Delegates to tidehelper.OutlierTracker (see there for the full
+        rationale), keeping one tracker per sensor_id since multiple
+        physical sensors share this write path and each needs its own
+        independent baseline. Returns True to accept (write it), False
+        to reject it.
 
         candidate_time is this specific reading's own timestamp --
         Notecard's embedded 'T' when available, otherwise the RPi's
         current wall-clock time as a fallback for LoRa readings (which
-        don't carry their own timestamp). If more than
-        OUTLIER_GAP_RESET_SECONDS has passed since the last ACCEPTED
-        reading for this sensor, the buffer is reset and re-bootstrapped
-        from scratch rather than left comparing fresh data against a
-        stale baseline indefinitely -- covers both a genuine reporting
-        gap (a connectivity outage) and a sensor that keeps reporting
-        but stays rejected for some other reason; either way, too long
-        without a trustworthy reading means the old baseline is no
-        longer a fair comparison.
+        don't carry their own timestamp).
         """
-        OUTLIER_MAX_DEVIATION_FT = 1
-        OUTLIER_BOOTSTRAP_UNCONDITIONAL = 4
-        OUTLIER_WINDOW_SIZE = 20
-        OUTLIER_GAP_RESET_SECONDS = 5 * 60
-
-        last_time = self._outlier_last_time.get(sensor_id)
-        if last_time is not None and candidate_time is not None:
-            gap = (candidate_time - last_time).total_seconds()
-            if gap > OUTLIER_GAP_RESET_SECONDS:
-                logging.warning(
-                  f'insert_tide: sensor {sensor_id} reporting gap of '
-                  f'{gap:.0f}s exceeds {OUTLIER_GAP_RESET_SECONDS}s -- '
-                  f'resetting outlier buffer to re-bootstrap')
-                self._outlier_buffers[sensor_id] = []
-
-        buf = self._outlier_buffers.setdefault(sensor_id, [])
-        n = len(buf)
-        if n < OUTLIER_BOOTSTRAP_UNCONDITIONAL:
-            # Seed the buffer, but don't write -- not enough history yet
-            # to judge this reading, so it's discarded rather than
-            # written unfiltered.
-            buf.append(candidate_ft)
-            self._outlier_last_time[sensor_id] = candidate_time
-            return False
-        elif n < OUTLIER_WINDOW_SIZE:
-            check_tide = median(buf)
-            if (candidate_ft > check_tide + OUTLIER_MAX_DEVIATION_FT or
-              candidate_ft < check_tide - OUTLIER_MAX_DEVIATION_FT):
-                logging.warning(
-                  f'insert_tide: rejecting outlier for sensor {sensor_id}: '
-                  f'{candidate_ft} versus running median {check_tide}')
-                return False
-            buf.append(candidate_ft)
-            self._outlier_last_time[sensor_id] = candidate_time
-            return True
-        check_tide = sum(buf) / OUTLIER_WINDOW_SIZE
-        if (candidate_ft > check_tide + OUTLIER_MAX_DEVIATION_FT or
-          candidate_ft < check_tide - OUTLIER_MAX_DEVIATION_FT):
+        tracker = self._outlier_trackers.setdefault(
+          sensor_id, tidehelper.OutlierTracker())
+        accepted, baseline, gap_reset_seconds = tracker.check(
+          candidate_ft, candidate_time)
+        if gap_reset_seconds is not None:
+            logging.warning(
+              f'insert_tide: sensor {sensor_id} reporting gap of '
+              f'{gap_reset_seconds:.0f}s exceeds '
+              f'{tracker.OUTLIER_GAP_RESET_SECONDS}s -- resetting outlier '
+              f'baseline to re-establish')
+        if not accepted:
             logging.warning(
               f'insert_tide: rejecting outlier for sensor {sensor_id}: '
-              f'{candidate_ft} versus 20-sample average {check_tide}')
-            return False
-        self._outlier_buffers[sensor_id] = buf[1:] + [candidate_ft]
-        self._outlier_last_time[sensor_id] = candidate_time
-        return True
+              f'{candidate_ft} versus baseline {baseline}')
+        return accepted
 
     def insert_tide(self, data_dict):
         # Reject an implausible reading before it reaches either database

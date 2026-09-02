@@ -15,24 +15,24 @@ only fires once per crossing rather than on every cycle it stays past
 it.
 
 Before any alert fires, the incoming tide_level itself is run through
-an outlier check -- a 20-sample rolling window (median while filling,
-mean once full) that rejects an implausible reading rather than acting
-on it, discards its first few bootstrap samples outright, and resets
-if the active station changes (tide.py's automatic failover, or a
-manual iparams change) so a newly-selected sensor's differently-
-calibrated readings aren't judged against a baseline that no longer
-applies. This mirrors -- but is a separate implementation from --
-tidedatabase.py's per-sensor outlier filter on the database write path;
-that one guards what gets stored, this one guards what triggers a
-live notification.
+an outlier check, delegated to the shared tidehelper.OutlierTracker --
+a single tracked baseline value (not an average) that rejects an
+implausible reading rather than acting on it, and resets if the
+active station changes (tide.py's automatic failover, or a manual
+iparams change) so a newly-selected sensor's differently-calibrated
+readings aren't judged against a baseline that no longer applies.
+The same tracker class is also used, as its own separate instance, by
+tidedatabase.py's per-sensor outlier filter on the database write
+path -- that one guards what gets stored, this one guards what
+triggers a live notification.
 """
 import sqlite3
 from datetime import datetime
-from statistics import median
 import time
 import pytz
 import logging
 import tidecrypto
+import tidehelper
 
 class TideAlerts:
     """Check conditions against alert table and provide notification as required"""
@@ -43,26 +43,15 @@ class TideAlerts:
         self.sql_connection = sqlite3.connect(self.cons.SQL_PATH)
         self.sql_cursor = self.sql_connection.cursor()
         self.save_alert_list = []
-        # Validated 20-minute rolling window of tide levels, used both to
-        # flag an implausible reading (deviates > OUTLIER_MAX_DEVIATION_FT
-        # from the window) and to detect rising/falling phase. Starts
-        # empty rather than pre-seeded with 20 zeros: a candidate is only
-        # added once it has passed the check below, so a bad reading
-        # during startup (or ever) can't corrupt the baseline it's being
-        # judged against. The first few samples are accepted outright
-        # (nothing to meaningfully compare against yet); from there,
-        # candidates are checked against the MEDIAN of what's validated
-        # so far while the window is still filling (median stays robust
-        # with only a handful of samples, unlike a mean, which a single
-        # bad value can drag arbitrarily far off), then against the MEAN
-        # once the full 20-sample window is established (steady state).
+        # Outlier filtering itself is now delegated to a shared
+        # tidehelper.OutlierTracker (see there for the full rationale).
+        # tide_average is kept only for rising/falling phase detection
+        # below -- a 20-sample window of ACCEPTED readings, fed from the
+        # tracker's decision but otherwise unrelated to it.
+        self._outlier_tracker = tidehelper.OutlierTracker()
         self.tide_average = []
         self._last_stationid = None
-        self._outlier_last_time = None
-        self.OUTLIER_MAX_DEVIATION_FT = 1
-        self.OUTLIER_BOOTSTRAP_UNCONDITIONAL = 4
-        self.OUTLIER_WINDOW_SIZE = 20
-        self.OUTLIER_GAP_RESET_SECONDS = 5 * 60
+        self.PHASE_WINDOW_SIZE = 20
         self.last_average = 0
         self.average = 0
         self.phase = ''
@@ -72,30 +61,24 @@ class TideAlerts:
        
     def check_alerts(self, tide, weather, ndbc_data, sunrise, sunset, debug,
       stationid=None):
-        # tide_average is a single shared buffer for whichever station is
-        # currently selected -- it isn't keyed per sensor the way
-        # insert_tide()'s outlier buffers are. If the active station
-        # changes (manual iparams change, or the automatic failover
-        # logic in tide.py's main()), the two sensors' calibrated
-        # readings may not agree closely enough to both sit inside the
-        # existing 1 ft window, even when neither is malfunctioning --
-        # so treat a station change exactly like a fresh restart: reset
-        # the buffer and let it re-bootstrap against the new sensor,
-        # rather than judging its readings against a baseline that no
-        # longer applies.
+        # tide_average and the outlier tracker are both single, shared
+        # instances for whichever station is currently selected -- not
+        # keyed per sensor the way insert_tide()'s outlier trackers are.
+        # If the active station changes (manual iparams change, or the
+        # automatic failover logic in tide.py's main()), the two
+        # sensors' calibrated readings may not agree closely enough to
+        # both sit inside the existing 1 ft window, even when neither is
+        # malfunctioning -- so treat a station change exactly like a
+        # fresh restart: reset both and let the baseline and phase
+        # window re-establish against the new sensor, rather than
+        # judging its readings against ones that no longer apply.
         if stationid is not None and stationid != self._last_stationid:
+            self._outlier_tracker.reset()
             self.tide_average = []
             self._last_stationid = stationid
         current_time = datetime.now()
-        if self._outlier_last_time is not None:
-            gap = (current_time - self._outlier_last_time).total_seconds()
-            if gap > self.OUTLIER_GAP_RESET_SECONDS:
-                logging.warning(
-                  f'check_alerts: reporting gap of {gap:.0f}s exceeds '
-                  f'{self.OUTLIER_GAP_RESET_SECONDS}s -- resetting outlier '
-                  f'buffer to re-bootstrap')
-                self.tide_average = []
         message_time = datetime.strftime(current_time, self.cons.TIME_FORMAT)
+
 
         def to_float_or_none(raw_value):
             # External weather/NDBC sources may hand back a proper float,
@@ -172,46 +155,33 @@ class TideAlerts:
                           save_entry['water_temp_status']
                         alert_list[index]['event_repeat'] = \
                           save_entry['event_repeat']
-        n = len(self.tide_average)
-        if n < self.OUTLIER_BOOTSTRAP_UNCONDITIONAL:
-            # Not enough samples yet to meaningfully judge a candidate --
-            # accept it outright.
+        accepted, baseline, gap_reset_seconds = self._outlier_tracker.check(
+          tide_level, current_time)
+        if gap_reset_seconds is not None:
+            logging.warning(
+              f'check_alerts: reporting gap of {gap_reset_seconds:.0f}s '
+              f'exceeds {self._outlier_tracker.OUTLIER_GAP_RESET_SECONDS}s '
+              f'-- resetting outlier baseline to re-establish')
+        if not accepted:
+            logging.warning(message_time+' invalid tide level: '+
+              str(tide_level)+' versus baseline: '+str(baseline))
+            return
+        # Rising/falling phase detection, unrelated to outlier
+        # filtering above -- fed only by accepted readings. Unchanged
+        # from the original 20-sample grow-then-slide window: compares
+        # the mean of the most recent 10 accepted readings against the
+        # mean of the 10 before that.
+        if len(self.tide_average) < self.PHASE_WINDOW_SIZE:
             self.tide_average.append(tide_level)
-            self._outlier_last_time = current_time
-            return
-        elif n < self.OUTLIER_WINDOW_SIZE:
-            # Still filling the window: check against the median of what
-            # has been validated so far (robust to the few outliers that
-            # might already be mixed in), then add if it passes.
-            check_tide = median(self.tide_average)
-            if (tide_level > check_tide + self.OUTLIER_MAX_DEVIATION_FT or
-              tide_level < check_tide - self.OUTLIER_MAX_DEVIATION_FT):
-                logging.warning(message_time+' invalid tide level: '+
-                  str(tide_level)+' versus running median: '+str(check_tide))
-                return
-            self.tide_average.append(tide_level)
-            self._outlier_last_time = current_time
-            return
-        # Steady state: full 20-sample window established. Check against
-        # the mean of the current window BEFORE adding the candidate, so
-        # a rejected reading never enters the window at all (previously,
-        # the candidate was added first and could still skew the average
-        # for the following 19 cycles even when the alert cycle itself
-        # was skipped for it).
-        check_tide = sum(self.tide_average)/self.OUTLIER_WINDOW_SIZE
-        if (tide_level > check_tide + self.OUTLIER_MAX_DEVIATION_FT or
-          tide_level < check_tide - self.OUTLIER_MAX_DEVIATION_FT):
-            logging.warning (message_time+' invalid tide level: '+
-              str(tide_level)+' versus 20 minute average: '+str(check_tide))
-            return
-        self.tide_average = self.tide_average[1:]+[tide_level]
-        self._outlier_last_time = current_time
-        self.average = sum(self.tide_average[10:])/10
-        self.last_average = sum(self.tide_average[:10])/10
-        if self.average > self.last_average + 0.05:
-            self.phase = 'Rising'
-        elif self.average < self.last_average - 0.05:
-            self.phase = 'Falling'
+        else:
+            self.tide_average = self.tide_average[1:]+[tide_level]
+        if len(self.tide_average) >= self.PHASE_WINDOW_SIZE:
+            self.average = sum(self.tide_average[10:])/10
+            self.last_average = sum(self.tide_average[:10])/10
+            if self.average > self.last_average + 0.05:
+                self.phase = 'Rising'
+            elif self.average < self.last_average - 0.05:
+                self.phase = 'Falling'
         for index, alert_dict in enumerate(alert_list):
             emailAddress = alert_dict['email_address'].encode()
             emailAddress = self.f1.decrypt(emailAddress).decode()

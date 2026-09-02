@@ -268,7 +268,95 @@ class Constants:
         INFLUXDB_NAMES = json.load(infile)
     RADIANS_PER_SECOND = math.pi*2/91080
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-    
+
+class OutlierTracker:
+    """Sensor-reading outlier filter, shared by tidedatabase.py's
+    insert_tide() and tidealerts.py's check_alerts() -- previously two
+    separate, hand-maintained implementations that quietly drifted out
+    of sync (one had a bug fix the other never received). Unifying
+    them here means a future fix only has to be made once.
+
+    Replaces the earlier 20-sample rolling-average approach entirely.
+    That design had a real failure mode: a single borderline-rejected
+    reading could never update the average, which guaranteed every
+    subsequent identical (and perfectly legitimate) reading would keep
+    failing the same check, for as long as OUTLIER_GAP_RESET_SECONDS
+    -- since the average that would have accepted it never got the
+    chance to move.
+
+    This design instead tracks a single baseline value rather than an
+    average. Once established, each new candidate is compared only
+    against that one number, using a flat +/- OUTLIER_MAX_DEVIATION_FT
+    window; if accepted, the candidate itself becomes the new
+    baseline, so the reference tracks the tide continuously rather
+    than needing several samples to catch up.
+
+    A baseline is established (or re-established, after a gap reset)
+    by requiring OUTLIER_BASELINE_CHAIN_LENGTH consecutive readings
+    that each agree with the one immediately before them (same flat
+    window). Any disagreement restarts the chain from that new
+    reading rather than discarding it. All readings during this
+    establishing phase are accepted (there's no confirmed baseline
+    yet to reject them against) -- once the chain completes, the
+    baseline becomes the most recent (last) reading in it.
+
+    If more than OUTLIER_GAP_RESET_SECONDS passes since the last
+    accepted reading, the baseline and any in-progress chain are
+    cleared and the establishing phase runs again from scratch --
+    covers both a genuine reporting gap and a sensor that keeps
+    reporting but stays rejected for some other reason; either way,
+    too long without a trustworthy reading means the old baseline is
+    no longer a fair comparison.
+
+    check() returns a (accepted, baseline, gap_reset_seconds) tuple:
+      accepted -- whether this reading should be written/used.
+      baseline -- the reference value it was compared against, for
+        the caller's own rejection log message; None whenever
+        accepted is True (nothing to log).
+      gap_reset_seconds -- the size of the gap that just triggered a
+        reset, for the caller's own log message; None otherwise.
+
+    Callers are expected to log rejections and gap-resets themselves,
+    in their own established wording -- this class only decides.
+    """
+    OUTLIER_MAX_DEVIATION_FT = 1
+    OUTLIER_BASELINE_CHAIN_LENGTH = 5
+    OUTLIER_GAP_RESET_SECONDS = 5 * 60
+
+    def __init__(self):
+        self.baseline = None
+        self.chain = []
+        self.last_accepted_time = None
+
+    def reset(self):
+        self.baseline = None
+        self.chain = []
+
+    def check(self, candidate_ft, candidate_time):
+        gap_reset_seconds = None
+        if self.last_accepted_time is not None and candidate_time is not None:
+            gap = (candidate_time - self.last_accepted_time).total_seconds()
+            if gap > self.OUTLIER_GAP_RESET_SECONDS:
+                gap_reset_seconds = gap
+                self.reset()
+
+        if self.baseline is not None:
+            if abs(candidate_ft - self.baseline) <= self.OUTLIER_MAX_DEVIATION_FT:
+                self.baseline = candidate_ft
+                self.last_accepted_time = candidate_time
+                return True, None, gap_reset_seconds
+            return False, self.baseline, gap_reset_seconds
+
+        if not self.chain or abs(candidate_ft - self.chain[-1]) <= self.OUTLIER_MAX_DEVIATION_FT:
+            self.chain.append(candidate_ft)
+        else:
+            self.chain = [candidate_ft]
+        self.last_accepted_time = candidate_time
+        if len(self.chain) >= self.OUTLIER_BASELINE_CHAIN_LENGTH:
+            self.baseline = self.chain[-1]
+            self.chain = []
+        return True, None, gap_reset_seconds
+
 class TideState:
     """Store state variables"""
     def __init__(self):
