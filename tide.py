@@ -16,6 +16,9 @@ import subprocess
 from datetime import datetime, timedelta
 import time
 import logging
+import logging.handlers
+import gzip
+import shutil
 import tidehelper
 import tideget
 import tidedatabase
