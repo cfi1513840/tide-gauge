@@ -35,12 +35,49 @@ if 'debug' in sys.argv:
 elif 'log' in sys.argv:
     level = logging.INFO
 
-logging.basicConfig(filename='newtide.log',
-  level = level,
-  format="%(asctime)s [%(levelname)s] %(message)s")
+MAX_ROTATED_LOGS = 7
+
+def _cascade_rotate(source, dest):
+  """Apache-style rotation: the most recently rotated log (newtide.log.1)
+  stays plain, uncompressed text for one full day, matching
+  /var/log/apache2/error.log.1's own convention, so it can be read
+  directly without unzipping. It's only compressed once a newer
+  rotation bumps it down to newtide.log.2.gz. Anything beyond
+  MAX_ROTATED_LOGS is deleted. The 'dest' argument from
+  TimedRotatingFileHandler's own naming is unused -- rotated files are
+  named and numbered entirely by this function instead.
+  """
+  base = 'newtide.log'
+  oldest = f'{base}.{MAX_ROTATED_LOGS}.gz'
+  if os.path.exists(oldest):
+    os.remove(oldest)
+  for n in range(MAX_ROTATED_LOGS - 1, 1, -1):
+    older = f'{base}.{n}.gz'
+    newer = f'{base}.{n + 1}.gz'
+    if os.path.exists(older):
+      os.rename(older, newer)
+  previous_plain = f'{base}.1'
+  if os.path.exists(previous_plain):
+    with open(previous_plain, 'rb') as f_in, gzip.open(f'{base}.2.gz', 'wb') as f_out:
+      shutil.copyfileobj(f_in, f_out)
+    os.remove(previous_plain)
+  os.rename(source, previous_plain)
+
+logger = logging.getLogger()
+logger.setLevel(level)
+log_format = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+
+file_handler = logging.handlers.TimedRotatingFileHandler(
+  filename='newtide.log', when='midnight', interval=1, backupCount=0)
+file_handler.rotator = _cascade_rotate
+file_handler.setFormatter(log_format)
+logger.addHandler(file_handler)
+
 console = logging.StreamHandler()
 console.setLevel(level)
-logging.getLogger('').addHandler(console)
+console.setFormatter(log_format)
+logger.addHandler(console)
+
 logging.info('tide.py initializing')
 
 sunny = tidehelper.SunTime()
