@@ -752,15 +752,15 @@ class CreateHTML:
                     peak = format(ent[2], '.2f')+' ft'
                     if prestate == 'H':
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({endx-21}, {midcanvas+28}, 42, 30);\n')
-                        outfile.write (f'ctx.fillRect({endx-21}, {midcanvas+28}, 42, 30);\n')
+                        outfile.write (f'ctx.strokeRect({endx-26}, {midcanvas+28}, 52, 30);\n')
+                        outfile.write (f'ctx.fillRect({endx-26}, {midcanvas+28}, 52, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#808080";\n')
                         outfile.write (f'ctx.fillText("{peak}", {endx}, {midcanvas+42});\n')
                         outfile.write (f'ctx.fillText("{hrmin}", {endx}, {midcanvas+57});\n')
                     else:
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({endx-21}, {midcanvas-28}, 42, 30);\n')
-                        outfile.write (f'ctx.fillRect({endx-21}, {midcanvas-28}, 42, 30);\n')
+                        outfile.write (f'ctx.strokeRect({endx-26}, {midcanvas-28}, 52, 30);\n')
+                        outfile.write (f'ctx.fillRect({endx-26}, {midcanvas-28}, 52, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#808080";\n')
                         outfile.write (f'ctx.fillText("{hrmin}", {endx}, {midcanvas+1});\n')
                         outfile.write (f'ctx.fillText("{peak}", {endx}, {midcanvas-14});\n')
@@ -774,15 +774,15 @@ class CreateHTML:
                 if ent[5] != '':
                     if ent[5] == 'high':
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({plotx-21}, {midcanvas-60}, 42, 30);\n')
-                        outfile.write (f'ctx.fillRect({plotx-21}, {midcanvas-60}, 42, 30);\n')
+                        outfile.write (f'ctx.strokeRect({plotx-26}, {midcanvas-60}, 52, 30);\n')
+                        outfile.write (f'ctx.fillRect({plotx-26}, {midcanvas-60}, 52, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
                         outfile.write (f'ctx.fillText("{peak}", {plotx}, {midcanvas-49});\n')
                         outfile.write (f'ctx.fillText("{hm}", {plotx}, {midcanvas-34});\n')
                     else:
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({plotx-21}, {midcanvas-4}, 42, 30);\n')
-                        outfile.write (f'ctx.fillRect({plotx-21}, {midcanvas-4}, 42, 30);\n')
+                        outfile.write (f'ctx.strokeRect({plotx-26}, {midcanvas-4}, 52, 30);\n')
+                        outfile.write (f'ctx.fillRect({plotx-26}, {midcanvas-4}, 52, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
                         outfile.write (f'ctx.fillText("{hm}", {plotx}, {midcanvas+24});\n')
                         outfile.write (f'ctx.fillText("{peak}", {plotx}, {midcanvas+9});\n')
