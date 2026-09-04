@@ -494,7 +494,7 @@ class TideDisplay:
                 elif preliminary_tide_state != thistate:
                     preliminary_tide_state = thistate 
                     hbox = self.plot_window.create_text(
-                      start_plot_x,self.canvas_height/2+40, width=58,
+                      start_plot_x,self.canvas_height/2+40, width=64,
                       fill="gray30", text=peaks, font=("Arial", 12),
                       justify="center")
                     hboxcors = self.plot_window.bbox(hbox)
@@ -534,7 +534,7 @@ class TideDisplay:
                         self.tide_turn_time = hourtime
                         peaks = format(entry[1],'.2f')+' ft '+hrmin
                         abox = self.plot_window.create_text(
-                          start_plot_x,self.canvas_height/2, width=58,
+                          start_plot_x,self.canvas_height/2, width=64,
                           fill="blue", text=peaks, font=("Arial", 12),
                           justify="center")
                         aboxcors = self.plot_window.bbox(abox)
