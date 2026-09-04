@@ -362,6 +362,14 @@ copy_tracked() {
 copy_tracked '*.cgi'  "$cgidir" 755
 copy_tracked '*.html' "$htmldir" 644
 copy_tracked '*.pdf'  "$htmldir" 644
+if [ -e "${htmldir}tide.html" ] && [ "$(stat -c '%U' "${htmldir}tide.html")" != "tide" ]; then
+  echo -e "\e[0m${htmldir}tide.html is owned by $(stat -c '%U' "${htmldir}tide.html"),"
+  echo "  not tide -- likely leftover from a version of install.sh that"
+  echo "  incorrectly copied index.html over it. tide.py runs as the tide"
+  echo "  user and needs to own this file to regenerate it. Fixing."
+  sudo chown tide:tide "${htmldir}tide.html"
+  sudo chmod 644 "${htmldir}tide.html"
+fi
 echo
 echo -e "\e[0mThe tide plot page (tideplot.html) needs to be regenerated"
 echo "  periodically to stay current. This is done via a cron job that runs"
