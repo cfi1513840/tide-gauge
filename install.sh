@@ -362,8 +362,6 @@ copy_tracked() {
 copy_tracked '*.cgi'  "$cgidir" 755
 copy_tracked '*.html' "$htmldir" 644
 copy_tracked '*.pdf'  "$htmldir" 644
-sudo cp -v index.html ${htmldir}tide.html
-sudo chmod 644 ${htmldir}tide.html
 echo
 echo -e "\e[0mThe tide plot page (tideplot.html) needs to be regenerated"
 echo "  periodically to stay current. This is done via a cron job that runs"
