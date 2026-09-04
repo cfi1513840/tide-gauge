@@ -749,7 +749,7 @@ class CreateHTML:
                     prestate = thistate
                 elif prestate != thistate:
                     prestate = thistate
-                    peak = format(ent[2], '.2f') 
+                    peak = format(ent[2], '.2f')+' ft'
                     if prestate == 'H':
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
                         outfile.write (f'ctx.strokeRect({endx-21}, {midcanvas+28}, 42, 30);\n')
@@ -769,7 +769,7 @@ class CreateHTML:
             for ent in timeline:
                 plotx = int(ent[0])
                 hm = ent[3]
-                peak = format(ent[2], '.2f')
+                peak = format(ent[2], '.2f')+' ft'
                 outfile.write ('ctx.strokeStyle = "#1A53FF";\n')
                 if ent[5] != '':
                     if ent[5] == 'high':

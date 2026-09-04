@@ -488,7 +488,7 @@ class TideDisplay:
                       fill="black", text=linedate, font=("Arial", 10))
                
             if thistate == 'L' or thistate == 'H':
-                peaks = format(entry[2],'.2f')+' '+hrmin
+                peaks = format(entry[2],'.2f')+' ft '+hrmin
                 if preliminary_tide_state == '':
                     preliminary_tide_state = thistate
                 elif preliminary_tide_state != thistate:
@@ -532,7 +532,7 @@ class TideDisplay:
                     if (self.tide_turn_time == 0 or 
                       abs(hourtime-self.tide_turn_time) >= 3):
                         self.tide_turn_time = hourtime
-                        peaks = format(entry[1],'.2f')+' '+hrmin
+                        peaks = format(entry[1],'.2f')+' ft '+hrmin
                         abox = self.plot_window.create_text(
                           start_plot_x,self.canvas_height/2, width=48,
                           fill="blue", text=peaks, font=("Arial", 12),
@@ -544,7 +544,7 @@ class TideDisplay:
                 start_plot_x = end_plot_x
                 start_plot_y = end_plot_y
             tide = measurements[len(measurements)-1][1]
-        tide_text = format(tide, '.2f')+' Ft.'
+        tide_text = format(tide, '.2f')+' ft'
         current_time = datetime.now()
         curhrmin = datetime.strftime(current_time, "%H:%M")
         text_font = tkfont.Font(family="Arial", size=12, weight="bold")
