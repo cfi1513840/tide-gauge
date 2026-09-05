@@ -307,6 +307,21 @@ class Tide:
             # own sqlite3 access.
             note_receiver.server.station_cal = station_cal
             note_receiver.server.station_link_type = station_link_type
+            # Everything do_POST() needs to run check_alerts() itself, per
+            # record, rather than tide.py only ever seeing the single most
+            # recent point once a minute -- which silently skips every
+            # earlier reading in a Notecard station's 15-reading burst,
+            # including any that crossed an alert threshold. Only the
+            # active (self.stationid) station's own readings should ever
+            # reach check_alerts(), same as the LoRa path below.
+            note_receiver.server.active_stationid = self.stationid
+            note_receiver.server.active_stype = self.stype
+            note_receiver.server.alerts = alerts
+            note_receiver.server.weather = self.weather
+            note_receiver.server.ndbc_data = self.ndbc_data
+            note_receiver.server.sunrise = self.sunrise
+            note_receiver.server.sunset = self.sunset
+            note_receiver.server.debug = state.debug
             if self.s1type == 'note':                
                 note_receiver.poll(1)
             elif self.s2type == 'note':
@@ -428,6 +443,12 @@ class Tide:
 
                 #print (self.message_time+' One minute processing')
                 self.main_loop_count = 0
+                # Reset every cycle so a stale value from a previous minute
+                # can never be mistaken for a fresh reading -- see the
+                # check_alerts() call below, which now depends on this
+                # actually meaning "the active station reported something
+                # new this minute", not just "since tide.py started".
+                self.tide_ft = 99
                 self.iparams_dict = db.fetch_iparams()
                 self.stationid = self.iparams_dict.get('stationid')
                 self.station1cal = self.iparams_dict.get('station1cal')
@@ -553,7 +574,7 @@ class Tide:
                     self.last_station1_time = self.current_time
                     self.last_station2_time = self.current_time
                     self.last_station3_time = self.current_time
-                if self.tide_ft != 99:
+                if self.tide_ft != 99 and self.stype == 'lora':
                     alerts.check_alerts(self.tide_ft, self.weather,
                       self.ndbc_data, self.sunrise, self.sunset, state.debug,
                       self.stationid)

@@ -43,9 +43,19 @@ class NotehubHandler(BaseHTTPRequestHandler):
         except (ValueError, KeyError, TypeError):
             self._reply(400, b"bad request")
             return
+        is_active_station = (
+          getattr(self.server, 'active_stationid', None) == self.server.station and
+          getattr(self.server, 'active_stype', None) == 'note')
         for record in records:
             # print(record)
             self.server.db.insert_tide(record)
+            if (is_active_station and record.get('H') is not None and
+              record.get('R') is not None):
+                tide_level = round(record['H'] - record['R']/304.8, 2)
+                self.server.alerts.check_alerts(
+                  tide_level, self.server.weather, self.server.ndbc_data,
+                  self.server.sunrise, self.server.sunset, self.server.debug,
+                  self.server.active_stationid)
         self._reply(200, b"ok")
 
     def _normalize(self, event):
