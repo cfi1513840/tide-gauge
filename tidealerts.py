@@ -51,6 +51,10 @@ class TideAlerts:
         self._outlier_tracker = tidehelper.OutlierTracker()
         self.tide_average = []
         self._last_stationid = None
+        # Temporary diagnostics (see check_alerts) for the missed-alert
+        # investigation -- not permanent, remove once resolved.
+        self._diag_last_phase = ''
+        self._diag_alert_window_state = {}
         self.PHASE_WINDOW_SIZE = 20
         self.last_average = 0
         self.average = 0
@@ -182,6 +186,13 @@ class TideAlerts:
                 self.phase = 'Rising'
             elif self.average < self.last_average - 0.05:
                 self.phase = 'Falling'
+        if self.phase != self._diag_last_phase:
+            diag_msg = (f'{message_time} DIAG phase change: '
+              f'{self._diag_last_phase!r} -> {self.phase!r} '
+              f'(tide_level={tide_level})')
+            print(diag_msg)
+            logging.warning(diag_msg)
+            self._diag_last_phase = self.phase
         for index, alert_dict in enumerate(alert_list):
             emailAddress = alert_dict['email_address'].encode()
             emailAddress = self.f1.decrypt(emailAddress).decode()
@@ -208,6 +219,28 @@ class TideAlerts:
             
             if (enabled and activated and tide_level != None and value != ''):
                 db_level = float(value)
+                in_rising_window = (tide_level >= db_level and
+                  tide_level < db_level+0.1)
+                in_falling_window = (tide_level <= db_level and
+                  tide_level > db_level-0.1)
+                prev_rising, prev_falling = self._diag_alert_window_state.get(
+                  index, (False, False))
+                for window_name, now_in, was_in in (
+                  ('rising', in_rising_window, prev_rising),
+                  ('falling', in_falling_window, prev_falling)):
+                    if now_in and not was_in:
+                        would_fire = (
+                          (status == 0 and self.phase == 'Rising' and window_name == 'rising') or
+                          (status == 0 and self.phase == 'Falling' and window_name == 'falling') or
+                          (status == 1 and self.phase == 'Rising' and window_name == 'rising') or
+                          (status == 2 and self.phase == 'Falling' and window_name == 'falling'))
+                        diag_msg = (f'{message_time} DIAG {window_name} alert window '
+                          f'entered: tide_level={tide_level} db_level={db_level} '
+                          f'status={status} phase={self.phase!r} '
+                          f'would_fire={would_fire}')
+                        print(diag_msg)
+                        logging.warning(diag_msg)
+                self._diag_alert_window_state[index] = (in_rising_window, in_falling_window)
                 email_headers = [
                   "From: " +self.cons.EMAIL_USERNAME, 
                   "Subject: Tide Level Alert",
