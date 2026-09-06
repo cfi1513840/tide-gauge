@@ -64,7 +64,7 @@ class TideAlerts:
         self.f2 = tidecrypto.PHONE_KEY
        
     def check_alerts(self, tide, weather, ndbc_data, sunrise, sunset, debug,
-      stationid=None):
+      stationid=None, candidate_time=None):
         # tide_average and the outlier tracker are both single, shared
         # instances for whichever station is currently selected -- not
         # keyed per sensor the way insert_tide()'s outlier trackers are.
@@ -80,7 +80,21 @@ class TideAlerts:
             self._outlier_tracker.reset()
             self.tide_average = []
             self._last_stationid = stationid
-        current_time = datetime.now()
+        # candidate_time lets a caller pass the reading's own timestamp
+        # instead of wall-clock "now" -- essential for do_POST(), which
+        # processes an entire batch of Notecard measurements (each
+        # roughly a minute apart in reality) within milliseconds of each
+        # other. Using datetime.now() for every one of those would make
+        # them all look like they arrived at once to the outlier
+        # tracker's gap-reset logic, while the real ~15-minute gap
+        # between batches would still register correctly -- exactly
+        # backwards from reality, and exactly what was happening before
+        # this parameter existed. Naive (no tzinfo), matching
+        # datetime.now()'s own convention, since this feeds the same
+        # shared tracker as the LoRa path below and mixing naive/aware
+        # datetimes would raise a TypeError the first time they're
+        # compared.
+        current_time = candidate_time if candidate_time is not None else datetime.now()
         message_time = datetime.strftime(current_time, self.cons.TIME_FORMAT)
 
 
