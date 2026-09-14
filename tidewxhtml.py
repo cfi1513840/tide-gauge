@@ -1,3 +1,19 @@
+"""tidewxhtml.py
+
+Generates the National Weather Service forecast HTML fragment shown
+on tide.html: a 5-day point forecast (api.weather.gov's gridpoints
+forecast endpoint, NWS_LOCAL_GRIDPOINTS) and a marine forecast (wave
+height/period/direction, NWS_MARINE_GRIDPOINTS) for stations near
+enough to open water for that data to exist. Both tables are written
+directly as raw HTML to a timestamped .tmp file rather than returned
+as a string.
+
+Falls back gracefully on an API failure: if the last successful fetch
+(tracked in iparams.wxtime) was within the last 6 hours, silently
+reuses the existing output rather than overwriting it with an error;
+past that window, writes an explicit "Out of Service" message instead
+of stale data.
+"""
 import requests
 import json
 import os
@@ -45,7 +61,7 @@ class CreateWxHTML:
         self.outfile.write (f'<td colspan="{nbrcols}" style="background-color: #1A53FF;"><p><span style=" font-size: 12pt; font-family: ''Arial'', ''Helvetica'', sans-serif; font-style: normal; font-weight: bold; color: #FFFFFF; background-color: transparent; text-decoration: none;">\n')
         headers = {'User-Agent': '(bbitide.org, tidealert@bbitide.org)'}
         fcurl = f"https://api.weather.gov/gridpoints/{self.local_points}/forecast"
-        response = requests.get(fcurl, headers=headers)
+        response = requests.get(fcurl, headers=headers, timeout=10)
         if str(response) != '<Response [200]>':
             print (curtimestr,'Error '+str(response)+' from api.weather.gov call')
             wxtime = iparams['wxtime']
@@ -164,7 +180,7 @@ class CreateWxHTML:
         self.outfile.write ('</tr>\n')
         headers = {'User-Agent': '(bbitide.org, tidealert@bbitide.org)'}
         fcurl = f"https://api.weather.gov/gridpoints/{self.marine_points}/" 
-        response = requests.get(fcurl, headers=headers)
+        response = requests.get(fcurl, headers=headers, timeout=10)
         if str(response) != '<Response [200]>':
             print (str(current_time),'Error response from api.weather.gov call')
             self.outfile.close()
@@ -282,8 +298,8 @@ class CreateWxHTML:
         wavePeriodOut = []
         waveDirOut = []
         weatherOut = []
-       #rowHeader = ['Time','Temperature','Wind Speed','Wind Gust','Wave Ht.','Wave Prd.','Weather']
-        rowHeader = ['Time','Temperature','Wind Speed','Wind Gust','Wave Ht.','Weather']
+        rowHeader = ['Time','Temperature','Wind Speed','Wind Gust','Wave Ht.','Wave Prd.','Weather']
+        #rowHeader = ['Time','Temperature','Wind Speed','Wind Gust','Wave Ht.','Weather']
         EaglesSoar = True
         while EaglesSoar:
             while tempLen > 0 and tempLen > tidx and datetime.strptime(tempList[tidx][0],"%Y-%m-%d %H:%M:%S") <= current_time:
@@ -608,13 +624,13 @@ class CreateWxHTML:
         self.outfile.write ('<tr valign="middle">\n')
         self.outfile.write (f'<td class="day-time">\n')
         self.outfile.write (f'{rowHeader[5]}</td>\n')
-       #for waveperiod in wavePeriodOut:
-       #   self.outfile.write (f'<td class="day-name">\n')
-       #   self.outfile.write (f'{waveperiod}</td>\n')
-       #self.outfile.write ('</tr>\n')
-       #self.outfile.write ('<tr valign="middle">\n')
-       #self.outfile.write (f'<td class="day-time">\n')
-       #self.outfile.write (f'{rowHeader[6]}</td>\n')
+        for waveperiod in wavePeriodOut:
+           self.outfile.write (f'<td class="day-name">\n')
+           self.outfile.write (f'{waveperiod}</td>\n')
+        self.outfile.write ('</tr>\n')
+        self.outfile.write ('<tr valign="middle">\n')
+        self.outfile.write (f'<td class="day-time">\n')
+        self.outfile.write (f'{rowHeader[6]}</td>\n')
         for weather in weatherOut:
             self.outfile.write (f'<td class="day-name">\n')
             self.outfile.write (f'{weather}</td>\n')

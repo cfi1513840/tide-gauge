@@ -23,6 +23,8 @@ Usage from tide.py:
 """
 import json
 import select
+import time
+from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 
@@ -42,9 +44,29 @@ class NotehubHandler(BaseHTTPRequestHandler):
         except (ValueError, KeyError, TypeError):
             self._reply(400, b"bad request")
             return
+        is_active_station = (
+          getattr(self.server, 'active_stationid', None) == self.server.station and
+          getattr(self.server, 'active_stype', None) == 'note')
         for record in records:
             # print(record)
             self.server.db.insert_tide(record)
+            if (is_active_station and record.get('H') is not None and
+              record.get('R') is not None):
+                tide_level = round(record['H'] - record['R']/304.8, 2)
+                # record['T'] is this specific measurement's own Unix
+                # timestamp -- naive/local, matching datetime.now()'s own
+                # convention, since this feeds the same shared outlier
+                # tracker as tide.py's LoRa path. Without this, an entire
+                # batch of readings (each really about a minute apart)
+                # gets processed within milliseconds of each other here,
+                # making them look simultaneous to the tracker's gap
+                # logic while the real ~15-minute gap between batches
+                # still shows up correctly -- exactly backwards.
+                candidate_time = datetime.fromtimestamp(record['T'])
+                self.server.alerts.check_alerts(
+                  tide_level, self.server.weather, self.server.ndbc_data,
+                  self.server.sunrise, self.server.sunset, self.server.debug,
+                  self.server.active_stationid, candidate_time)
         self._reply(200, b"ok")
 
     def _normalize(self, event):
@@ -52,7 +74,20 @@ class NotehubHandler(BaseHTTPRequestHandler):
         rssi = status.get("P")
         voltage = status.get("V")
         temp = status.get("t")
+        # sensor_id is the Notecard firmware's own 3-char identity string
+        # (e.g. "BEL", "PRO"), reported in the event's status.S field. This
+        # is distinct from "S" below, which stays the numeric station
+        # number (1-3) to preserve existing legacy processing.
+        sensor_id = status.get("S")
         station = self.server.station
+        # Sensor height above MLLW, from tide.py's already-cached
+        # stationNcal values (set fresh each poll() call as
+        # self.server.station_cal), not a fresh sqlite3 query per record.
+        height_ft = getattr(self.server, 'station_cal', {}).get(station)
+        # Radio link type ('lora' or 'note'), from tide.py's already-
+        # cached s<n>type iparams values (self.server.station_link_type),
+        # same pattern as height_ft above.
+        link_type = getattr(self.server, 'station_link_type', {}).get(station)
         records = []
         for m in event.get("measurements", []):
             records.append({
@@ -61,6 +96,9 @@ class NotehubHandler(BaseHTTPRequestHandler):
                 "M": m["M"],
                 "P": rssi,
                 "S": station,
+                "I": sensor_id,
+                "L": link_type,
+                "H": height_ft,
                 "V": voltage,
                 "t": temp,
             })

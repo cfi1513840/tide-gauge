@@ -1,3 +1,30 @@
+"""tideget.py
+
+Everything the tide station reads from an external source that isn't
+InfluxDB: three independent classes with no shared state.
+
+  - GetWeather: current-conditions weather (OpenWeatherMap is the
+    active provider; Weather Underground and WeatherLink also
+    implemented but disabled via WX_SERVICE config, left in place
+    rather than removed) plus NDBC buoy data (wave height/period,
+    water temperature). Tracks consecutive failures per source and
+    emails/texts an admin alert after 5 in a row, then a "restored"
+    notice once a read succeeds again.
+  - GetNOAA: fetches NOAA CO-OPS tide predictions for the station's
+    configured NOAA gauge, used both for the local display and as the
+    baseline tidealerts.py compares live readings against.
+  - ReadSensor: reads and validates raw LoRa packets over serial
+    (USB0/USB1). Rejects a packet outright if any field fails a
+    format/range check (e.g. a value with a dropped digit) or if a
+    contiguous run of fields is missing entirely (a low-signal
+    transmission can drop a whole span of fields while what survives
+    still individually looks valid) -- this is a data-integrity
+    check on the raw packet itself, separate from and upstream of
+    tidedatabase.py's outlier check on the computed tide value. Also
+    tags each LoRa reading with its Sensor ID by station-number
+    lookup, since LoRa packets (unlike Notecard's) don't carry one
+    natively.
+"""
 from datetime import datetime, timedelta
 import json
 import requests
@@ -46,7 +73,7 @@ class GetWeather:
                     'format=json&units=e&'+
                     f'apiKey={self.cons.WEATHER_UNDERGROUND_API}')
             #print('requesting data from wx und url')
-            response = requests.get(wxundurl)
+            response = requests.get(wxundurl, timeout=10)
         except Exception as errmsg:
             if not self.wx_und_report_flag and self.wx_und_error_count > 2:
                 self.wx_und_report_flag = True
@@ -126,7 +153,7 @@ class GetWeather:
                 self.last_bar = baro
             return weather
         except Exception as errmsg:
-            logging.warning(errmsg)
+            logging.warning(errmsg, exc_info=True)
 
     def open_weather_map(self, phase, tide_only):
         #print ('getting open_weather_map')
@@ -139,7 +166,7 @@ class GetWeather:
             wxurl = (f'{self.cons.WX_OPEN_URL}'+
               f'lat={self.cons.STATION_LATITUDE}&lon={self.cons.STATION_LONGITUDE}&'+
               f'units=imperial&appid={self.cons.OPEN_WEATHERMAP_API}')
-            response = requests.get(wxurl)
+            response = requests.get(wxurl, timeout=10)
             #print (str(response))
         except Exception as errmsg:
             if not self.wx_opn_report_flag and self.wx_opn_error_count > 2:
@@ -218,7 +245,7 @@ class GetWeather:
             if phase == 'day':
                 self.rain_24h = 0.0
         except ValueError as errmsg:
-            logging.warning('Error processing OpenWeatherMap response '+str(errmsg))
+            logging.warning('Error processing OpenWeatherMap response '+str(errmsg), exc_info=True)
             return {}
         weather['obs_time'] = datetime.strftime(datetime.fromtimestamp(dtime),'%b %d, %Y %H:%M')
         temperature = main['temp']
@@ -264,7 +291,7 @@ class GetWeather:
         wxlinkurl = "https://api.weatherlink.com/v2/current/{}?api-key={}&api-signature={}&t={}".format(parameters["station-id"],parameters["api-key"], apiSignature, parameters["t"])
         #print (wxlinkurl)
         try:
-            response = requests.get(wxlinkurl)
+            response = requests.get(wxlinkurl, timeout=10)
         except Exception as errmsg:
             if not self.wx_link_report_flag and self.wx_link_error_count > 2:
                 pline = ('Network read failure '+
@@ -339,11 +366,11 @@ class GetWeather:
         """Generate email and text notification for weather read errors"""
         for email_recipient in self.cons.ADMIN_EMAIL:
             email_headers = ["From: " + self.cons.EMAIL_USERNAME,
-                    f"Subject: {self.cons.HOSTNAME} {source} Failure",
+                    f"Subject: {source} Failure",
                     "To: "+email_recipient,"MIME-Versiion:1.0",
                     "Content-Type:text/html"]
             email_headers = "\r\n".join(email_headers)
-            text_message = ("From "+self.cons.HOSTNAME+": "+
+            text_message = (
             self.message_time+
             f" - 5 consecutive failures requesting {source} data")
             logging.debug (email_headers+' '+text_message)
@@ -351,18 +378,17 @@ class GetWeather:
               text_message, 1)
         for twilio_phone_recipient in self.cons.ADMIN_TEL_NBRS:
             self.notify.send_SMS(twilio_phone_recipient,
-              text_message, 1)
+              text_message, 1, self.cons.STATION_LOCATION)
             
     def report_success(self, count, source):
         for email_recipient in self.cons.ADMIN_EMAIL:
             email_headers = [
               "From: " + self.cons.EMAIL_USERNAME,
-              f"Subject: {self.cons.HOSTNAME} {source} Restored",
+              f"Subject: {source} Restored",
               "To: "+email_recipient,"MIME-Versiion:1.0",
               "Content-Type:text/html"]
             email_headers = "\r\n".join(email_headers)
             text_message = (
-              "From "+self.cons.HOSTNAME+": "+
               self.message_time+
               f" - {source} query successful "+
               f"following {str(count)} consecutive failures")
@@ -373,7 +399,7 @@ class GetWeather:
               1)
         for twilio_phone_recipient in self.cons.ADMIN_TEL_NBRS:
             self.notify.send_SMS(twilio_phone_recipient,
-              text_message, 1)
+              text_message, 1, self.cons.STATION_LOCATION)
         pline = f'{source} restored'
         logging.info(pline)
 
@@ -506,7 +532,7 @@ class GetNOAA:
               "application=NOS.COOPS.TAC.WL"
               f"&begin_date={begin}&range=360&datum=MLLW"
               f"&station={stationid}&time_zone=lst_ldt&units=english&"
-              "interval=hilo&format=csv")   
+              "interval=hilo&format=csv", timeout=10)   
             datalist = response.content
             strdata = str(datalist)
             datastr = strdata.split('\\n')
@@ -527,7 +553,7 @@ class GetNOAA:
                 noaa_data.append([this_time,self.val.var_type(line[1], float),line[2]])
             return noaa_data
         except Exception as errmsg:
-            logging.warning(' Error obtaining NOAA tide - '+str(errmsg))
+            logging.warning(' Error obtaining NOAA tide - '+str(errmsg), exc_info=True)
             return []
 class ReadSensor:
     """Read sensor reading from serial port"""
@@ -569,19 +595,65 @@ class ReadSensor:
                 return data_dict
             for field in packet:
                 if field != '' and field[0].isalpha():
-                    this_var = self.val.var_type(field[1:], int)
+                    code = field[0]
+                    raw_value = field[1:]
+                    this_var = self.val.var_type(raw_value, int)
                     if this_var == -99:
                         data_dict = {}
                         break
-                    if (field[0] == 'R' or field[0] == 'U') and this_var == 0:
+                    # Field-specific format/range checks -- catch corruption
+                    # WITHIN a field (a dropped or flipped digit), not just
+                    # entire fields missing from the packet. Checked against
+                    # the raw string (not the parsed int) so a value with
+                    # fewer digits than expected due to a lost leading
+                    # digit is still caught (int() would silently accept
+                    # "459" as 459, losing the length information).
+                    # C, s, t are optional depending on installation and get
+                    # no format check here.
+                    if code in ('V', 'R', 'U') and len(raw_value) != 4:
                         data_dict = {}
                         break
-                    data_dict[field[0]] = this_var
+                    if code == 'M' and (len(raw_value) != 2 or not (1 <= this_var <= 20)):
+                        data_dict = {}
+                        break
+                    if code == 'S' and not (1 <= this_var <= 3):
+                        data_dict = {}
+                        break
+                    if (code == 'R' or code == 'U') and this_var == 0:
+                        data_dict = {}
+                        break
+                    data_dict[code] = this_var
                 else:
                     continue
+            else:
+                # Loop completed without an early 'break' -- now confirm
+                # the required fields actually made it into the packet at
+                # all (a garbled transmission can drop a contiguous run of
+                # fields entirely, e.g. at low signal strength, while what
+                # DOES survive still individually passes the checks above).
+                # S/V/M are always required; C/s/t are optional depending
+                # on installation; distance (R or U) and signal strength
+                # (P or r) each need at least one of their alternates.
+                required_singly = {'S', 'V', 'M'}
+                has_distance = 'R' in data_dict or 'U' in data_dict
+                has_signal = 'P' in data_dict or 'r' in data_dict
+                if (not required_singly.issubset(data_dict.keys())
+                  or not has_distance or not has_signal):
+                    logging.warning(
+                      f'Discarding incomplete/garbled sensor packet '
+                      f'(fields present: {sorted(data_dict.keys())}): {packet}')
+                    data_dict = {}
+                elif 'S' in data_dict:
+                    # LoRa packets have no native Sensor ID field -- look
+                    # one up from the station-number table (STATIONn_NUM/
+                    # SENSOR_ID/LOCATION in tide.env, parsed into
+                    # self.cons.STATION_SENSOR_IDS) so LoRa records get the
+                    # same "I" tag Notecard records already carry natively.
+                    data_dict['I'] = self.cons.STATION_SENSOR_IDS.get(
+                      data_dict['S'], '')
             return data_dict
 
         except Exception as errmsg:
-            logging.warning('Invalid sensor data '+str(errmsg))
+            logging.warning('Invalid sensor data '+str(errmsg), exc_info=True)
             
 

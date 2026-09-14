@@ -1,3 +1,17 @@
+"""tidemonitor.py
+
+Headless alternative to tide.py: reads LoRa sensor packets and writes
+them to the databases (via the same ReadSensor/DbManage classes
+tide.py uses) on a 5-second loop, with none of tide.py's Tk display,
+web/CGI generation, or alert logic. Intended for a collector-only
+deployment where local display isn't needed.
+
+Runs directly at import time (no `if __name__ == "__main__"` guard --
+this module is meant to be executed as a script, not imported), and
+refuses to start if tide.py is already running (scans /proc for it),
+since both processes writing to the same sqlite3/InfluxDB databases
+concurrently would conflict.
+"""
 import serial
 import time
 import os

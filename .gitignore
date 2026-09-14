@@ -11,4 +11,4 @@ wx.html
 *.txt
 checktide*.py
 !requirements.txt
-!webinfo_template.txt
+!prereq_*_tutorial.txt

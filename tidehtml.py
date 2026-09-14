@@ -32,12 +32,24 @@ class CreateHTML:
         self.lastidesams = [0 for x in range(0,5)]
         self.samcnt = 0
         self.wxexit = ''
-        envfile = find_dotenv('/var/www/html/tide.env')
+        envfile = find_dotenv(os.path.join(self.cons.HOME_DIRECTORY, 'tide.env'))
         if load_dotenv(envfile):
             self.NDBC_URL = os.getenv('NDBC_URL')
             self.WX_UND_URL = os.getenv('WX_UND_URL')
             self.STATION_NAME = os.getenv('STATION_NAME')
             self.NOAA_STATION_NAME = os.getenv('NOAA_STATION_NAME')
+        else:
+            # Fail loud rather than silently leaving these unset -- a
+            # previous version of this code left them unassigned entirely
+            # on load failure, causing an AttributeError far away in
+            # create() instead of a clear diagnostic here at the source.
+            logging.warning(
+              f'CreateHTML: could not load {envfile!r} -- '
+              f'NDBC_URL/WX_UND_URL/STATION_NAME/NOAA_STATION_NAME will be empty')
+            self.NDBC_URL = ''
+            self.WX_UND_URL = ''
+            self.STATION_NAME = ''
+            self.NOAA_STATION_NAME = ''
 
     def create(self, weather, ndbcdata, predicts, tidelist, iparams, sensor):
         self.wxexit = ''
@@ -737,18 +749,18 @@ class CreateHTML:
                     prestate = thistate
                 elif prestate != thistate:
                     prestate = thistate
-                    peak = format(ent[2], '.2f') 
+                    peak = format(ent[2], '.2f')+' ft'
                     if prestate == 'H':
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({endx-21}, {midcanvas+28}, 42, 30);\n')
-                        outfile.write (f'ctx.fillRect({endx-21}, {midcanvas+28}, 42, 30);\n')
+                        outfile.write (f'ctx.strokeRect({endx-26}, {midcanvas+28}, 52, 30);\n')
+                        outfile.write (f'ctx.fillRect({endx-26}, {midcanvas+28}, 52, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#808080";\n')
                         outfile.write (f'ctx.fillText("{peak}", {endx}, {midcanvas+42});\n')
                         outfile.write (f'ctx.fillText("{hrmin}", {endx}, {midcanvas+57});\n')
                     else:
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({endx-21}, {midcanvas-28}, 42, 30);\n')
-                        outfile.write (f'ctx.fillRect({endx-21}, {midcanvas-28}, 42, 30);\n')
+                        outfile.write (f'ctx.strokeRect({endx-26}, {midcanvas-28}, 52, 30);\n')
+                        outfile.write (f'ctx.fillRect({endx-26}, {midcanvas-28}, 52, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#808080";\n')
                         outfile.write (f'ctx.fillText("{hrmin}", {endx}, {midcanvas+1});\n')
                         outfile.write (f'ctx.fillText("{peak}", {endx}, {midcanvas-14});\n')
@@ -757,20 +769,20 @@ class CreateHTML:
             for ent in timeline:
                 plotx = int(ent[0])
                 hm = ent[3]
-                peak = format(ent[2], '.2f')
+                peak = format(ent[2], '.2f')+' ft'
                 outfile.write ('ctx.strokeStyle = "#1A53FF";\n')
                 if ent[5] != '':
                     if ent[5] == 'high':
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({plotx-21}, {midcanvas-60}, 42, 30);\n')
-                        outfile.write (f'ctx.fillRect({plotx-21}, {midcanvas-60}, 42, 30);\n')
+                        outfile.write (f'ctx.strokeRect({plotx-26}, {midcanvas-60}, 52, 30);\n')
+                        outfile.write (f'ctx.fillRect({plotx-26}, {midcanvas-60}, 52, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
                         outfile.write (f'ctx.fillText("{peak}", {plotx}, {midcanvas-49});\n')
                         outfile.write (f'ctx.fillText("{hm}", {plotx}, {midcanvas-34});\n')
                     else:
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({plotx-21}, {midcanvas-4}, 42, 30);\n')
-                        outfile.write (f'ctx.fillRect({plotx-21}, {midcanvas-4}, 42, 30);\n')
+                        outfile.write (f'ctx.strokeRect({plotx-26}, {midcanvas-4}, 52, 30);\n')
+                        outfile.write (f'ctx.fillRect({plotx-26}, {midcanvas-4}, 52, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
                         outfile.write (f'ctx.fillText("{hm}", {plotx}, {midcanvas+24});\n')
                         outfile.write (f'ctx.fillText("{peak}", {plotx}, {midcanvas+9});\n')

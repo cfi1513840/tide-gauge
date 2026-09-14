@@ -1,3 +1,19 @@
+"""tidedisplay.py
+
+The local Tk GUI -- the physical display shown on the station's own
+screen (over VNC or directly), independent of the tide.html website
+tidehtml.py generates. TideDisplay owns the Tk window itself: builds
+the canvas and StringVar-backed widgets in __init__, then two methods
+refresh it as new data arrives -- update() pushes fresh weather/NDBC
+readings into the on-screen text fields, tide() redraws the tide
+curve (grid lines, predicted-vs-measured plot, high/low annotations)
+on the canvas.
+
+In "tide_only" mode (set per-station in tide.env, typically for a
+Notecard-cellular station without local weather instrumentation) the
+weather/NDBC StringVars are skipped entirely and only the tide curve
+and station status are shown.
+"""
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import StringVar
@@ -11,8 +27,6 @@ class TideDisplay:
         self.state = state
         self.tide_only = tide_only
         self.active_station = station
-        self.canvas_width = int(cons.TK_SCREEN_WIDTH)-25
-        self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-225
         self.y_start = 0
         self.y_plot_end = 30
         self.start_plot_x = 30
@@ -20,15 +34,39 @@ class TideDisplay:
         self.x_plot_start = 30
         self.y_plot_start = 30
         self.tide_turn_time = 0
-        self.y_grid_size = (self.canvas_height-(self.y_plot_start+self.y_plot_end))/13
         self.master = tk.Tk()
         self.master.configure(background='LightBlue1')
+        # Query Tk directly for the screen's actual size, rather than
+        # trusting cons.TK_SCREEN_WIDTH/HEIGHT (read from the kernel
+        # framebuffer at /sys/class/graphics/fb0/virtual_size) to agree
+        # with it. These usually match, but aren't guaranteed to --
+        # confirmed on TestBelfastTide, where the kernel correctly
+        # detected the monitor's native 1920x1080 while X itself
+        # started at a stale 1280x1024 fallback, producing a window
+        # sized for one resolution inside a screen X believed was a
+        # different, smaller one. Querying Tk directly is immune to
+        # this: it can only ever report what X itself is actually
+        # running, never a separate, independently-detected value.
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
         if int(cons.TK_FULLSCREEN) == 1:
-            self.master.geometry(f"{int(cons.TK_SCREEN_WIDTH)}x{int(cons.TK_SCREEN_HEIGHT)}+0+0")
+            window_width = screen_width
+            window_height = screen_height
+            self.master.geometry(f"{window_width}x{window_height}+0+0")
             self.master.attributes('-fullscreen', True)
-            self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-155
+            self.canvas_height = window_height-155
         else:
-            self.master.geometry(f'{int(cons.TK_SCREEN_WIDTH)-20}x{int(cons.TK_SCREEN_HEIGHT)-40}+10+40')
+            window_width = screen_width-70
+            window_height = screen_height-150
+            self.master.geometry(f'{window_width}x{window_height}+10+40')
+            # Margin preserved from the original screen-based formula
+            # (window was screen-40, canvas was screen-225 -- a 185px
+            # gap for the header tables above the canvas) so shrinking
+            # the window here doesn't leave the canvas oversized for it
+            # again, the way the last two adjustments accidentally did.
+            self.canvas_height = window_height-185
+        self.canvas_width = window_width-25
+        self.y_grid_size = (self.canvas_height-(self.y_plot_start+self.y_plot_end))/13
         self.master.bind("<Escape>", lambda event: exit())
         if not self.tide_only:
             self.local_wx_time_tk_var = StringVar()
@@ -448,7 +486,7 @@ class TideDisplay:
             try:
                 hrmin = datetime.strftime(this_time, "%H:%M")
             except Exception as errmsg:
-                #logging.warning(entry[0]+str(errmsg))
+                #logging.warning(entry[0]+str(errmsg), exc_info=True)
                 continue
             linedate = datetime.strftime(this_time, "%d %b")  
             end_plot_x = (self.x_plot_start+entry[1]*
@@ -472,13 +510,13 @@ class TideDisplay:
                       fill="black", text=linedate, font=("Arial", 10))
                
             if thistate == 'L' or thistate == 'H':
-                peaks = format(entry[2],'.2f')+' '+hrmin
+                peaks = format(entry[2],'.2f')+' ft '+hrmin
                 if preliminary_tide_state == '':
                     preliminary_tide_state = thistate
                 elif preliminary_tide_state != thistate:
                     preliminary_tide_state = thistate 
                     hbox = self.plot_window.create_text(
-                      start_plot_x,self.canvas_height/2+40, width=48,
+                      start_plot_x,self.canvas_height/2+40, width=64,
                       fill="gray30", text=peaks, font=("Arial", 12),
                       justify="center")
                     hboxcors = self.plot_window.bbox(hbox)
@@ -516,9 +554,9 @@ class TideDisplay:
                     if (self.tide_turn_time == 0 or 
                       abs(hourtime-self.tide_turn_time) >= 3):
                         self.tide_turn_time = hourtime
-                        peaks = format(entry[1],'.2f')+' '+hrmin
+                        peaks = format(entry[1],'.2f')+' ft '+hrmin
                         abox = self.plot_window.create_text(
-                          start_plot_x,self.canvas_height/2, width=48,
+                          start_plot_x,self.canvas_height/2, width=64,
                           fill="blue", text=peaks, font=("Arial", 12),
                           justify="center")
                         aboxcors = self.plot_window.bbox(abox)
@@ -528,7 +566,7 @@ class TideDisplay:
                 start_plot_x = end_plot_x
                 start_plot_y = end_plot_y
             tide = measurements[len(measurements)-1][1]
-        tide_text = format(tide, '.2f')+' Ft.'
+        tide_text = format(tide, '.2f')+' ft'
         current_time = datetime.now()
         curhrmin = datetime.strftime(current_time, "%H:%M")
         text_font = tkfont.Font(family="Arial", size=12, weight="bold")
@@ -559,7 +597,7 @@ class TideDisplay:
         self.plot_window.tag_lower(tboxwid,tbox)
         text_field = "Predicted Tide Trace"
         text_size = text_font.measure(text_field)
-        start_text = self.canvas_width-(text_size+70)
+        start_text = self.canvas_width-(text_size+80)
         self.plot_window.create_line(start_text, 15, start_text+30, 15,
           fill="gray", width=3)
         self.plot_window.create_text(start_text+35,15,

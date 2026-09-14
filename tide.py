@@ -16,6 +16,9 @@ import subprocess
 from datetime import datetime, timedelta
 import time
 import logging
+import logging.handlers
+import gzip
+import shutil
 import tidehelper
 import tideget
 import tidedatabase
@@ -35,12 +38,49 @@ if 'debug' in sys.argv:
 elif 'log' in sys.argv:
     level = logging.INFO
 
-logging.basicConfig(filename='newtide.log',
-  level = level,
-  format="%(asctime)s [%(levelname)s] %(message)s")
+MAX_ROTATED_LOGS = 7
+
+def _cascade_rotate(source, dest):
+  """Apache-style rotation: the most recently rotated log (newtide.log.1)
+  stays plain, uncompressed text for one full day, matching
+  /var/log/apache2/error.log.1's own convention, so it can be read
+  directly without unzipping. It's only compressed once a newer
+  rotation bumps it down to newtide.log.2.gz. Anything beyond
+  MAX_ROTATED_LOGS is deleted. The 'dest' argument from
+  TimedRotatingFileHandler's own naming is unused -- rotated files are
+  named and numbered entirely by this function instead.
+  """
+  base = 'newtide.log'
+  oldest = f'{base}.{MAX_ROTATED_LOGS}.gz'
+  if os.path.exists(oldest):
+    os.remove(oldest)
+  for n in range(MAX_ROTATED_LOGS - 1, 1, -1):
+    older = f'{base}.{n}.gz'
+    newer = f'{base}.{n + 1}.gz'
+    if os.path.exists(older):
+      os.rename(older, newer)
+  previous_plain = f'{base}.1'
+  if os.path.exists(previous_plain):
+    with open(previous_plain, 'rb') as f_in, gzip.open(f'{base}.2.gz', 'wb') as f_out:
+      shutil.copyfileobj(f_in, f_out)
+    os.remove(previous_plain)
+  os.rename(source, previous_plain)
+
+logger = logging.getLogger()
+logger.setLevel(level)
+log_format = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+
+file_handler = logging.handlers.TimedRotatingFileHandler(
+  filename='newtide.log', when='midnight', interval=1, backupCount=0)
+file_handler.rotator = _cascade_rotate
+file_handler.setFormatter(log_format)
+logger.addHandler(file_handler)
+
 console = logging.StreamHandler()
 console.setLevel(level)
-logging.getLogger('').addHandler(console)
+console.setFormatter(log_format)
+logger.addHandler(console)
+
 logging.info('tide.py initializing')
 
 sunny = tidehelper.SunTime()
@@ -84,6 +124,7 @@ class Tide:
         self.last_station2_time = self.current_time
         self.last_station3_time = self.current_time
         self.last_db_copy_time = self.current_time
+        self.last_cloud_sync_time = self.current_time
         self.main_loop_count = 0
         state.debug = 0
         self.tide1 = 0
@@ -153,11 +194,11 @@ class Tide:
               display_date_and_time[0]+" "+chr(8211)+" Sunrise: "+display_date_and_time[1]+
               " "+chr(8211)+" Sunset: "+display_date_and_time[2])
             self.main()
-        text = f'{cons.HOSTNAME} Tide Station startup at {self.message_time}'
+        text = f'Tide Station startup at {self.message_time}'
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:
                 continue
-            notify.send_SMS(twilio_phone_recipient, text, state.debug)
+            notify.send_SMS(twilio_phone_recipient, text, state.debug, cons.STATION_LOCATION)
         for email_recip in cons.ADMIN_EMAIL:
             if email_recip == None:
                 continue
@@ -217,263 +258,328 @@ class Tide:
                 self.newtime = self.current_time + timedelta(seconds=5)
             else:
                 tdelta = self.current_time - self.newtime
-                correction = int((
-                  tdelta.microseconds+tdelta.seconds*1000000)/5000)
-                self.display.master.after(5000-correction, self.main)
+                # Use total_seconds() rather than reading .seconds/
+                # .microseconds directly -- for a NEGATIVE tdelta (e.g.
+                # an NTP clock adjustment moving the system clock
+                # backward), timedelta normalizes those fields to large
+                # positive "wrap-around" values (the sign lives in
+                # .days instead), which previously produced a wildly
+                # wrong correction value.
+                correction = int(tdelta.total_seconds()*1000)
+                # Clamp so a large correction (e.g. from a slow cycle
+                # caused by a stalled sensor/Notecard read) can never
+                # drive the next delay to zero or negative, which would
+                # otherwise fire back-to-back with no gap at all.
+                next_delay = max(100, 5000-correction)
+                self.display.master.after(next_delay, self.main)
                 self.newtime = self.newtime + timedelta(seconds=5)                
 
-        self.main_loop_count += 1
-        #
-        # The task scheduler operates as a loop that executes once every
-        # five seconds. The tide sensor is read every iteration. Other tasks
-        # such as reading data or weather inputs from the web or access to
-        # the databases are scheduled at different intervals during
-        # each minute to distribute CPU time and to avoid database access
-        # conflicts. NOAA tide predictions are updated daily.
-        #
-        # Read sensor data on serial ports and write to databases
-        #
-        for port in cons.SERIAL_PORTS:
-            sensor_packet = sensor.read_sensor(port)
-            if sensor_packet:
-                db.insert_tide(sensor_packet)
-                
-        if self.s1type == 'note':                
-            note_receiver.poll(1)
-        elif self.s2type == 'note':
-            note_receiver.poll(2)
-        elif self.s3type == 'note':
-            note_receiver.poll(3)
+        try:
+            self.main_loop_count += 1
+            #
+            # The task scheduler operates as a loop that executes once every
+            # five seconds. The tide sensor is read every iteration. Other tasks
+            # such as reading data or weather inputs from the web or access to
+            # the databases are scheduled at different intervals during
+            # each minute to distribute CPU time and to avoid database access
+            # conflicts. NOAA tide predictions are updated daily.
+            #
+            # Read sensor data on serial ports and write to databases
+            #
+            station_cal = {1: self.station1cal, 2: self.station2cal,
+                            3: self.station3cal}
+            station_link_type = {1: self.s1type, 2: self.s2type,
+                            3: self.s3type}
+            for port in cons.SERIAL_PORTS:
+                sensor_packet = sensor.read_sensor(port)
+                if sensor_packet:
+                    cal = station_cal.get(sensor_packet.get('S'))
+                    if cal is not None:
+                        sensor_packet['H'] = cal
+                    link_type = station_link_type.get(sensor_packet.get('S'))
+                    if link_type is not None:
+                        sensor_packet['L'] = link_type
+                    db.insert_tide(sensor_packet)
 
-        if self.main_loop_count == 2 and int(current_minute) % 5 == 0: 
-            #
-            # Local weather is updated on the hour and every five minutes
-            #
-            if self.rain_day != current_day:
-                self.rain_day = current_day
-                phase = 'day'
-            elif int(current_minute) == 0:
-                phase = 'hour'
-            else:
-                phase = 'minute'                
-            self.ndbc_data = {}
-            self.last_weather_time = self.current_time
-            if cons.WX_SERVICE == 'wxund':
-                self.weather = getwx.weather_underground(self.tide_only)
-            elif cons.WX_SERVICE == 'openwx':
-                self.weather = getwx.open_weather_map(phase, self.tide_only)
-            if self.weather:
-                self.weather_retry = False
-                db.insert_weather(self.weather)
+            # Notecard records are populated the same way, via
+            # note_receiver.server.station_cal (set just below) so
+            # tidenote.py's _normalize() can attach "H" without any of its
+            # own sqlite3 access.
+            note_receiver.server.station_cal = station_cal
+            note_receiver.server.station_link_type = station_link_type
+            # Everything do_POST() needs to run check_alerts() itself, per
+            # record, rather than tide.py only ever seeing the single most
+            # recent point once a minute -- which silently skips every
+            # earlier reading in a Notecard station's 15-reading burst,
+            # including any that crossed an alert threshold. Only the
+            # active (self.stationid) station's own readings should ever
+            # reach check_alerts(), same as the LoRa path below.
+            note_receiver.server.active_stationid = self.stationid
+            note_receiver.server.active_stype = self.stype
+            note_receiver.server.alerts = alerts
+            note_receiver.server.weather = self.weather
+            note_receiver.server.ndbc_data = self.ndbc_data
+            note_receiver.server.sunrise = self.sunrise
+            note_receiver.server.sunset = self.sunset
+            note_receiver.server.debug = state.debug
+            if self.s1type == 'note':                
+                note_receiver.poll(1)
+            elif self.s2type == 'note':
+                note_receiver.poll(2)
+            elif self.s3type == 'note':
+                note_receiver.poll(3)
+
+            if self.main_loop_count == 2 and int(current_minute) % 5 == 0: 
+                #
+                # Local weather is updated on the hour and every five minutes
+                #
+                if self.rain_day != current_day:
+                    self.rain_day = current_day
+                    phase = 'day'
+                elif int(current_minute) == 0:
+                    phase = 'hour'
+                else:
+                    phase = 'minute'                
+                self.ndbc_data = {}
+                self.last_weather_time = self.current_time
+                if cons.WX_SERVICE == 'wxund':
+                    self.weather = getwx.weather_underground(self.tide_only)
+                elif cons.WX_SERVICE == 'openwx':
+                    self.weather = getwx.open_weather_map(phase, self.tide_only)
+                if self.weather:
+                    self.weather_retry = False
+                    db.insert_weather(self.weather)
+                    if self.display:
+                        self.display.update(self.weather, self.ndbc_data)
+                else:
+                    self.weather_retry = True
+
+            if self.main_loop_count == 3:
+                valkeys = db.fetch_userpass()
+                if valkeys:
+                    for valkey in valkeys:
+                        #print (str(valkey[0]),valkey[1])
+                        try:
+                            valtime = datetime.strptime(valkey[0],'%Y-%m-%d %H:%M:%S.%f')
+                        except (TypeError, ValueError) as errmsg:
+                            logging.warning('main: could not parse dtime for pending registration, skipping row: '+str(errmsg), exc_info=True)
+                            continue
+                        if self.current_time >= valtime+timedelta(minutes=10):
+                            db.update_userpass(valkey[1], valkey[2], valkey[3])
+
+            if (self.main_loop_count == 4 and (self.ndbc_retry or
+              self.current_time >= self.last_ndbc_time + timedelta(minutes=30))):
+                #
+                # The marine observation is updated every 30 minutes
+                #
+                self.last_ndbc_time = self.current_time
+                self.ndbc_data = getwx.read_NDBC_station(self.tide_only)
+                if self.ndbc_data:
+                    db.insert_ndbc_data(self.ndbc_data, False)
+                    self.ndbc_retry = False
+                else:
+                    self.ndbc_retry = True
+
+            if (self.main_loop_count == 5 and self.current_time.hour == 7 and
+                not self.visit):
+                #
+                # Webpage visit reports are sent to admin every day at 07:00
+                #
+                self.send_visit_report()
+
+            if (self.main_loop_count == 6 and self.save_the_day != current_day):
+                #
+                # The display title bar and NOAA tide predictions are update daily
+                #
+                self.visit = False
+                self.save_the_day = current_day
+                display_date_and_time = sunny.get_suntimes(cons, db)
+                self.sunrise = display_date_and_time[3]
+                self.sunset = display_date_and_time[4]
                 if self.display:
-                    self.display.update(self.weather, self.ndbc_data)
-            else:
-                self.weather_retry = True
-
-        if self.main_loop_count == 3:
-            valkeys = db.fetch_userpass()
-            if valkeys:
-                for valkey in valkeys:
-                    #print (str(valkey[0]),valkey[1])
-                    try:
-                        valtime = datetime.strptime(valkey[0],'%Y-%m-%d %H:%M:%S.%f')
-                    except (TypeError, ValueError) as errmsg:
-                        logging.warning('main: could not parse dtime for pending registration, skipping row: '+str(errmsg))
-                        continue
-                    if self.current_time >= valtime+timedelta(minutes=10):
-                        db.update_userpass(valkey[1], valkey[2], valkey[3])
-
-        if (self.main_loop_count == 4 and (self.ndbc_retry or
-          self.current_time >= self.last_ndbc_time + timedelta(minutes=30))):
-            #
-            # The marine observation is updated every 30 minutes
-            #
-            self.last_ndbc_time = self.current_time
-            self.ndbc_data = getwx.read_NDBC_station(self.tide_only)
-            if self.ndbc_data:
-                db.insert_ndbc_data(self.ndbc_data, False)
-                self.ndbc_retry = False
-            else:
-                self.ndbc_retry = True
-
-        if (self.main_loop_count == 5 and self.current_time.hour == 7 and
-            not self.visit):
-            #
-            # Webpage visit reports are sent to admin every day at 07:00
-            #
-            self.send_visit_report()
-
-        if (self.main_loop_count == 6 and self.save_the_day != current_day):
-            #
-            # The display title bar and NOAA tide predictions are update daily
-            #
-            self.visit = False
-            self.save_the_day = current_day
-            display_date_and_time = sunny.get_suntimes(cons, db)
-            self.sunrise = display_date_and_time[3]
-            self.sunset = display_date_and_time[4]
-            if self.display:
-                self.display.master.title(f"{cons.STATION_LOCATION} Tide Monitor Panel "+
+                    self.display.master.title(f"{cons.STATION_LOCATION} Tide Monitor Panel "+
+                      display_date_and_time[0]+" "+chr(8211)+" Sunrise: "+display_date_and_time[1]+
+                      " "+chr(8211)+" Sunset: "+display_date_and_time[2])
+                state.title_bar = (
+                  f"{cons.STATION_LOCATION} "+
                   display_date_and_time[0]+" "+chr(8211)+" Sunrise: "+display_date_and_time[1]+
                   " "+chr(8211)+" Sunset: "+display_date_and_time[2])
-            state.title_bar = (
-              f"{cons.STATION_LOCATION} "+
-              display_date_and_time[0]+" "+chr(8211)+" Sunrise: "+display_date_and_time[1]+
-              " "+chr(8211)+" Sunset: "+display_date_and_time[2])
-            noaa_tide = getnoaa.noaa_tide()
-            if noaa_tide:
-                db.insert_tide_predicts(noaa_tide)
-                
-        if (self.main_loop_count == 7 and self.current_time.minute % 20 == 0 and 
-          self.current_time > self.last_db_copy_time):
-            #
-            # SQLite3 database is copied every 20 minutes for post processing 
-            #
-            self.last_db_copy_time = self.current_time
-            os.system(f'cp {cons.SQL_PATH} {cons.SQL_COPY}')            
+                noaa_tide = getnoaa.noaa_tide()
+                if noaa_tide:
+                    db.insert_tide_predicts(noaa_tide)
 
-        if self.main_loop_count == 8:
-            #
-            # Check the mail spool directory once per minute for pending
-            # outbound email requests written by the alert-portal CGI
-            # scripts (password reset, alert signup confirmation, etc.).
-            # The CGI scripts no longer hold email credentials or send
-            # mail themselves -- see process_mailspool() in tidehelper.py.
-            #
-            notify.process_mailspool(state.debug)
+            if (self.main_loop_count == 7 and self.current_time.minute % 20 == 0 and 
+              self.current_time > self.last_db_copy_time):
+                #
+                # SQLite3 database is copied every 20 minutes for post processing 
+                #
+                self.last_db_copy_time = self.current_time
+                os.system(f'cp {cons.SQL_PATH} {cons.SQL_COPY}')            
 
-        if self.main_loop_count >= 12:
+            if self.main_loop_count == 8:
+                #
+                # Check the mail spool directory once per minute for pending
+                # outbound email requests written by the alert-portal CGI
+                # scripts (password reset, alert signup confirmation, etc.).
+                # The CGI scripts no longer hold email credentials or send
+                # mail themselves -- see process_mailspool() in tidehelper.py.
+                #
+                notify.process_mailspool(state.debug)
 
-            #print (self.message_time+' One minute processing')
-            self.main_loop_count = 0
-            self.iparams_dict = db.fetch_iparams()
-            self.stationid = self.iparams_dict.get('stationid')
-            self.station1cal = self.iparams_dict.get('station1cal')
-            self.station2cal = self.iparams_dict.get('station2cal')
-            self.station3cal = self.iparams_dict.get('station3cal')
-            self.s1type = self.iparams_dict.get('s1type')
-            self.s2type = self.iparams_dict.get('s2type')
-            self.s3type = self.iparams_dict.get('s3type')
-            self.s3enable = self.iparams_dict.get('s3enable')
-            self.s1enable = self.iparams_dict.get('s1enable')
-            self.s2enable = self.iparams_dict.get('s2enable')
-            if self.stationid == 1:
-                self.stationcal = self.station1cal
-                self.stype = self.s1type
-            elif self.stationid == 2:
-                self.stationcal = self.station2cal
-                self.stype = self.s2type
-            elif self.stationid == 3:
-                self.stationcal = self.station3cal
-                self.stype = self.s3type
-            state.debug = self.iparams_dict.get('debug')
-            self.tide_only = self.iparams_dict.get('tide_only')
-            predict_list = predict.tide_predict()
-            tide_list = []
-            self.sensor_read_list = []
-            if getattr(self, f's{self.stationid}enable'):
-                
-                tide_list, self.sensor_read_list = db.fetch_tide(
-                  self.stationid, self.stationcal, self.influx_duration)
-                volts = 0
-                rssi = 0
-                try:
-                    self.sensor_readings = self.sensor_read_list[len(self.sensor_read_list)-1]
-                    tide_time = self.sensor_readings.get("T")
-                    tide_mm = self.sensor_readings['R']
-                    station = self.sensor_readings['S']
-                    volts = self.sensor_readings['V']/1000
-                    rssi = self.sensor_readings['P']
-                    if station == 1:
-                        self.last_station1_time = self.current_time
-                        if self.stationid == 1:
-                            if self.display:
-                                self.display.station_battery_voltage_tk_var.set(
-                                  str(volts))
-                                self.display.station_signal_strength_tk_var.set(
-                                  str(rssi))
-                            self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
-                            self.station_oos = False
-                    elif station == 2:
-                        self.last_station2_time = self.current_time
-                        if self.stationid == 2:
-                            if self.display:
-                                self.display.station_battery_voltage_tk_var.set(
-                                  str(volts))
-                                self.display.station_signal_strength_tk_var.set(
-                                  str(rssi))
-                            self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
-                            self.station_oos = False
-                    elif station == 3:
-                        self.last_station3_time = self.current_time
-                        if self.stationid == 3:
-                            if self.display:
-                                self.display.station_battery_voltage_tk_var.set(
-                                  str(volts))
-                                self.display.station_signal_strength_tk_var.set(
-                                  str(rssi))
-                            self.tide_ft = round(self.station3cal-tide_mm/304.8, 2)
-                            self.station_oos = False
-                    if self.tide_ft != 99:
-                        self.tide_list = self.process.update_tide_list(
-                          tide_list)
-                          #self.tide_list, self.tide_ft, tide_time)
-                except Exception as errmsg:
-                    pass
-                    print (str(errmsg))
-                    logging.warning(str(errmsg))
+            if (self.main_loop_count == 9 and self.current_time.minute % 15 == 2 and
+              self.current_time > self.last_cloud_sync_time):
+                #
+                # Sync unsynced local InfluxDB readings to InfluxDB Cloud every
+                # 15 minutes, offset to :02 past the hour (rather than :00) to
+                # avoid contending with weather/NDBC processing which also runs
+                # at minute zero. Local-first design: this never blocks or
+                # affects local writes -- see sync_influxdb_cloud() in
+                # tidedatabase.py for the retry/failure behavior.
+                #
+                self.last_cloud_sync_time = self.current_time
+                db.sync_influxdb_cloud()
 
-            if self.display:
-                self.display.active_station_tk_var.set(str(self.stationid))
-                self.display.tide(predict_list, self.tide_list)
-            if not self.tide_only:
-                self.ndbc_data = db.fetch_ndbc()
+            if self.main_loop_count >= 12:
+
+                #print (self.message_time+' One minute processing')
+                self.main_loop_count = 0
+                # Reset every cycle so a stale value from a previous minute
+                # can never be mistaken for a fresh reading -- see the
+                # check_alerts() call below, which now depends on this
+                # actually meaning "the active station reported something
+                # new this minute", not just "since tide.py started".
+                self.tide_ft = 99
+                self.iparams_dict = db.fetch_iparams()
+                self.stationid = self.iparams_dict.get('stationid')
+                self.station1cal = self.iparams_dict.get('station1cal')
+                self.station2cal = self.iparams_dict.get('station2cal')
+                self.station3cal = self.iparams_dict.get('station3cal')
+                self.s1type = self.iparams_dict.get('s1type')
+                self.s2type = self.iparams_dict.get('s2type')
+                self.s3type = self.iparams_dict.get('s3type')
+                self.s3enable = self.iparams_dict.get('s3enable')
+                self.s1enable = self.iparams_dict.get('s1enable')
+                self.s2enable = self.iparams_dict.get('s2enable')
+                if self.stationid == 1:
+                    self.stationcal = self.station1cal
+                    self.stype = self.s1type
+                elif self.stationid == 2:
+                    self.stationcal = self.station2cal
+                    self.stype = self.s2type
+                elif self.stationid == 3:
+                    self.stationcal = self.station3cal
+                    self.stype = self.s3type
+                state.debug = self.iparams_dict.get('debug')
+                self.tide_only = self.iparams_dict.get('tide_only')
+                predict_list = predict.tide_predict()
+                tide_list = []
+                self.sensor_read_list = []
+                if getattr(self, f's{self.stationid}enable'):
+
+                    tide_list, self.sensor_read_list = db.fetch_tide(
+                      self.stationid, self.stationcal, self.influx_duration)
+                    volts = 0
+                    rssi = 0
+                    try:
+                        self.sensor_readings = self.sensor_read_list[len(self.sensor_read_list)-1]
+                        tide_time = self.sensor_readings.get("T")
+                        tide_mm = self.sensor_readings['R']
+                        station = self.sensor_readings['S']
+                        volts = self.sensor_readings['V']/1000
+                        rssi = self.sensor_readings['P']
+                        if station == 1:
+                            self.last_station1_time = self.current_time
+                            if self.stationid == 1:
+                                if self.display:
+                                    self.display.station_battery_voltage_tk_var.set(
+                                      str(volts))
+                                    self.display.station_signal_strength_tk_var.set(
+                                      str(rssi))
+                                self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
+                                self.station_oos = False
+                        elif station == 2:
+                            self.last_station2_time = self.current_time
+                            if self.stationid == 2:
+                                if self.display:
+                                    self.display.station_battery_voltage_tk_var.set(
+                                      str(volts))
+                                    self.display.station_signal_strength_tk_var.set(
+                                      str(rssi))
+                                self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
+                                self.station_oos = False
+                        elif station == 3:
+                            self.last_station3_time = self.current_time
+                            if self.stationid == 3:
+                                if self.display:
+                                    self.display.station_battery_voltage_tk_var.set(
+                                      str(volts))
+                                    self.display.station_signal_strength_tk_var.set(
+                                      str(rssi))
+                                self.tide_ft = round(self.station3cal-tide_mm/304.8, 2)
+                                self.station_oos = False
+                        if self.tide_ft != 99:
+                            self.tide_list = self.process.update_tide_list(
+                              tide_list)
+                              #self.tide_list, self.tide_ft, tide_time)
+                    except Exception as errmsg:
+                        pass
+                        print (str(errmsg))
+                        logging.warning(str(errmsg), exc_info=True)
+
                 if self.display:
-                    self.display.update(self.weather, self.ndbc_data)
-            if current_minute == '00':
-                wxhtml.wxproc(self.iparams_dict)
-            if self.sensor_read_list:
-                last_sensor_read = self.sensor_read_list[len(self.sensor_read_list)-1]
-            else:
-                last_sensor_read = None
-            self.html.create(self.weather, self.ndbc_data, predict_list,
-              self.tide_list, self.iparams_dict, last_sensor_read)
-            cur_station = self.stationid
-            alt_station = 2 if self.stationid == 1 else 1
-            if (not self.station_oos and ((self.stationid == 1 and self.current_time >
-              self.last_station1_time + timedelta(minutes=5)) or
-              (self.stationid == 2 and self.current_time >
-              self.last_station2_time + timedelta(minutes=5)))):
-                self.station_oos = True
-                msgsuff = ''
-                if ((alt_station == 1 and self.s1enable) or
-                  (alt_station == 2 and self.s2enable)):
-                    self.stationid = alt_station
-                    db.update_stationid(alt_station)
-                    msgsuff = f', switching to Station {str(alt_station)}'
-                text = (self.message_time+f' {cons.HOSTNAME} Station {cur_station} has not reported in '+
-                  f'over 5 minutes{msgsuff}')
-                for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
-                    if twilio_phone_recipient == None:
-                        continue
-                    notify.send_SMS(twilio_phone_recipient, text, state.debug)
-                for email_recip in cons.ADMIN_EMAIL:
-                    if email_recip == None:
-                        continue
-                    email_recipient = email_recip
-                    email_headers = ["From: " + cons.EMAIL_USERNAME,
-                      f"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
-                      +email_recipient,"MIME-Versiion:1.0",
-                      "Content-Type:text/html"]
-                    email_headers =  "\r\n".join(email_headers)
-                    notify.send_email(email_recipient, email_headers, text,
-                      state.debug)                    
-                self.last_station1_time = self.current_time
-                self.last_station2_time = self.current_time
-                self.last_station3_time = self.current_time
-            if self.tide_ft != 99:
-                alerts.check_alerts(self.tide_ft, self.weather,
-                  self.ndbc_data, self.sunrise, self.sunset, state.debug)
+                    self.display.active_station_tk_var.set(str(self.stationid))
+                    self.display.tide(predict_list, self.tide_list)
+                if not self.tide_only:
+                    self.ndbc_data = db.fetch_ndbc()
+                    if self.display:
+                        self.display.update(self.weather, self.ndbc_data)
+                if current_minute == '00':
+                    wxhtml.wxproc(self.iparams_dict)
+                if self.sensor_read_list:
+                    last_sensor_read = self.sensor_read_list[len(self.sensor_read_list)-1]
+                else:
+                    last_sensor_read = None
+                self.html.create(self.weather, self.ndbc_data, predict_list,
+                  self.tide_list, self.iparams_dict, last_sensor_read)
+                cur_station = self.stationid
+                alt_station = 2 if self.stationid == 1 else 1
+                if (not self.station_oos and ((self.stationid == 1 and self.current_time >
+                  self.last_station1_time + timedelta(minutes=5)) or
+                  (self.stationid == 2 and self.current_time >
+                  self.last_station2_time + timedelta(minutes=5)))):
+                    self.station_oos = True
+                    msgsuff = ''
+                    if ((alt_station == 1 and self.s1enable) or
+                      (alt_station == 2 and self.s2enable)):
+                        self.stationid = alt_station
+                        db.update_stationid(alt_station)
+                        msgsuff = f', switching to Station {str(alt_station)}'
+                    text = (self.message_time+f' Station {cur_station} has not reported in '+
+                      f'over 5 minutes{msgsuff}')
+                    for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
+                        if twilio_phone_recipient == None:
+                            continue
+                        notify.send_SMS(twilio_phone_recipient, text, state.debug, cons.STATION_LOCATION)
+                    for email_recip in cons.ADMIN_EMAIL:
+                        if email_recip == None:
+                            continue
+                        email_recipient = email_recip
+                        email_headers = ["From: " + cons.EMAIL_USERNAME,
+                          f"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
+                          +email_recipient,"MIME-Versiion:1.0",
+                          "Content-Type:text/html"]
+                        email_headers =  "\r\n".join(email_headers)
+                        notify.send_email(email_recipient, email_headers, text,
+                          state.debug)                    
+                    self.last_station1_time = self.current_time
+                    self.last_station2_time = self.current_time
+                    self.last_station3_time = self.current_time
+                if self.tide_ft != 99 and self.stype == 'lora':
+                    alerts.check_alerts(self.tide_ft, self.weather,
+                      self.ndbc_data, self.sunrise, self.sunset, state.debug,
+                      self.stationid)
+        except Exception as errmsg:
+            logging.warning('main() loop body: '+str(errmsg), exc_info=True)
 
     def notk_loop(self):
         interval = 5.0
@@ -491,7 +597,7 @@ class Tide:
 
         self.visit = True
         visits_text = visits.get_daily_report()
-        email_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+        email_message = (self.message_time+
           "\n"+visits_text)
         for email_recip in cons.ADMIN_EMAIL:
             if email_recip == None:
@@ -505,12 +611,12 @@ class Tide:
             notify.send_email(email_recipient, email_headers,
               email_message, state.debug,)
 
-        text_message = ("From "+cons.HOSTNAME+": "+self.message_time+
+        text_message = (self.message_time+
           "\n"+visits_text)
         for twilio_phone_recipient in cons.ADMIN_TEL_NBRS:
             if twilio_phone_recipient == None:
                 continue
-            notify.send_SMS(twilio_phone_recipient, text_message, state.debug)
+            notify.send_SMS(twilio_phone_recipient, text_message, state.debug, cons.STATION_LOCATION)
 #
 # Start the ball rolling
 #

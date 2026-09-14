@@ -1,0 +1,67 @@
+{
+  "S": [
+    "tag",
+    "sensor_num",
+    "int"
+  ],
+  "I": [
+    "tag",
+    "sensor_id",
+    "str"
+  ],
+  "L": [
+    "tag",
+    "link_type",
+    "str"
+  ],
+  "H": [
+    "fld",
+    "sensor_height_ft",
+    "float"
+  ],
+  "C": [
+    "fld",
+    "message_count",
+    "int"
+  ],
+  "U": [
+    "fld",
+    "sensor_measurement_mm",
+    "int"
+  ],
+  "R": [
+    "fld",
+    "sensor_measurement_mm",
+    "int"
+  ],
+  "M": [
+    "fld",
+    "correlation_count",
+    "int"
+  ],
+  "V": [
+    "fld",
+    "battery_milliVolts",
+    "int"
+  ],
+  "P": [
+    "fld",
+    "signal_strength",
+    "int"
+  ],
+  "r": [
+    "fld",
+    "signal_strength",
+    "int"
+  ],
+  "s": [
+    "fld",
+    "solar_milliVolts",
+    "int"
+  ],
+  "t": [
+    "fld",
+    "temperature",
+    "int"
+  ]
+}

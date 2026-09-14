@@ -29,6 +29,7 @@ import pytz
 from cryptography.fernet import Fernet
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
+from influxdb_client_3 import InfluxDBClient3
 from dotenv import load_dotenv, find_dotenv
 from twilio.rest import Client
 from email.message import EmailMessage
@@ -86,25 +87,58 @@ class Constants:
     BREVO_ADDRESS = secure_dict.get('BREVO_EMAIL_ADDRESS')
     BREVO_USERNAME = secure_dict.get('BREVO_EMAIL_USERNAME')
     BREVO_PASSWORD = secure_dict.get('BREVO_EMAIL_PASSWORD')
-    INFLUXDB_TOKEN = secure_dict.get('INFLUXDB_TOKEN')
-    INFLUXDB_READ_TOKEN = secure_dict.get('INFLUXDB_READ_TOKEN')
-    INFLUXDB_WRITE_TOKEN = secure_dict.get('INFLUXDB_WRITE_TOKEN')
-    INFLUXDB_ORG = secure_dict.get('INFLUXDB_ORG')
-    INFLUXDB_BUCKET = secure_dict.get('INFLUXDB_BUCKET')
-    INFLUXDB_MEASUREMENT = secure_dict.get('INFLUXDB_MEASUREMENT')
-    INFLUXDB_LOCATION = secure_dict.get('INFLUXDB_LOCATION')
-    INFLUXDB_SENSOR = secure_dict.get('INFLUXDB_SENSOR')
-    INFLUXDB_READ_CLIENT = InfluxDBClient(url='http://localhost:8086',
-      token=INFLUXDB_READ_TOKEN, org=INFLUXDB_ORG)
-    INFLUXDB_WRITE_CLIENT = InfluxDBClient(url='http://localhost:8086',
-      token=INFLUXDB_WRITE_TOKEN, org=INFLUXDB_ORG)
-    INFLUXDB_QUERY_API = INFLUXDB_WRITE_CLIENT.query_api()
+    # Load tide.env early so INFLUXDB_CLOUD_ORG/BUCKET are available before
+    # constructing INFLUXDB_CLOUD_WRITE_CLIENT below (load_dotenv is safe to
+    # call again later, in the main tide.env block further down that loads
+    # everything else -- see 'envfile = find_dotenv(...)' below).
+    load_dotenv(find_dotenv('tide.env'))
+    # --- Local InfluxDB 3 Core (primary write target; every node has its own) ---
+    # URL/DATABASE moved to tide.env -- not secrets, just endpoints/identifiers.
+    # Only the token itself is a real credential.
+    INFLUXDB_LOCAL_URL = os.getenv('INFLUXDB_LOCAL_URL')
+    INFLUXDB_LOCAL_TOKEN = secure_dict.get('INFLUXDB_LOCAL_TOKEN')
+    INFLUXDB_LOCAL_DATABASE = os.getenv('INFLUXDB_LOCAL_DATABASE')
+    # --- InfluxDB Cloud Serverless (sync target; shared org/bucket across nodes) ---
+    # URL moved to tide.env for the same reason.
+    INFLUXDB_CLOUD_URL = os.getenv('INFLUXDB_CLOUD_URL')
+    INFLUXDB_CLOUD_TOKEN = secure_dict.get('INFLUXDB_CLOUD_TOKEN')
+    # INFLUXDB_CLOUD_ORG/BUCKET moved to tide.env -- not secrets, just the
+    # standard TideGauge/TideData names shared across all nodes.
+    INFLUXDB_CLOUD_ORG = os.getenv('INFLUXDB_CLOUD_ORG')
+    INFLUXDB_CLOUD_BUCKET = os.getenv('INFLUXDB_CLOUD_BUCKET')
+    # --- Point tag/field values shared by both local and cloud writes ---
+    # (INFLUXDB_MEASUREMENT/LOCATION/SENSOR moved to tide.env -- not
+    # secrets, see the tide.env-derived block below)
+    # NOTE: InfluxDB 3 Core has no "org" concept -- org is a v2/Cloud-only
+    # construct. The v2-compatible write endpoint (/api/v2/write) that
+    # InfluxDBClient targets accepts a blank org string against local
+    # InfluxDB 3 Core; ORG_FOR_LOCAL_WRITES exists only to make that
+    # explicit rather than passing '' inline at each call site.
+    ORG_FOR_LOCAL_WRITES = ''
+    # Writes (local and cloud) -- v2-compatible client. Reverted from the
+    # native v3 write_lp endpoint after finding it does not reliably
+    # auto-create tables (confirmed: a table name that previously had
+    # heavy write history, once deleted, permanently fails to
+    # auto-recreate via native v3 writes, while brand-new names work
+    # fine -- likely an InfluxDB 3 Core catalog bug) and fails
+    # completely silently in that case (write() returns normally, no
+    # exception, even with write_accept_partial=False set). The v2
+    # endpoint's per-write latency is addressed via a background write
+    # thread in tidedatabase.py instead of switching write APIs.
+    INFLUXDB_WRITE_CLIENT = InfluxDBClient(url=INFLUXDB_LOCAL_URL,
+      token=INFLUXDB_LOCAL_TOKEN, org=ORG_FOR_LOCAL_WRITES)
+    INFLUXDB_CLOUD_WRITE_CLIENT = InfluxDBClient(url=INFLUXDB_CLOUD_URL,
+      token=INFLUXDB_CLOUD_TOKEN, org=INFLUXDB_CLOUD_ORG)
+    # Queries only (local) -- InfluxDB 3 native client, required since
+    # InfluxDB 3 does not support Flux/v2 queries.
+    INFLUXDB_LOCAL_QUERY_CLIENT = InfluxDBClient3(host=INFLUXDB_LOCAL_URL,
+      token=INFLUXDB_LOCAL_TOKEN, database=INFLUXDB_LOCAL_DATABASE)
     OBSCAPE_USER = secure_dict.get('OBSCAPE_USER')
     OBSCAPE_KEY = secure_dict.get('OBSCAPE_KEY')
     NOTEHUB_SECRET = secure_dict.get('NOTEHUB_SECRET')
-    SMTP_SERVER = secure_dict.get('SMTP_SERVER')
+    # (SMTP_SERVER/SMTP_PORT moved to tide.env -- not secrets, see the
+    # tide.env-derived block below)
     BREVO_SMTP_SERVER = secure_dict.get('BREVO_SMTP_SERVER')
-    SMTP_PORT = secure_dict.get('SMTP_PORT')
     TWILIO_ACCOUNT_SID = secure_dict.get('TWILIO_ACCOUNT_SID')
     TWILIO_AUTH_TOKEN = secure_dict.get('TWILIO_AUTH_TOKEN')
     TWILIO_CLIENT = Client(TWILIO_ACCOUNT_SID,
@@ -164,6 +198,18 @@ class Constants:
         NWS_MARINE_GRIDPOINTS = os.getenv('NWS_MARINE_GRIDPOINTS')
         #INFLUXDB_NAMES = os.getenv('INFLUXDB_NAMES')
         TIME_ZONE = os.getenv('TIME_ZONE')
+        # HOME_DIRECTORY was documented in tide.env but never actually loaded
+        # into Constants before -- needed now by sync_influxdb_cloud()'s
+        # watermark file path (tidedatabase.py).
+        HOME_DIRECTORY = os.getenv('HOME_DIRECTORY')
+        # Moved from tide_constants.json -- not secrets, and moving them
+        # here means site-specific edits no longer require the
+        # decrypt-edit-encrypt cycle.
+        INFLUXDB_MEASUREMENT = os.getenv('INFLUXDB_MEASUREMENT')
+        INFLUXDB_LOCATION = os.getenv('INFLUXDB_LOCATION')
+        INFLUXDB_SENSOR = os.getenv('INFLUXDB_SENSOR')
+        SMTP_SERVER = os.getenv('SMTP_SERVER')
+        SMTP_PORT = os.getenv('SMTP_PORT')
         NWS_RADAR = os.getenv('NWS_RADAR')
         TK_CANVAS_WIDTH = os.getenv('TK_CANVAS_WIDTH')
         TK_CANVAS_HEIGHT = os.getenv('TK_CANVAS_HEIGHT')
@@ -174,14 +220,40 @@ class Constants:
         USB1_BAUDRATE = os.getenv('USB1_BAUDRATE')
         SENSOR_SOURCE = os.getenv('SENSOR_SOURCE')
 
+        # Station number -> Sensor ID lookup, built from the indexed
+        # STATIONn_NUM/SENSOR_ID/LOCATION groups in tide.env (up to 3
+        # stations). Used by tideget.py's read_sensor() to tag LoRa
+        # packets with a Sensor ID, since LoRa hardware doesn't transmit
+        # one natively the way Notecard sensors do. Blank/missing slots
+        # are skipped.
+        STATION_SENSOR_IDS = {}
+        STATION_LOCATIONS = {}
+        # Per-station toggle for whether sync_influxdb_cloud() should
+        # forward that station's local InfluxDB rows to the cloud.
+        # Intended for LoRa-sourced stations only (True) -- Notecard-
+        # sourced stations are routed directly from Notehub to InfluxDB
+        # Cloud now, so forwarding them here would just duplicate that
+        # data via an extra, less resilient hop. Defaults to False
+        # (not forwarded) if unset, since that's the safer failure mode
+        # -- a missed LoRa sync is easy to notice and backfill from the
+        # watermark, while silently duplicating already-delivered
+        # Notecard data is a messier cleanup.
+        STATION_CLOUD_ENABLE = {}
+        for _n in (1, 2, 3):
+            STATION_CLOUD_ENABLE[_n] = (
+              os.getenv(f'S{_n}CLOUD_ENABLE', '').strip().lower()
+              in ('true', '1', 'yes'))
+
+        for _n in (1, 2, 3):
+            _num = os.getenv(f'STATION{_n}_NUM')
+            _sid = os.getenv(f'STATION{_n}_SENSOR_ID')
+            _loc = os.getenv(f'STATION{_n}_LOCATION')
+            if _num and _sid:
+                STATION_SENSOR_IDS[int(_num)] = _sid
+                STATION_LOCATIONS[int(_num)] = _loc or ''
+
     else:
         print ('Unable to load Environment file')
-
-    with open("/sys/class/graphics/fb0/virtual_size", "r") as f:
-        screen_res = f.read().strip().split(',')
-
-    TK_SCREEN_WIDTH = screen_res[0]
-    TK_SCREEN_HEIGHT = screen_res[1]
 
     FULL_TIDE = math.pi
     HALF_TIDE = math.pi/2
@@ -190,7 +262,95 @@ class Constants:
         INFLUXDB_NAMES = json.load(infile)
     RADIANS_PER_SECOND = math.pi*2/91080
     TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-    
+
+class OutlierTracker:
+    """Sensor-reading outlier filter, shared by tidedatabase.py's
+    insert_tide() and tidealerts.py's check_alerts() -- previously two
+    separate, hand-maintained implementations that quietly drifted out
+    of sync (one had a bug fix the other never received). Unifying
+    them here means a future fix only has to be made once.
+
+    Replaces the earlier 20-sample rolling-average approach entirely.
+    That design had a real failure mode: a single borderline-rejected
+    reading could never update the average, which guaranteed every
+    subsequent identical (and perfectly legitimate) reading would keep
+    failing the same check, for as long as OUTLIER_GAP_RESET_SECONDS
+    -- since the average that would have accepted it never got the
+    chance to move.
+
+    This design instead tracks a single baseline value rather than an
+    average. Once established, each new candidate is compared only
+    against that one number, using a flat +/- OUTLIER_MAX_DEVIATION_FT
+    window; if accepted, the candidate itself becomes the new
+    baseline, so the reference tracks the tide continuously rather
+    than needing several samples to catch up.
+
+    A baseline is established (or re-established, after a gap reset)
+    by requiring OUTLIER_BASELINE_CHAIN_LENGTH consecutive readings
+    that each agree with the one immediately before them (same flat
+    window). Any disagreement restarts the chain from that new
+    reading rather than discarding it. All readings during this
+    establishing phase are accepted (there's no confirmed baseline
+    yet to reject them against) -- once the chain completes, the
+    baseline becomes the most recent (last) reading in it.
+
+    If more than OUTLIER_GAP_RESET_SECONDS passes since the last
+    accepted reading, the baseline and any in-progress chain are
+    cleared and the establishing phase runs again from scratch --
+    covers both a genuine reporting gap and a sensor that keeps
+    reporting but stays rejected for some other reason; either way,
+    too long without a trustworthy reading means the old baseline is
+    no longer a fair comparison.
+
+    check() returns a (accepted, baseline, gap_reset_seconds) tuple:
+      accepted -- whether this reading should be written/used.
+      baseline -- the reference value it was compared against, for
+        the caller's own rejection log message; None whenever
+        accepted is True (nothing to log).
+      gap_reset_seconds -- the size of the gap that just triggered a
+        reset, for the caller's own log message; None otherwise.
+
+    Callers are expected to log rejections and gap-resets themselves,
+    in their own established wording -- this class only decides.
+    """
+    OUTLIER_MAX_DEVIATION_FT = 1
+    OUTLIER_BASELINE_CHAIN_LENGTH = 5
+    OUTLIER_GAP_RESET_SECONDS = 5 * 60
+
+    def __init__(self):
+        self.baseline = None
+        self.chain = []
+        self.last_accepted_time = None
+
+    def reset(self):
+        self.baseline = None
+        self.chain = []
+
+    def check(self, candidate_ft, candidate_time):
+        gap_reset_seconds = None
+        if self.last_accepted_time is not None and candidate_time is not None:
+            gap = (candidate_time - self.last_accepted_time).total_seconds()
+            if gap > self.OUTLIER_GAP_RESET_SECONDS:
+                gap_reset_seconds = gap
+                self.reset()
+
+        if self.baseline is not None:
+            if abs(candidate_ft - self.baseline) <= self.OUTLIER_MAX_DEVIATION_FT:
+                self.baseline = candidate_ft
+                self.last_accepted_time = candidate_time
+                return True, None, gap_reset_seconds
+            return False, self.baseline, gap_reset_seconds
+
+        if not self.chain or abs(candidate_ft - self.chain[-1]) <= self.OUTLIER_MAX_DEVIATION_FT:
+            self.chain.append(candidate_ft)
+        else:
+            self.chain = [candidate_ft]
+        self.last_accepted_time = candidate_time
+        if len(self.chain) >= self.OUTLIER_BASELINE_CHAIN_LENGTH:
+            self.baseline = self.chain[-1]
+            self.chain = []
+        return True, None, gap_reset_seconds
+
 class TideState:
     """Store state variables"""
     def __init__(self):
@@ -216,7 +376,7 @@ class SunTime:
             db.update_datetime(display_date, display_sunrise, display_sunset)
             return display_date, display_sunrise, display_sunset, sunrise, sunset
         except Exception as errmsg:
-            logging.warning('Error processing sunrise/sunset - '+str(errmsg))
+            logging.warning('Error processing sunrise/sunset - '+str(errmsg), exc_info=True)
             return -1
 
 class Notify:
@@ -225,8 +385,15 @@ class Notify:
     def __init__(self, cons):
         self.cons = cons
 
-    def send_SMS(self, twilio_phone_recipient, text_message, debug):
-        """Method to send status or alert information via SMS text message"""
+    def send_SMS(self, twilio_phone_recipient, text_message, debug, header=None):
+        """Method to send status or alert information via SMS text message.
+        Optional header (typically the station's location) is prepended
+        to identify the source -- SMS has no equivalent to email's
+        From/Subject headers, so this is the only way to carry that
+        identity once it's no longer baked into the message body itself.
+        """
+        if header:
+            text_message = f"{header}: {text_message}"
         if debug:
             print ('SMS notify to '+ twilio_phone_recipient+'\n'+text_message)
             return
@@ -236,7 +403,7 @@ class Notify:
                     from_= self.cons.TWILIO_PHONE_SENDER,
                     body = text_message)
         except Exception as errmsg:
-            logging.warning(str(errmsg))
+            logging.warning(str(errmsg), exc_info=True)
 
     def send_email(self, email_recipient, email_headers, email_message, debug):
         """Method to send status or alert information via email message.
@@ -249,7 +416,7 @@ class Notify:
         if self.cons.EMAIL_SERVICE != 'brevo':
             try:
                 session = smtplib.SMTP(self.cons.SMTP_SERVER,
-                self.cons.SMTP_PORT)
+                self.cons.SMTP_PORT, timeout=10)
                 session.ehlo()
                 session.starttls()
                 session.ehlo()
@@ -260,7 +427,7 @@ class Notify:
                 session.quit()
                 return True, None
             except Exception as errmsg:
-                logging.warning(str(errmsg))
+                logging.warning(str(errmsg), exc_info=True)
                 return False, str(errmsg)
         else:    
             try:
@@ -277,13 +444,13 @@ class Notify:
                 msg["To"] = email_recipient
                 msg["Subject"] = sub
                 msg.set_content(email_message)
-                with smtplib.SMTP(self.cons.BREVO_SMTP_SERVER, self.cons.SMTP_PORT) as server:
+                with smtplib.SMTP(self.cons.BREVO_SMTP_SERVER, self.cons.SMTP_PORT, timeout=10) as server:
                     server.starttls()
                     server.login(self.cons.BREVO_USERNAME, self.cons.BREVO_PASSWORD)
                     server.send_message(msg)
                 return True, None
             except Exception as errmsg:
-                logging.warning(str(errmsg))
+                logging.warning(str(errmsg), exc_info=True)
                 return False, str(errmsg)
 
     MAILSPOOL_DIR = '/var/www/html/mailspool/'
@@ -310,7 +477,7 @@ class Notify:
                 with open(filepath, 'r') as f:
                     request = json.load(f)
             except Exception as errmsg:
-                logging.warning(f'mailspool: could not read {filename}: {errmsg}')
+                logging.warning(f'mailspool: could not read {filename}: {errmsg}', exc_info=True)
                 continue
             full_headers = f"From: {self.cons.EMAIL_USERNAME}\r\n" + request['headers']
             if request['recipient'] == 'ADMIN':
