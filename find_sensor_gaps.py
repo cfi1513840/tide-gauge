@@ -43,7 +43,7 @@ from datetime import datetime, timedelta
 
 DEFAULT_DB_PATH = "/var/www/html/tides.db"
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-DEFAULT_BUCKETS = [1, 5, 10, 15, 30, 60]  # minutes
+DEFAULT_BUCKETS = [1.5, 2.5, 3.5, 5, 10, 15, 30, 60]  # minutes
 
 
 def parse_args():
