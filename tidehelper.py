@@ -255,12 +255,6 @@ class Constants:
     else:
         print ('Unable to load Environment file')
 
-    with open("/sys/class/graphics/fb0/virtual_size", "r") as f:
-        screen_res = f.read().strip().split(',')
-
-    TK_SCREEN_WIDTH = screen_res[0]
-    TK_SCREEN_HEIGHT = screen_res[1]
-
     FULL_TIDE = math.pi
     HALF_TIDE = math.pi/2
     HOSTNAME = socket.gethostname()

@@ -27,8 +27,6 @@ class TideDisplay:
         self.state = state
         self.tide_only = tide_only
         self.active_station = station
-        self.canvas_width = int(cons.TK_SCREEN_WIDTH)-25
-        self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-225
         self.y_start = 0
         self.y_plot_end = 30
         self.start_plot_x = 30
@@ -36,42 +34,31 @@ class TideDisplay:
         self.x_plot_start = 30
         self.y_plot_start = 30
         self.tide_turn_time = 0
-        self.y_grid_size = (self.canvas_height-(self.y_plot_start+self.y_plot_end))/13
         self.master = tk.Tk()
         self.master.configure(background='LightBlue1')
+        # Query Tk directly for the screen's actual size, rather than
+        # trusting cons.TK_SCREEN_WIDTH/HEIGHT (read from the kernel
+        # framebuffer at /sys/class/graphics/fb0/virtual_size) to agree
+        # with it. These usually match, but aren't guaranteed to --
+        # confirmed on TestBelfastTide, where the kernel correctly
+        # detected the monitor's native 1920x1080 while X itself
+        # started at a stale 1280x1024 fallback, producing a window
+        # sized for one resolution inside a screen X believed was a
+        # different, smaller one. Querying Tk directly is immune to
+        # this: it can only ever report what X itself is actually
+        # running, never a separate, independently-detected value.
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
+        self.canvas_width = screen_width-25
+        self.canvas_height = screen_height-225
+        self.y_grid_size = (self.canvas_height-(self.y_plot_start+self.y_plot_end))/13
         if int(cons.TK_FULLSCREEN) == 1:
-            self.master.geometry(f"{int(cons.TK_SCREEN_WIDTH)}x{int(cons.TK_SCREEN_HEIGHT)}+0+0")
+            self.master.geometry(f"{screen_width}x{screen_height}+0+0")
             self.master.attributes('-fullscreen', True)
-            self.canvas_height = int(cons.TK_SCREEN_HEIGHT)-155
+            self.canvas_height = screen_height-155
         else:
-            self.master.geometry(f'{int(cons.TK_SCREEN_WIDTH)-20}x{int(cons.TK_SCREEN_HEIGHT)-40}+10+40')
+            self.master.geometry(f'{screen_width-20}x{screen_height-100}+10+40')
         self.master.bind("<Escape>", lambda event: exit())
-        # Temporary diagnostic for the TestBelfastTide (1920x1080) display
-        # cutoff investigation -- not permanent, remove once resolved.
-        # Requested values are known from the code; what's actually
-        # missing is what Tk/the window manager did with them at
-        # runtime, which only update_idletasks() + winfo_* can reveal.
-        def _diag_report_sizing():
-            self.master.update_idletasks()
-            msg = (
-              f'DIAG sizing: TK_SCREEN={cons.TK_SCREEN_WIDTH}x{cons.TK_SCREEN_HEIGHT} '
-              f'TK_FULLSCREEN={cons.TK_FULLSCREEN} '
-              f'requested_canvas={self.canvas_width}x{self.canvas_height} '
-              f'actual_master_winfo={self.master.winfo_width()}x{self.master.winfo_height()} '
-              f'actual_master_geometry={self.master.geometry()} '
-              f'screenwidth={self.master.winfo_screenwidth()} '
-              f'screenheight={self.master.winfo_screenheight()} '
-              f'vrootwidth={self.master.winfo_vrootwidth()} '
-              f'vrootheight={self.master.winfo_vrootheight()}')
-            print(msg)
-            logging.warning(msg)
-            if hasattr(self, 'plot_window'):
-                canvas_msg = (
-                  f'DIAG sizing: actual_canvas_winfo='
-                  f'{self.plot_window.winfo_width()}x{self.plot_window.winfo_height()}')
-                print(canvas_msg)
-                logging.warning(canvas_msg)
-        self.master.after(3000, _diag_report_sizing)
         if not self.tide_only:
             self.local_wx_time_tk_var = StringVar()
             self.wind_speed_tk_var = StringVar()
