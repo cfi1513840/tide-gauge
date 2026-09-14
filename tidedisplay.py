@@ -49,15 +49,24 @@ class TideDisplay:
         # running, never a separate, independently-detected value.
         screen_width = self.master.winfo_screenwidth()
         screen_height = self.master.winfo_screenheight()
-        self.canvas_width = screen_width-25
-        self.canvas_height = screen_height-225
-        self.y_grid_size = (self.canvas_height-(self.y_plot_start+self.y_plot_end))/13
         if int(cons.TK_FULLSCREEN) == 1:
-            self.master.geometry(f"{screen_width}x{screen_height}+0+0")
+            window_width = screen_width
+            window_height = screen_height
+            self.master.geometry(f"{window_width}x{window_height}+0+0")
             self.master.attributes('-fullscreen', True)
-            self.canvas_height = screen_height-155
+            self.canvas_height = window_height-155
         else:
-            self.master.geometry(f'{screen_width-70}x{screen_height-150}+10+40')
+            window_width = screen_width-70
+            window_height = screen_height-150
+            self.master.geometry(f'{window_width}x{window_height}+10+40')
+            # Margin preserved from the original screen-based formula
+            # (window was screen-40, canvas was screen-225 -- a 185px
+            # gap for the header tables above the canvas) so shrinking
+            # the window here doesn't leave the canvas oversized for it
+            # again, the way the last two adjustments accidentally did.
+            self.canvas_height = window_height-185
+        self.canvas_width = window_width-25
+        self.y_grid_size = (self.canvas_height-(self.y_plot_start+self.y_plot_end))/13
         self.master.bind("<Escape>", lambda event: exit())
         if not self.tide_only:
             self.local_wx_time_tk_var = StringVar()
