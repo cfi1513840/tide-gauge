@@ -57,7 +57,7 @@ class TideDisplay:
             self.master.attributes('-fullscreen', True)
             self.canvas_height = screen_height-155
         else:
-            self.master.geometry(f'{screen_width-20}x{screen_height-100}+10+40')
+            self.master.geometry(f'{screen_width-70}x{screen_height-150}+10+40')
         self.master.bind("<Escape>", lambda event: exit())
         if not self.tide_only:
             self.local_wx_time_tk_var = StringVar()
