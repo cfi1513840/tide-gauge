@@ -597,7 +597,7 @@ class TideDisplay:
         self.plot_window.tag_lower(tboxwid,tbox)
         text_field = "Predicted Tide Trace"
         text_size = text_font.measure(text_field)
-        start_text = self.canvas_width-(text_size+70)
+        start_text = self.canvas_width-(text_size+80)
         self.plot_window.create_line(start_text, 15, start_text+30, 15,
           fill="gray", width=3)
         self.plot_window.create_text(start_text+35,15,
