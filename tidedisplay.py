@@ -46,6 +46,32 @@ class TideDisplay:
         else:
             self.master.geometry(f'{int(cons.TK_SCREEN_WIDTH)-20}x{int(cons.TK_SCREEN_HEIGHT)-40}+10+40')
         self.master.bind("<Escape>", lambda event: exit())
+        # Temporary diagnostic for the TestBelfastTide (1920x1080) display
+        # cutoff investigation -- not permanent, remove once resolved.
+        # Requested values are known from the code; what's actually
+        # missing is what Tk/the window manager did with them at
+        # runtime, which only update_idletasks() + winfo_* can reveal.
+        def _diag_report_sizing():
+            self.master.update_idletasks()
+            msg = (
+              f'DIAG sizing: TK_SCREEN={cons.TK_SCREEN_WIDTH}x{cons.TK_SCREEN_HEIGHT} '
+              f'TK_FULLSCREEN={cons.TK_FULLSCREEN} '
+              f'requested_canvas={self.canvas_width}x{self.canvas_height} '
+              f'actual_master_winfo={self.master.winfo_width()}x{self.master.winfo_height()} '
+              f'actual_master_geometry={self.master.geometry()} '
+              f'screenwidth={self.master.winfo_screenwidth()} '
+              f'screenheight={self.master.winfo_screenheight()} '
+              f'vrootwidth={self.master.winfo_vrootwidth()} '
+              f'vrootheight={self.master.winfo_vrootheight()}')
+            print(msg)
+            logging.warning(msg)
+            if hasattr(self, 'plot_window'):
+                canvas_msg = (
+                  f'DIAG sizing: actual_canvas_winfo='
+                  f'{self.plot_window.winfo_width()}x{self.plot_window.winfo_height()}')
+                print(canvas_msg)
+                logging.warning(canvas_msg)
+        self.master.after(3000, _diag_report_sizing)
         if not self.tide_only:
             self.local_wx_time_tk_var = StringVar()
             self.wind_speed_tk_var = StringVar()
