@@ -116,8 +116,9 @@ sudo chmod 770 /var/www/html
 if test -e tide.env; then
   echo -e "\e[0mChecking the existing tide.env against tide.env.template for"
   echo "  missing or obsolete parameters..."
-  /usr/bin/python check_config_drift.py tide.env tide.env.template env
-  if [ $? -eq 0 ]; then
+  /usr/bin/python check_config_drift.py tide.env tide.env.template env | tee /tmp/tide_env_drift_report.txt
+  drift_status=${PIPESTATUS[0]}
+  if [ $drift_status -eq 0 ]; then
     echo -e "\e[0mtide.env is up to date -- nothing to do."
   else
     echo
@@ -125,6 +126,10 @@ if test -e tide.env; then
     echo "  It will now open in nano so you can add any missing parameters"
     echo "  and remove any obsolete ones. The current file will be backed up"
     echo "  first as tide.env.dev, in case anything needs to be reverted."
+    echo "  The report above is also saved to /tmp/tide_env_drift_report.txt"
+    echo "  -- nano will replace this screen, so open a second terminal or"
+    echo "  SSH session and 'cat' or 'less' that file if you'd like to keep"
+    echo "  it visible for reference while editing."
     echo -e "\e[31m"
     read -p "Hit return to continue: " go
     if check_backup_safe tide.env.dev; then
@@ -182,8 +187,9 @@ if [ $jsonfound == 1 ]; then
   echo -e "\e[0mChecking the existing /home/tide/bin/tidegauge/tide_constants.json"
   echo "  against tide_constants.json.template for missing or obsolete"
   echo "  parameters..."
-  /usr/bin/python check_config_drift.py /home/tide/bin/tidegauge/tide_constants.json tide_constants.json.template json
-  if [ $? -eq 0 ]; then
+  /usr/bin/python check_config_drift.py /home/tide/bin/tidegauge/tide_constants.json tide_constants.json.template json | tee /tmp/tide_constants_drift_report.txt
+  drift_status=${PIPESTATUS[0]}
+  if [ $drift_status -eq 0 ]; then
     echo -e "\e[0mtide_constants.json is up to date -- nothing to do."
   else
     echo
@@ -192,6 +198,11 @@ if [ $jsonfound == 1 ]; then
     echo "  clear-text scratch copy for editing, then re-encrypting. The"
     echo "  original encrypted file will be backed up first as"
     echo "  tide_constants.json.dev, in case anything needs to be reverted."
+    echo "  The report above is also saved to"
+    echo "  /tmp/tide_constants_drift_report.txt -- nano will replace this"
+    echo "  screen, so open a second terminal or SSH session and 'cat' or"
+    echo "  'less' that file if you'd like to keep it visible for reference"
+    echo "  while editing."
     echo -e "\e[31m"
     read -p "Hit return to continue: " go
     if check_backup_safe tide_constants.json.dev; then
