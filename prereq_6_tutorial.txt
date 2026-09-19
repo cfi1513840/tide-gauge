@@ -1,0 +1,73 @@
+The following steps must be performed from the target Raspberry Pi
+used to host the tide station, and cover setting up a Cloudflare
+account and domain, installing the cloudflared connector, and
+configuring the tunnel that exposes this station's services to the
+internet without opening any firewall ports.
+
+Open a browser and go to https://cloudflare.com, then select the
+Login menu option. If an account already exists, enter the login
+credentials; otherwise, use the "Sign up" option to create a free
+account.
+
+A newly created tide station needs its own, unique domain name.
+Following login, when the Cloudflare dashboard appears, navigate to
+"Domains" in the left side panel, then select "Registrations." When
+the Registrations screen appears, select "Buy domain" at the top
+right. Any domain name works, but one that identifies the nature of
+the station is recommended, e.g. "BelfastTide.org" -- the ".org"
+suffix is also recommended, to indicate that the domain belongs to a
+non-commercial entity.
+
+After the domain has been purchased, select "Zero Trust" at the left
+side of the screen. The Cloudflare One screen will appear; from
+there, select Networks -> Tunnels & Mesh. On the Tunnels & Mesh
+screen, select "Create a tunnel" at the top right, choose the
+Cloudflare tunnel type, and follow the prompts.
+
+Following tunnel creation, the tunnel's configuration screen
+appears. Use the "Connectors" button to download and configure the
+tunnel connector on the RPi -- select "Debian," 64-bit, and follow
+the instructions given there. Once the connector is configured,
+communication with the Cloudflare service is established
+automatically.
+
+Return to the Tunnels & Mesh screen. On the entry for the new
+tunnel, click the ellipses at the right and select "Configure," then
+select the "Published application routes" tab at the top of the
+page.
+
+The published application routes are what allow queries to this
+station's domain to actually be routed to the tunnel. The basic
+route is just the domain name itself, selected from the Domain
+pull-down, with Service Type: HTTP, URL: localhost:80. The following
+subdomains are added the same way, each built on that same domain:
+
+    www.<domain>      HTTP   localhost:80
+    ssh.<domain>       SSH   localhost:22
+    note.<domain>     HTTP   localhost:8088
+    vnc.<domain>       TCP   localhost:5901
+    grafana.<domain>  HTTP   localhost:3000
+
+Not every station needs every one of these -- "note." only matters
+for a Notecard-linked sensor (see the separate notehub.io tutorial),
+and "grafana." only if Grafana is actually installed on this
+station -- but "www.", "ssh.", and "vnc." are needed on every
+station, for the public web page and for admin/maintenance access.
+
+Once configured, these routes can be tested from any network-
+connected host. If Apache2 has already been installed on the RPi, a
+request to <domain> should return Apache2's own default
+initialization page.
+
+Any host that will connect to this station over SSH through the
+tunnel needs a corresponding entry in its own SSH config file
+(".ssh/config"). On a Windows host, using the Windows build of
+cloudflared, this looks like:
+
+    Host ssh.<domain>
+      ProxyCommand C:\Cloudflared\bin\cloudflared.exe access ssh --hostname %h
+
+The path to cloudflared.exe may need to be adjusted to match where
+it was actually installed. On macOS or Linux, the same idea applies,
+using that platform's own cloudflared binary and its own installed
+path in place of the Windows one shown here.
