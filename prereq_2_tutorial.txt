@@ -36,3 +36,24 @@ domain's DNS settings; having the Cloudflare DNS records page open
 at the same time makes this considerably easier, since each Brevo
 record needs to be added there directly. Once entered, Brevo's setup
 wizard verifies the domain and its records.
+
+The credentials needed to actually authenticate with Brevo still
+need to be retrieved separately, from the brevo.com "Settings ->
+SMTP & API" page. On that page, look for the panel titled "Your SMTP
+Settings," and select "Generate SMTP key" -- name the key so it
+identifies this specific tide station (its URL is a reasonable
+choice), then copy and save every value shown there before leaving
+the page, since the key itself is not shown again afterward.
+
+These Brevo values map directly onto the tide station's own
+configuration fields:
+
+    Brevo "SMTP Server"       ->  tide_constants.json BREVO_SMTP_SERVER
+    Brevo "Login"             ->  tide_constants.json BREVO_EMAIL_USERNAME
+    Brevo SMTP key value      ->  tide_constants.json BREVO_EMAIL_PASSWORD
+    Brevo "Port"              ->  tide.env SMTP_PORT
+
+BREVO_EMAIL_ADDRESS, the one remaining field, is not something Brevo
+provides directly -- it's simply "tidealert@<domain>," the same
+sending address already established as this station's Sender,
+earlier in this same setup.
