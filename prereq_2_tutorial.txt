@@ -1,0 +1,38 @@
+Note that creation of the tide station's domain name (see the
+Cloudflare tutorial) is a prerequisite to this email configuration.
+
+The tide station issues email notifications and alerts based on
+administrator and user settings. Administrator email settings are
+configured through the station's own tide.env file. A user's own
+interface to the alerting system is through the website's home page
+menu, which handles email registration and verification directly.
+
+Brevo.com is the email service used for all outgoing email from the
+tide station. The following steps activate the email-sending service
+for a given station.
+
+From a browser, go to brevo.com. If this is an entirely new setup,
+register for a free account before proceeding -- registration
+includes establishing the account owner's own email address, which
+becomes the tide station administrator's contact address.
+
+Log in to the brevo.com account, and from the home page, select the
+settings icon in the top row of widgets. From the left side panel,
+select "Senders, Domains & IPs." When that screen appears, select
+"Add Sender."
+
+The convention for the actual sending address is
+"tidealert@<domain>," where <domain> is the same Cloudflare domain
+already created for this station. In the Add Sender window, enter
+the "From Name" as "<station identifier>-Tide-Alert" (e.g.
+"Belfast-Tide-Alert"), and the "From Email" as "tidealert@<domain>"
+(e.g. "tidealert@belfasttide.org").
+
+Next, select the "Domains" tab and "Add a domain." A popup prompts
+for the domain name -- enter the same base domain configured during
+the Cloudflare setup (e.g. "belfasttide.org"). A series of panels
+will then show the specific records that need to be added to that
+domain's DNS settings; having the Cloudflare DNS records page open
+at the same time makes this considerably easier, since each Brevo
+record needs to be added there directly. Once entered, Brevo's setup
+wizard verifies the domain and its records.
