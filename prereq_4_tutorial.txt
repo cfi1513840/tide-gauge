@@ -1,0 +1,22 @@
+Twilio.com provides the SMS services used by the tide station to
+issue text messages for administrative and alerting purposes. A new
+tide station deployment would normally use an existing Twilio
+account and sending phone number.
+
+If this deployment requires setting up a new Twilio account instead,
+refer to Twilio's own documentation at https://www.twilio.com/docs
+for up to date guidance on that process, including selection and
+verification of a Twilio sending phone number.
+
+The Twilio account credentials must be entered into the
+tide_constants.json file. For an existing account, the credentials
+will be provided by the tide station network administrator; for a
+new account, they are derived from the account settings following
+configuration and testing.
+
+    Account SID (Twilio home page)          TWILIO_ACCOUNT_SID
+    Auth Token (Twilio home page)           TWILIO_AUTH_TOKEN
+    Phone number (Twilio My Inventory page) TWILIO_PHONE_SENDER
+
+TWILIO_PHONE_RECIPIENT is not taken from Twilio at all -- it is
+simply the phone number assigned to this station's own administrator.
