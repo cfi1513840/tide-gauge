@@ -48,11 +48,13 @@ subdomains are added the same way, each built on that same domain:
     vnc.<domain>       TCP   localhost:5901
     grafana.<domain>  HTTP   localhost:3000
 
-Not every station needs every one of these -- "note." only matters
-for a Notecard-linked sensor (see the separate notehub.io tutorial),
-and "grafana." only if Grafana is actually installed on this
-station -- but "www.", "ssh.", and "vnc." are needed on every
-station, for the public web page and for admin/maintenance access.
+Not every station needs "note." -- that route only matters for a
+Notecard-linked sensor (see the separate notehub.io tutorial) -- but
+"www.", "ssh.", "vnc.", and "grafana." are all needed on every
+station: the first three for the public web page and for
+admin/maintenance access, and "grafana." because Grafana is this
+project's actual means of accessing a station's local InfluxDB
+database, not an optional extra.
 
 Once configured, these routes can be tested from any network-
 connected host. If Apache2 has already been installed on the RPi, a

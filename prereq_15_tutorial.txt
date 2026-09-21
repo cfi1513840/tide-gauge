@@ -1,0 +1,63 @@
+Grafana is this project's actual means of accessing a station's
+local InfluxDB 3 Core database -- InfluxDB 3 Core has no built-in
+web UI of its own, so without Grafana, the data being collected has
+no way to actually be viewed or graphed locally. It is not an
+optional add-on.
+
+First confirm this station is running a 64-bit OS, since Grafana's
+official ARM builds require it:
+
+    uname -m
+
+This should report "aarch64." If it instead reports "armv7l" or
+similar, this station's OS itself would need reinstalling as 64-bit
+before continuing -- Grafana's official packages do not support a
+32-bit OS.
+
+Grafana has had official, native ARM64/ARMv7 support since version
+5.2.0, so no unofficial third-party build is needed. Install it from
+Grafana's own official apt repository:
+
+    sudo apt-get install -y apt-transport-https software-properties-common wget
+    sudo mkdir -p /etc/apt/keyrings/
+    wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
+    sudo apt-get update
+    sudo apt-get install -y grafana
+    sudo systemctl enable --now grafana-server
+
+Once running, Grafana is reachable at port 3000. Log in and set a
+real administrator password immediately -- Grafana ships with the
+well-known default of admin/admin, and this station's grafana.
+Cloudflare route (see the Cloudflare tutorial) means this instance
+is reachable from the open internet, not just locally.
+
+Grafana needs its own connection to this station's local InfluxDB 3
+Core instance before it can actually show anything. From Grafana's
+own interface, add a new InfluxDB data source, pointed at
+http://127.0.0.1:8181 -- use the explicit IPv4 address here, not
+"localhost". On a modern system, "localhost" can resolve to IPv6
+first, while InfluxDB 3 Core only ever binds IPv4; using
+"localhost" can fail with a misleading "connection refused" even
+though the server itself is perfectly healthy.
+
+Select SQL as the query language, and the database name configured
+for this station (normally "TideData," per
+tide_constants.json.template's INFLUXDB_LOCAL_DATABASE). Under this
+data source's Advanced Database Settings specifically, enable
+"Insecure Connection" -- this is a different, separate setting from
+"Skip TLS Verify" in the general TLS/SSL section, which does nothing
+here, since the local instance uses plain HTTP with no TLS
+involved at all. Without "Insecure Connection" enabled, the
+connection fails with an error resembling "tls: first record does
+not look like a TLS handshake."
+
+If the SQL/InfluxQL selector does not appear at all when adding the
+data source, check /etc/grafana/grafana.ini for a
+[feature_toggles] section, and add "enable =
+newInfluxDSConfigPageDesign" if it is missing -- this was required
+on an earlier Grafana version, though a newer one may already
+include it by default.
+
+Finally, use "Save & Test" to confirm the connection succeeds before
+building any actual dashboards.

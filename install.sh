@@ -28,6 +28,9 @@ echo " 13. If a LoRa-linked sensor is defined, the LoRa receiver must be plugged
 echo "     the USB port specified by SERIAL_PORTS in tide.env."
 echo " 14. If a Notecard-linked sensor is defined, a route must be configured in"
 echo "     notehub.io to deliver its data to this station."
+echo " 15. Grafana must be installed and configured, to provide access to"
+echo "     this station's local InfluxDB database. install.sh does not set"
+echo "     it up."
 echo
 while true; do
   read -p "Enter a prerequisite item number for further instruction, or press Enter to continue: " itemnum
