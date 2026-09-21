@@ -1,0 +1,6 @@
+Apache2 is automatically installed by install.sh if it is not
+already present on this station -- there is nothing to set up
+manually here. install.sh also checks, and if needed corrects, the
+one Apache configuration setting (+FollowSymLinks in
+serve-cgi-bin.conf) this project's CGI scripts specifically depend
+on.

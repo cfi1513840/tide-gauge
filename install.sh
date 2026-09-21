@@ -48,9 +48,15 @@ if [ $answ == "N" ] || [ $answ == "n" ]; then
 fi
 apvar=$(dpkg -l | grep apache2)
 if [ -z "$apvar" ]; then
-   echo "Apache2 and all other supporting modules must be"
-   echo " installed prior to running the install.sh script"
-   exit
+   echo -e "\e[0mApache2 is not yet installed -- installing it now."
+   sudo apt-get update
+   sudo apt-get install -y apache2
+fi
+sqlvar=$(dpkg -l | grep 'sqlite3 ')
+if [ -z "$sqlvar" ]; then
+   echo -e "\e[0mSQLite3 is not yet installed -- installing it now."
+   sudo apt-get update
+   sudo apt-get install -y sqlite3
 fi
 echo
 if grep -q "+FollowSymLinks" /etc/apache2/conf-available/serve-cgi-bin.conf; then

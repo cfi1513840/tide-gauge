@@ -1,0 +1,3 @@
+SQLite3 is automatically installed by install.sh if it is not
+already present on this station -- there is nothing to set up
+manually here.
