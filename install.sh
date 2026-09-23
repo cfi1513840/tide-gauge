@@ -13,7 +13,7 @@ echo "Prerequisites for tide station installation:"
 echo
 echo " 1.  A phone number and email address to be used for receiving administrative alerts."
 echo " 2.  A mail server account and address to be used for the issuance of tide station alerts."
-echo " 3.  InfluxDB installed and configured with Organization: TideGauge, Bucket: TideData."
+echo " 3.  InfluxDB 3 Core installed locally, with a database named TideData."
 echo " 4.  A TWILIO SMS account for the issuance of tide station alert messages."
 echo " 5.  One of the following API keys: WeatherUndergroud, OpenWeatherMap, or WeatherLink."
 echo " 6.  A Cloudflare.com account with a domain to be used for the tide station web server."
@@ -31,6 +31,9 @@ echo "     notehub.io to deliver its data to this station."
 echo " 15. Grafana must be installed and configured, to provide access to"
 echo "     this station's local InfluxDB database. install.sh does not set"
 echo "     it up."
+echo " 16. An InfluxDB Cloud account, for this station's cloud sync, with"
+echo "     Organization: TideGauge, Bucket: TideData -- unlike the local"
+echo "     database (item 3), InfluxDB Cloud genuinely needs both."
 echo
 while true; do
   read -p "Enter a prerequisite item number for further instruction, or press Enter to continue: " itemnum

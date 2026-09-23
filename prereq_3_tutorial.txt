@@ -1,0 +1,82 @@
+InfluxDB 3 Core is the local, self-hosted database this station
+writes its own sensor readings into. It has no organization concept
+at all -- unlike InfluxDB Cloud (a separate prerequisite, used for
+this project's cloud sync), which does. The only naming that
+actually matters here is the database itself, named "TideData"
+(tide_constants.json.template's INFLUXDB_LOCAL_DATABASE).
+
+Confirm this station is running a 64-bit OS first, since InfluxDB 3
+Core's official builds require it:
+
+    uname -m
+
+This should report "aarch64." If it instead reports "armv7l" or
+similar, this station's OS itself would need reinstalling as 64-bit
+before continuing.
+
+Run InfluxData's own installer:
+
+    curl -O https://www.influxdata.com/d/install_influxdb3.sh
+    sh install_influxdb3.sh
+
+When prompted for an install type, choose "Simple Download," not
+Docker Compose -- this matches how the rest of this project expects
+to invoke the binary directly through systemd, not through a
+container. When prompted for a storage solution, choose "File
+storage (Persistent)" -- Object storage adds an unnecessary remote
+dependency for what is a single, local RPi, and In-memory storage
+would lose every reading on the next reboot.
+
+The installer leaves a temporary, foreground instance of InfluxDB 3
+Core running once it finishes, using its own defaults -- a
+placeholder node ID, bound to every network interface rather than
+just localhost, with its data in a hidden, dot-prefixed directory --
+none of which match this project's actual setup. This needs to be
+fully stopped before continuing. A closed terminal window does not
+reliably stop it if it was ever left running in the background, so
+confirm directly rather than assume:
+
+    sudo ss -tlnp | grep 8181
+
+Once confirmed stopped, move its data out of the installer's
+default location into this project's own convention -- partly to
+match the existing systemd service template, and partly to avoid
+any confusion with an existing InfluxDB V2 install that might
+already be present on the same station:
+
+    mkdir -p /home/tide/influxdb3
+    mv /home/tide/.influxdb/data /home/tide/influxdb3/data
+
+InfluxDB 3 Core does not create its own plugin directory
+automatically, and its systemd service fails to start without it
+if a plugin directory is configured at all, which this project's
+own template does:
+
+    mkdir -p /home/tide/influxdb3/plugins
+
+Now set up the actual, permanent service, starting from this
+project's own template:
+
+    cp influxdb3_template.service influxdb3.service
+
+Edit the copy, changing its placeholder --node-id value to this
+station's actual name -- easy to miss, since it is buried inside a
+single, long ExecStart line. Confirm --data-dir matches the path
+used above, and that --http-bind reads 127.0.0.1:8181, not
+0.0.0.0:8181 as the installer's own temporary instance used.
+
+    sudo cp influxdb3.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now influxdb3
+    sudo systemctl status influxdb3
+
+That last command should show the service active and running, with
+no errors. Finally, generate the admin token that
+tide_constants.json's INFLUXDB_LOCAL_TOKEN needs:
+
+    influxdb3 create token --admin
+
+This prints the actual token value directly to the terminal, and
+only ever does so this once -- copy it somewhere safe immediately,
+since it is hashed on the server side right afterward, with no way
+to recover the original value later.

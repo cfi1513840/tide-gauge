@@ -1,0 +1,34 @@
+InfluxDB Cloud is the shared, hosted database this project syncs
+every station's data into, separately from each station's own local
+InfluxDB 3 Core instance. Unlike the local database, InfluxDB Cloud
+genuinely has an organization concept, and every station in this
+project shares the same one: Organization "TideGauge," Bucket
+"TideData." A new tide station deployment would normally use this
+existing account and its existing credentials, rather than setting
+up a new organization or bucket of its own.
+
+If this deployment does require setting up a new InfluxDB Cloud
+account instead, refer to InfluxData's own documentation at
+https://www.influxdata.com/products/influxdb-cloud/ for up to date
+guidance on account creation, and on creating the "TideGauge"
+organization and "TideData" bucket within it once signed up.
+
+For an existing account, the values needed are provided by the tide
+station network administrator, since the token in particular is
+shared across every station rather than unique to this one -- unlike
+the local InfluxDB 3 Core admin token, which is generated fresh, per
+station, during that separate installation. For a new account, these
+are read back from the account itself once the organization, bucket,
+and an API token (with read/write access to that bucket) have all
+been created.
+
+Three of the four values are not secrets, and live in tide.env:
+
+    Cloud URL (account API/host settings)   INFLUXDB_CLOUD_URL
+    Organization name                       INFLUXDB_CLOUD_ORG
+    Bucket name                             INFLUXDB_CLOUD_BUCKET
+
+The fourth, the API token itself, is a genuine secret, and lives in
+tide_constants.json instead:
+
+    API token                               INFLUXDB_CLOUD_TOKEN
