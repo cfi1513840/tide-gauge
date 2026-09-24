@@ -11,6 +11,13 @@ WorkingDirectory=/home/tide/bin/tidegauge
 StandardOutput=inherit
 StandardError=inherit
 User=tide
+# Restart tide.py automatically if the process dies with an error
+# (an exit code other than 0, or a fatal signal). A deliberate clean
+# exit -- e.g. tide.py refusing to start because tidemonitor.py is
+# already running -- is NOT restarted. Each restart repeats the
+# ExecStartPre 180-second delay above.
+Restart=on-failure
+RestartSec=30
 
 [Install]
 WantedBy=multi-user.target
