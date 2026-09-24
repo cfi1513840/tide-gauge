@@ -214,6 +214,35 @@ Earlier stations already running the bare TigerVNC scraper
 applies to new deployments going forward, not a retrofit of stations
 already in service.
 
+### 2.3 SSH
+
+Every station also needs SSH access for the same admin/maintenance
+purposes as VNC, reached the same way — through the Cloudflare
+Tunnel, never an open port. Raspberry Pi OS ships with its SSH
+server disabled by default, so this needs verifying (and enabling,
+if this is a fresh station) rather than assumed.
+
+From `sudo raspi-config`, select **Interface Options**, then **SSH**,
+and confirm it's enabled. (Skip any guide that instead tells you to
+select a specific numbered shortcut like "I1 SSH" — those shortcuts
+get renumbered between Raspberry Pi OS releases and are a common
+source of outdated instructions; the plain menu names above stay
+stable.)
+
+Access itself is controlled by `/home/tide/.ssh/authorized_keys`.
+Each line in this file is one client's public key; a client whose
+public key is listed there can connect without a password, and one
+that isn't, can't. Setting up SSH access for a new client machine
+means appending that machine's own public key as a new line in this
+file — nothing else needs to change on the station's side to grant
+or revoke a given client.
+
+The corresponding client-side configuration — the `~/.ssh/config`
+entry that routes an outgoing connection through this station's
+Cloudflare Tunnel rather than trying to reach it directly — is
+already covered in the Cloudflare tutorial (prerequisite 6), rather
+than repeated here.
+
 ## 3. Fresh installation procedure
 
 This section walks through `install.sh` as it actually runs, in
