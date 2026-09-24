@@ -4,7 +4,7 @@
 
 One-off setup utility: encrypts every value in a plaintext JSON file
 of station secrets (API tokens, credentials, etc.) with the Fernet
-key at /home/tide/bin/tidegauge/ku, and writes the result to
+key ku in this script's own directory, and writes the result to
 tide_constants.tmp for review before it replaces the real
 tide_constants.json. Run once per station when initially provisioning
 secrets, or after rotating a value by hand.
@@ -27,7 +27,10 @@ if os.path.exists(infile):
 else:    
     print ('Non-existent input file specified')
     exit()
-with open('/home/tide/bin/tidegauge/ku', 'r') as file:
+# ku is read from the directory this script lives in (the directory
+# install.sh runs from), not a hardcoded path, so that during an
+# upgrade the new directory's own copy of the key is used.
+with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ku'), 'r') as file:
     key = file.read()
 enkey = Fernet(key)
 #

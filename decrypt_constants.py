@@ -4,7 +4,7 @@
 
 Companion to encrypt_constants.py: decrypts every value in an
 encrypted tide_constants.json (or a backup copy of one) with the
-Fernet key at /home/tide/bin/tidegauge/ku, and writes the clear-text
+Fernet key ku in this script's own directory, and writes the clear-text
 result to tide_constants_decrypted.tmp for review or editing. Used
 when adding a parameter to an existing station's constants file
 without losing the values already encrypted there -- decrypt, edit
@@ -32,7 +32,10 @@ if os.path.exists(infile):
 else:
     print('Non-existent input file specified')
     exit()
-with open('/home/tide/bin/tidegauge/ku', 'r') as file:
+# ku is read from the directory this script lives in (the directory
+# install.sh runs from), not a hardcoded path, so that during an
+# upgrade the new directory's own copy of the key is used.
+with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ku'), 'r') as file:
     key = file.read()
 enkey = Fernet(key)
 #

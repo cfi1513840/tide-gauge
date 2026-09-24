@@ -1,10 +1,65 @@
 #!/bin/bash
-if test -e /home/tide/bin/tidegauge/k1; then
+# install.sh works entirely on the files in the directory it is run
+# from (workdir): the encryption keys, tide_constants.json, tide.env
+# and sensor_fields.json. During an upgrade that is the new directory
+# (e.g. ~/bin/tidegauge-new), which is later renamed to
+# /home/tide/bin/tidegauge -- so any file missing from workdir now
+# would also be missing after the rename. livedir is only consulted to
+# detect that this is an upgrade of an existing station.
+workdir="$(pwd -P)"
+livedir=/home/tide/bin/tidegauge
+livedir_real="$(readlink -f "$livedir" 2>/dev/null)"
+
+# Upgrade check: running somewhere other than the live directory on a
+# station that already has an installation. Every per-station file
+# must have been copied into workdir first (Installation Manual, 3.15).
+if [ "$workdir" != "$livedir_real" ] && test -e "${livedir}/tide_constants.json"; then
+  missingfiles=""
+  for f in tide_constants.json tide.env sensor_fields.json k1 k2 k3 ku; do
+    if ! test -e "${workdir}/$f"; then
+      missingfiles="$missingfiles $f"
+    fi
+  done
+  if [ -n "$missingfiles" ]; then
+    echo -e "\e[31mStopping: this looks like an upgrade (an existing installation"
+    echo "  was found at ${livedir}), but these per-station files are"
+    echo "  missing from ${workdir}:"
+    echo
+    echo "   ${missingfiles}"
+    echo
+    echo "  They would also be missing after this directory is renamed into"
+    echo "  place. Copy them from the existing installation, keeping their"
+    echo "  permissions, then run install.sh again:"
+    echo
+    echo "    cd ${livedir}"
+    echo "    cp -p${missingfiles} ${workdir}/"
+    echo -e "\e[0m"
+    exit 1
+  fi
+  if ! test -e "${workdir}/.cloud_sync_watermark" && test -e "${livedir}/.cloud_sync_watermark"; then
+    echo -e "\e[33mNote: .cloud_sync_watermark was not copied from ${livedir}."
+    echo "  Without it, the first cloud sync after cutover re-sends this"
+    echo "  station's entire local history to InfluxDB Cloud (harmless, but"
+    echo "  slow). To avoid that:  cp -p ${livedir}/.cloud_sync_watermark ${workdir}/"
+    echo -e "\e[0m"
+  fi
+fi
+
+keycount=0
+missingkeys=""
+for k in k1 k2 k3 ku; do
+  if test -e "${workdir}/$k"; then
+    keycount=$((keycount + 1))
+  else
+    missingkeys="$missingkeys $k"
+  fi
+done
+if [ $keycount -eq 4 ]; then
   keyfound=1
 else
   keyfound=0
 fi
-if test -e /home/tide/bin/tidegauge/tide_constants.json; then
+if test -e "${workdir}/tide_constants.json"; then
   jsonfound=1
 else
   jsonfound=0
@@ -14,28 +69,14 @@ fi
 # encrypted data. makekeys.py (run further below when keyfound=0)
 # creates a brand-new k1/k2/k3/ku set, which can never decrypt a
 # tide_constants.json, or subscriber data in tides.db, that was
-# encrypted with the original keys. The usual way to get here is an
-# upgrade into a new directory (see the Installation Manual, 3.15)
-# where the key files weren't copied over along with the config
-# files. So: if the full key set isn't present, but a
-# tide_constants.json already exists (at the live path or in the
-# directory install.sh is running from), stop before changing
-# anything. Also stop on a partial key set, which means some keys
-# have been lost rather than never created.
-keydir=/home/tide/bin/tidegauge
-keycount=0
-missingkeys=""
-for k in k1 k2 k3 ku; do
-  if test -e ${keydir}/$k; then
-    keycount=$((keycount + 1))
-  else
-    missingkeys="$missingkeys $k"
-  fi
-done
+# encrypted with the original keys. So: if the full key set isn't in
+# workdir but a tide_constants.json is, stop before changing anything.
+# Also stop on a partial key set, which means some keys have been lost
+# rather than never created.
 if [ $keycount -lt 4 ]; then
-  if [ $jsonfound -eq 1 ] || test -e tide_constants.json || [ $keycount -gt 0 ]; then
+  if [ $jsonfound -eq 1 ] || [ $keycount -gt 0 ]; then
     echo -e "\e[31mStopping: the encryption key file(s)${missingkeys} are missing"
-    echo "  from ${keydir}, but existing encrypted data was found"
+    echo "  from ${workdir}, but existing encrypted data was found"
     if [ $keycount -gt 0 ]; then
       echo "  (a partial key set is present)."
     else
@@ -45,11 +86,11 @@ if [ $keycount -lt 4 ]; then
     echo "  Generating new keys here would make that data permanently"
     echo "  unreadable, so install.sh will not run makekeys.py."
     echo
-    echo "  If this is an upgrade into a new directory, copy the key files"
-    echo "  from the previous installation (e.g. tidegauge-save), keeping"
-    echo "  their permissions, then run install.sh again:"
+    echo "  Copy the key files from the installation they belong with"
+    echo "  (e.g. ~/bin/tidegauge-save after an upgrade), keeping their"
+    echo "  permissions, then run install.sh again:"
     echo
-    echo "    cp -p ~/bin/tidegauge-save/{k1,k2,k3,ku} ${keydir}/"
+    echo "    cp -p ~/bin/tidegauge-save/{k1,k2,k3,ku} ${workdir}/"
     echo
     echo "  If this really is a fresh install and the existing"
     echo "  tide_constants.json is a leftover, remove it first."
@@ -244,10 +285,10 @@ echo "HTML files will be copied to ${htmldir}"
 echo "CGI files will be copied to $cgidir"
 echo
 if [ $jsonfound == 1 ]; then
-  echo -e "\e[0mChecking the existing /home/tide/bin/tidegauge/tide_constants.json"
+  echo -e "\e[0mChecking the existing ${workdir}/tide_constants.json"
   echo "  against tide_constants.json.template for missing or obsolete"
   echo "  parameters..."
-  /usr/bin/python check_config_drift.py /home/tide/bin/tidegauge/tide_constants.json tide_constants.json.template json | tee /tmp/tide_constants_drift_report.txt
+  /usr/bin/python check_config_drift.py tide_constants.json tide_constants.json.template json | tee /tmp/tide_constants_drift_report.txt
   drift_status=${PIPESTATUS[0]}
   if [ $drift_status -eq 0 ]; then
     echo -e "\e[0mtide_constants.json is up to date -- nothing to do."
@@ -266,11 +307,11 @@ if [ $jsonfound == 1 ]; then
     echo -e "\e[31m"
     read -p "Hit return to continue: " go
     if check_backup_safe tide_constants.json.dev; then
-      cp -v /home/tide/bin/tidegauge/tide_constants.json tide_constants.json.dev
-      /usr/bin/python decrypt_constants.py /home/tide/bin/tidegauge/tide_constants.json
+      cp -v tide_constants.json tide_constants.json.dev
+      /usr/bin/python decrypt_constants.py tide_constants.json
       nano tide_constants_decrypted.tmp
       /usr/bin/python encrypt_constants.py tide_constants_decrypted.tmp
-      echo "encrypting and writing updated constants file to /home/tide/bin/tidegauge/tide_constants.json"
+      echo "encrypting and writing updated constants file to ${workdir}/tide_constants.json"
       mv -v tide_constants.tmp tide_constants.json
       rm -f tide_constants_decrypted.tmp
     else
@@ -286,7 +327,7 @@ else
     read -p "Do you want to use it to create the encrypted constants file? Y/N: " answ
     if [ $answ == "Y" ] || [ $answ == "y" ]; then
       /usr/bin/python encrypt_constants.py tide_constants.tmp
-      echo "encrypting and writing new constants file to /home/tide/bin/tidegauge/tide_constants.json"
+      echo "encrypting and writing new constants file to ${workdir}/tide_constants.json"
       mv -v tide_constants.tmp tide_constants.json
     fi  
   else
@@ -305,7 +346,7 @@ else
     echo "  clear text format to include all parameters associated with this"
     echo "  tide station implementation. When editing is complete and the file has"
     echo "  been saved, it will be encrypted and saved as"
-    echo "  /home/tide/bin/tidegauge/tide_constants.json."
+    echo "  ${workdir}/tide_constants.json."
     echo "  Note that no clear text versions of the edited file will be saved."
     echo -e "\e[31m" 
     read -p "Hit return to continue: " go

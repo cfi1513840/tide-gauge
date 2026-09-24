@@ -393,12 +393,15 @@ moved into the systemd directory. Either way, the script then runs
 
 ### 3.7 Encryption keys
 
-If no keys exist yet at `/home/tide/bin/tidegauge/k1`, the script
-runs `makekeys.py` to generate a fresh set (`k1`, `k2`, `k3`, and
-`ku`). If keys already exist, this step is correctly skipped —
-regenerating keys over an existing encrypted `tide_constants.json`
-would make it permanently undecryptable, since that file was
-encrypted under the old keys. The keys are never copied anywhere
+If none of the four keys (`k1`, `k2`, `k3`, `ku`) exist yet in the
+directory the script is run from, and there is no
+`tide_constants.json` there either, the script runs `makekeys.py` to
+generate a fresh set. If all four keys already exist, this step is
+skipped. In any other case (some keys missing, or keys missing while
+a `tide_constants.json` exists) the script stops at startup instead,
+because regenerating keys over an existing encrypted
+`tide_constants.json` would make it permanently undecryptable (see
+3.15). The keys are never copied anywhere
 else — they, like `tide_constants.json`, `tide.env`, and
 `sensor_fields.json`, live exclusively in `~/bin/tidegauge`; nothing
 reads them from `/var/www/html`.
@@ -553,25 +556,29 @@ crash or unplanned restart of the live process during this whole
 preparation phase is harmless, since nothing it depends on has
 changed.
 
-**The key files are the easy ones to miss, and missing them is the
-costly mistake.** Before the cutover, nothing notices they're absent:
-while preparing the new directory, `install.sh` and `tide.py` both
-read keys from the live `/home/tide/bin/tidegauge/` path (see below),
-where they still exist. After the rename, the new directory has no
-keys, so `tidecrypto.py` can't load them and `tide.py` can't decrypt
+**`install.sh` checks for these files before it does anything.**
+It works only on the files in the directory it is run from, never
+on the live copies, because that directory is what becomes
+`/home/tide/bin/tidegauge/` after the rename. If it is run anywhere
+other than `/home/tide/bin/tidegauge/` on a station that already has
+an installation there, and any of `tide_constants.json`, `tide.env`,
+`sensor_fields.json`, `k1`, `k2`, `k3` or `ku` is missing, it stops
+immediately and prints the `cp -p` command for the missing files.
+
+The key files matter most. Without them, `tide.py` can't decrypt
 `tide_constants.json` or any subscriber's stored email address or
-phone number. The follow-up `install.sh` run described below catches
-this: when any key file is missing but a `tide_constants.json`
-already exists (or only some of the keys are present), it stops with
-an error instead of running `makekeys.py`. A brand-new key set could
-never decrypt the existing data. The fix is to copy the original
-keys back from `tidegauge-save` with `cp -p` and run `install.sh`
-again.
+phone number, and a brand-new key set from `makekeys.py` never
+could. So even in its own directory, `install.sh` refuses to run
+`makekeys.py` when a `tide_constants.json` is present but the keys
+aren't, or when only some of the keys are present. If that happens
+after a cutover, copy the original keys back from `tidegauge-save`
+with `cp -p` and run `install.sh` again.
 
 The watermark matters less. Without it, the first cloud sync after
 cutover starts again from the beginning and re-sends the station's
 entire local history to InfluxDB Cloud. That's harmless, since
-identical points simply overwrite themselves, but slow.
+identical points simply overwrite themselves, but slow. `install.sh`
+prints a reminder if it wasn't copied, but carries on.
 
 **Why the new directory can be prepared, but not run, in place.** `tidehelper.py`
 loads `tide_constants.json` (and `tidecrypto.py` loads the Fernet
@@ -579,12 +586,10 @@ key, `ku`, plus `k1`/`k2`/`k3`) from a path hardcoded directly into
 the source as the literal string `/home/tide/bin/tidegauge/` — not
 derived from wherever the script actually runs from. This means
 `tide.py` itself will *always* read whatever is at that exact path,
-no matter which directory it was launched from. (`decrypt_constants.py`
-and `encrypt_constants.py` are the one exception — they take the
-JSON file to operate on as a command-line argument, so those two
-specifically *are* safe to run against a file anywhere, including
-inside the new directory; only their own key-loading line is
-hardcoded the same way.)
+no matter which directory it was launched from. (The install-time
+tools are different: `install.sh`, `decrypt_constants.py` and
+`encrypt_constants.py` all use the files in their own directory, so
+they can prepare the new directory without touching the live one.)
 
 The practical result: testing the new branch's `tide.py` against its
 own, newly-edited config requires that config to actually be reachable
