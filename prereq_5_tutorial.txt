@@ -1,0 +1,15 @@
+OpenWeatherMap is the current weather data provider used by the
+tide station. For an existing account, the tide station network
+administrator will normally provide the API key needed to access
+weather reports.
+
+If a new account is required instead, go to openweathermap.org from
+a browser and register for a free account. Once logged in, use "Get
+API Key" to obtain a key.
+
+That key is entered during install.sh as the tide_constants.json
+parameter WXOPENAPI. Two further parameters, in tide.env rather than
+tide_constants.json, are also required at that same point:
+
+    WX_SERVICE='openwx'
+    WX_OPEN_URL='https://api.openweathermap.org/data/2.5/weather?'
