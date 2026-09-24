@@ -9,6 +9,54 @@ if test -e /home/tide/bin/tidegauge/tide_constants.json; then
 else
   jsonfound=0
 fi
+
+# Guard against silently regenerating encryption keys over existing
+# encrypted data. makekeys.py (run further below when keyfound=0)
+# creates a brand-new k1/k2/k3/ku set, which can never decrypt a
+# tide_constants.json, or subscriber data in tides.db, that was
+# encrypted with the original keys. The usual way to get here is an
+# upgrade into a new directory (see the Installation Manual, 3.15)
+# where the key files weren't copied over along with the config
+# files. So: if the full key set isn't present, but a
+# tide_constants.json already exists (at the live path or in the
+# directory install.sh is running from), stop before changing
+# anything. Also stop on a partial key set, which means some keys
+# have been lost rather than never created.
+keydir=/home/tide/bin/tidegauge
+keycount=0
+missingkeys=""
+for k in k1 k2 k3 ku; do
+  if test -e ${keydir}/$k; then
+    keycount=$((keycount + 1))
+  else
+    missingkeys="$missingkeys $k"
+  fi
+done
+if [ $keycount -lt 4 ]; then
+  if [ $jsonfound -eq 1 ] || test -e tide_constants.json || [ $keycount -gt 0 ]; then
+    echo -e "\e[31mStopping: the encryption key file(s)${missingkeys} are missing"
+    echo "  from ${keydir}, but existing encrypted data was found"
+    if [ $keycount -gt 0 ]; then
+      echo "  (a partial key set is present)."
+    else
+      echo "  (a tide_constants.json already exists)."
+    fi
+    echo
+    echo "  Generating new keys here would make that data permanently"
+    echo "  unreadable, so install.sh will not run makekeys.py."
+    echo
+    echo "  If this is an upgrade into a new directory, copy the key files"
+    echo "  from the previous installation (e.g. tidegauge-save), keeping"
+    echo "  their permissions, then run install.sh again:"
+    echo
+    echo "    cp -p ~/bin/tidegauge-save/{k1,k2,k3,ku} ${keydir}/"
+    echo
+    echo "  If this really is a fresh install and the existing"
+    echo "  tide_constants.json is a leftover, remove it first."
+    echo -e "\e[0m"
+    exit 1
+  fi
+fi
 echo "Prerequisites for tide station installation:"
 echo
 echo " 1.  A phone number and email address to be used for receiving administrative alerts."

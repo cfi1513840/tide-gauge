@@ -532,16 +532,48 @@ installation (`~/bin/tidegauge-new`, say, next to the live
 `~/bin/tidegauge`) — never into the live directory itself, and never
 by pulling new commits into it while it's still the one actually
 running. Copy `tide_constants.json`, `tide.env`, and
-`sensor_fields.json` from the live directory into the new one, and
-run `install.sh` there. This lets `install.sh`'s drift-check
-reconcile the *copies* against the new branch's templates, while the
-live files — and the live `tide.py` reading them — stay completely
-untouched throughout. A crash or unplanned restart of the live
-process during this whole preparation phase is harmless, since
-nothing it depends on has changed.
+`sensor_fields.json` from the live directory into the new one, along
+with the four encryption key files (`k1`, `k2`, `k3`, `ku`) and the
+cloud sync watermark (`.cloud_sync_watermark`), then run `install.sh`
+there:
 
-**Copy config files this way — but not the encryption key or
-`tide_constants.json`'s own runtime load path.** `tidehelper.py`
+```bash
+cd ~/bin/tidegauge
+cp -p tide_constants.json tide.env sensor_fields.json \
+      k1 k2 k3 ku .cloud_sync_watermark ../tidegauge-new/
+```
+
+(`cp -p` keeps each file's owner and permissions, which matters for
+the key files.)
+
+This lets `install.sh`'s drift-check reconcile the *copies* against
+the new branch's templates, while the live files — and the live
+`tide.py` reading them — stay completely untouched throughout. A
+crash or unplanned restart of the live process during this whole
+preparation phase is harmless, since nothing it depends on has
+changed.
+
+**The key files are the easy ones to miss, and missing them is the
+costly mistake.** Before the cutover, nothing notices they're absent:
+while preparing the new directory, `install.sh` and `tide.py` both
+read keys from the live `/home/tide/bin/tidegauge/` path (see below),
+where they still exist. After the rename, the new directory has no
+keys, so `tidecrypto.py` can't load them and `tide.py` can't decrypt
+`tide_constants.json` or any subscriber's stored email address or
+phone number. The follow-up `install.sh` run described below catches
+this: when any key file is missing but a `tide_constants.json`
+already exists (or only some of the keys are present), it stops with
+an error instead of running `makekeys.py`. A brand-new key set could
+never decrypt the existing data. The fix is to copy the original
+keys back from `tidegauge-save` with `cp -p` and run `install.sh`
+again.
+
+The watermark matters less. Without it, the first cloud sync after
+cutover starts again from the beginning and re-sends the station's
+entire local history to InfluxDB Cloud. That's harmless, since
+identical points simply overwrite themselves, but slow.
+
+**Why the new directory can be prepared, but not run, in place.** `tidehelper.py`
 loads `tide_constants.json` (and `tidecrypto.py` loads the Fernet
 key, `ku`, plus `k1`/`k2`/`k3`) from a path hardcoded directly into
 the source as the literal string `/home/tide/bin/tidegauge/` — not
