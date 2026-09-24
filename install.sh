@@ -98,9 +98,9 @@ check_backup_safe() {
 }
 pyvenv=$(dpkg -l | grep python3-venv)
 if [ -z "$pyvenv" ]; then
-   echo "python3-venv must be installed prior to running the install.sh script"
-   echo "  (apt install python3-venv)"
-   exit
+   echo -e "\e[0mpython3-venv is not yet installed -- installing it now."
+   sudo apt-get update
+   sudo apt-get install -y python3-venv
 fi
 if [ -d /home/tide/.tidenv ]; then
   echo -e "\e[0mPython virtual environment already exists at /home/tide/.tidenv."

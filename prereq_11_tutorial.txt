@@ -1,0 +1,4 @@
+The Python virtual environment (python3-venv, if not already
+present) and every package this project needs (requirements.txt)
+are both automatically installed by install.sh -- there is nothing
+to set up manually here.
