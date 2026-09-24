@@ -114,7 +114,7 @@ need no account at all.
 | **Blues Notehub** (notehub.io) | Cellular sensor connectivity — device registration, Fleet, and the HTTPS route that forwards readings to the station | Only if the station uses a Notecard sensor. Not needed for a LoRa-only station. |
 | **Brevo** | Outbound email for subscriber alerts | Only if the alert feature's email notifications are enabled. |
 | **Twilio** | Outbound SMS for subscriber alerts | Only if the alert feature's SMS notifications are enabled. |
-| **OpenWeatherMap** | Current-conditions weather shown on the local display and website | Only if local weather display is enabled (the currently supported provider — see Section 6 for why the others in the codebase are disabled). |
+| **OpenWeatherMap** | Current-conditions weather shown on the local display and website | Only if local weather display is enabled. |
 | **NOAA CO-OPS** | Tide predictions | Always used, but no account or registration needed — it's a public API. |
 | **NDBC** (buoy data) | Wave height/period, water temperature | Used if the station is near enough to open water for this data to exist. No account needed — public API. |
 
