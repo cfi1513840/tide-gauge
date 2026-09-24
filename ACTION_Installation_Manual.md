@@ -243,6 +243,52 @@ Cloudflare Tunnel rather than trying to reach it directly — is
 already covered in the Cloudflare tutorial (prerequisite 6), rather
 than repeated here.
 
+### 2.4 Cloudflare Tunnel
+
+Every station is an RPi on an ordinary home or office network,
+typically behind a router with no static public IP and no safe way
+to forward inbound ports to it directly. A Cloudflare Tunnel solves
+this the other way around: the RPi itself initiates an outbound
+connection out to Cloudflare's own network, and Cloudflare routes
+public requests for this station's web page, SSH, and VNC back
+through that same tunnel. No inbound port ever needs to be opened on
+the station's own router, and nothing about the setup depends on
+that router's own configuration or NAT situation. Account, domain,
+and tunnel setup are all covered in the Cloudflare tutorial
+(prerequisite 6).
+
+### 2.5 InfluxDB 3 Core (local)
+
+`tide.py` needs fast, reliable reads and writes for its own,
+moment-to-moment operation — outlier detection, the TK display, the
+web page, alerting — none of which can depend on this station's
+internet connection staying up. Each station therefore keeps its own,
+entirely local copy of its own data, independent of anything else,
+and separately syncs that data up to the shared cloud database
+(Section 2.6) whenever connectivity actually allows. Installation is
+covered in the InfluxDB 3 Core tutorial (prerequisite 3).
+
+### 2.6 InfluxDB Cloud
+
+Where each station's local database is deliberately isolated,
+holding only that one station's own data, InfluxDB Cloud is the
+single, shared destination every station syncs into — the only
+place cross-station comparison is possible, and an off-site backup
+of each station's own readings independent of that station's own
+RPi and SD card. Every station shares the same organization and
+bucket; credentials are normally provided by the network
+administrator rather than created fresh per station. Covered in the
+InfluxDB Cloud tutorial (prerequisite 16).
+
+### 2.7 Grafana
+
+InfluxDB 3 Core has no web interface of its own — without Grafana,
+a station's own local data has no way to actually be viewed or
+graphed at all. It is this project's actual means of access to that
+data, not an optional visualization add-on. Installation and the
+local datasource configuration are covered in the Grafana tutorial
+(prerequisite 15).
+
 ## 3. Fresh installation procedure
 
 This section walks through `install.sh` as it actually runs, in
