@@ -372,8 +372,12 @@ before.
 
 If `tide.env` already exists, the script instead compares it against
 `tide.env.template`, reporting any parameters present in one but not
-the other. If nothing's missing or obsolete, it says so and moves on
-with no prompt. If there's a difference, the existing file is backed
+the other. If nothing's missing or obsolete, it says so and asks
+whether to edit the file anyway. That matters when `tide.env` was
+copied from another station: its parameter names match the template,
+but its station-specific values still need changing. Answering "Y"
+backs it up and opens it in `nano`, the same as below. If there's a
+difference, the existing file is backed
 up as `tide.env.dev` before opening directly in `nano` for the
 missing lines to be added and any obsolete ones removed in place. If
 a `tide.env.dev` backup from an earlier run already exists, the
@@ -412,7 +416,10 @@ If an encrypted `tide_constants.json` already exists, the script
 compares its parameter names — the values are encrypted, but the
 key names are read directly, needing no decryption — against
 `tide_constants.json.template`, reporting anything missing or
-obsolete. If the key sets match exactly, nothing further happens. If
+obsolete. If the key sets match exactly, it asks whether to edit
+the file anyway (for example, one copied from another station);
+answering "Y" goes through the same backup, decrypt, edit and
+re-encrypt steps described next. If
 they differ, the existing file is backed up as
 `tide_constants.json.dev` (protected by the same overwrite warning
 described in 3.5), then decrypted to a clear-text scratch file for

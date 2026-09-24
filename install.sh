@@ -185,6 +185,23 @@ check_backup_safe() {
   fi
   return 0
 }
+# Decrypt the existing tide_constants.json to a clear-text scratch copy,
+# edit it in nano, re-encrypt, and move it into place. The encrypted
+# original is backed up first as tide_constants.json.dev.
+edit_existing_constants() {
+  if check_backup_safe tide_constants.json.dev; then
+    cp -v tide_constants.json tide_constants.json.dev
+    /usr/bin/python decrypt_constants.py tide_constants.json
+    nano tide_constants_decrypted.tmp
+    /usr/bin/python encrypt_constants.py tide_constants_decrypted.tmp
+    echo "encrypting and writing updated constants file to ${workdir}/tide_constants.json"
+    mv -v tide_constants.tmp tide_constants.json
+    rm -f tide_constants_decrypted.tmp
+  else
+    echo -e "\e[0mSkipping the tide_constants.json update -- resolve the"
+    echo "  existing backup situation, then run install.sh again."
+  fi
+}
 pyvenv=$(dpkg -l | grep python3-venv)
 if [ -z "$pyvenv" ]; then
    echo -e "\e[0mpython3-venv is not yet installed -- installing it now."
@@ -220,7 +237,16 @@ if test -e tide.env; then
   /usr/bin/python check_config_drift.py tide.env tide.env.template env | tee /tmp/tide_env_drift_report.txt
   drift_status=${PIPESTATUS[0]}
   if [ $drift_status -eq 0 ]; then
-    echo -e "\e[0mtide.env is up to date -- nothing to do."
+    echo -e "\e[0mtide.env is up to date with the template."
+    echo "  (If it was copied from another station, its station-specific"
+    echo "  values may still need changing.)"
+    read -p "Would you like to edit tide.env anyway? Y/N: " answ
+    if [ "$answ" == "Y" ] || [ "$answ" == "y" ]; then
+      if check_backup_safe tide.env.dev; then
+        cp -v tide.env tide.env.dev
+        nano tide.env
+      fi
+    fi
   else
     echo
     echo -e "\e[0mThe existing tide.env needs updating, per the report above."
@@ -291,7 +317,13 @@ if [ $jsonfound == 1 ]; then
   /usr/bin/python check_config_drift.py tide_constants.json tide_constants.json.template json | tee /tmp/tide_constants_drift_report.txt
   drift_status=${PIPESTATUS[0]}
   if [ $drift_status -eq 0 ]; then
-    echo -e "\e[0mtide_constants.json is up to date -- nothing to do."
+    echo -e "\e[0mtide_constants.json is up to date with the template."
+    echo "  (If it was copied from another station, its station-specific"
+    echo "  values may still need changing.)"
+    read -p "Would you like to edit tide_constants.json anyway? Y/N: " answ
+    if [ "$answ" == "Y" ] || [ "$answ" == "y" ]; then
+      edit_existing_constants
+    fi
   else
     echo
     echo -e "\e[31mThe existing tide_constants.json needs updating, per the report"
@@ -306,18 +338,7 @@ if [ $jsonfound == 1 ]; then
     echo "  while editing."
     echo -e "\e[31m"
     read -p "Hit return to continue: " go
-    if check_backup_safe tide_constants.json.dev; then
-      cp -v tide_constants.json tide_constants.json.dev
-      /usr/bin/python decrypt_constants.py tide_constants.json
-      nano tide_constants_decrypted.tmp
-      /usr/bin/python encrypt_constants.py tide_constants_decrypted.tmp
-      echo "encrypting and writing updated constants file to ${workdir}/tide_constants.json"
-      mv -v tide_constants.tmp tide_constants.json
-      rm -f tide_constants_decrypted.tmp
-    else
-      echo -e "\e[0mSkipping the tide_constants.json update -- resolve the"
-      echo "  existing backup situation, then run install.sh again."
-    fi
+    edit_existing_constants
   fi
 else
   if test -e tide_constants.tmp; then
@@ -350,7 +371,13 @@ else
     echo "  Note that no clear text versions of the edited file will be saved."
     echo -e "\e[31m" 
     read -p "Hit return to continue: " go
-    echo
+    cp -v tide_constants.json.template tide_constants.tmp
+    nano tide_constants.tmp
+    # encrypt_constants.py writes its encrypted output to
+    # tide_constants.tmp, replacing the clear-text copy just edited
+    /usr/bin/python encrypt_constants.py tide_constants.tmp
+    echo "encrypting and writing new constants file to ${workdir}/tide_constants.json"
+    mv -v tide_constants.tmp tide_constants.json
     echo -e "\e[0m "
   fi
 fi
