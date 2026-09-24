@@ -109,7 +109,7 @@ need no account at all.
 | Service | Used for | When it's needed |
 |---|---|---|
 | **GitHub** | Cloning the repository | Always. The repo is public — no account is needed just to clone it, only if you intend to contribute changes back. |
-| **InfluxDB Cloud Serverless** | Cloud-synced time-series storage, accessible from anywhere | Always, in the standard architecture. Org and bucket must be created ahead of time (see Section 4). |
+| **InfluxDB Cloud Serverless** | Cloud-synced time-series storage, accessible from anywhere | Always, in the standard architecture. Org and bucket must be created ahead of time (see Section 2.6). |
 | **Cloudflare** (account + Tunnel) | Exposing services to the internet without an open firewall port | Always required — every station needs it for admin/maintenance SSH and VNC access, regardless of other configuration. Also used for a **public website** (if enabled) and for a **Blues Notecard**'s inbound Notehub webhook (if used) — the same Tunnel serves all three purposes as needed. |
 | **Blues Notehub** (notehub.io) | Cellular sensor connectivity — device registration, Fleet, and the HTTPS route that forwards readings to the station | Only if the station uses a Notecard sensor. Not needed for a LoRa-only station. |
 | **Brevo** | Outbound email for subscriber alerts | Only if the alert feature's email notifications are enabled. |
@@ -128,7 +128,7 @@ first.
 - A **GitHub** account only if you plan to contribute back (cloning
   itself needs nothing).
 - Access to the network's **InfluxDB Cloud Serverless** organization
-  and bucket (see Section 4.6 for the exact values this station
+  and bucket (see Section 2.6 for the exact values this station
   expects), or a new one created if this is the first station on a
   fresh network.
 - Access to the network's **Cloudflare** account and domain — needed
@@ -621,13 +621,13 @@ Core, `sudo ss -tlnp | grep <port>`) before assuming it's actually
 gone.
 
 
-## 6. Known issues and troubleshooting notes
+## 4. Known issues and troubleshooting notes
 
 Standing, reusable gotchas worth knowing before they cost you
 debugging time — not a changelog of every bug fixed during
 development, just the ones likely to recur on a future station.
 
-### 6.1 InfluxDB 3 Core installation
+### 4.1 InfluxDB 3 Core installation
 
 - **The quick-installer's own symlink step can fail** (most likely a
   `$EUID`/POSIX `sh` incompatibility, the same class of bug seen in
@@ -667,7 +667,7 @@ development, just the ones likely to recur on a future station.
   convention (`~/influxdb3/data`) also avoids confusing it with any
   InfluxDB V2 install already present on the same machine.
 
-### 6.2 Grafana and the InfluxDB 3 datasource
+### 4.2 Grafana and the InfluxDB 3 datasource
 
 - `localhost` can resolve to IPv6 (`::1`) first on modern systems,
   while `influxdb3` only ever binds IPv4 (`127.0.0.1`, per this
@@ -696,7 +696,7 @@ development, just the ones likely to recur on a future station.
   own Save & Test, or a bare `SHOW TABLES` — before treating a
   table-specific query failure as a connection problem.
 
-### 6.3 Email (Brevo/SMTP)
+### 4.3 Email (Brevo/SMTP)
 
 `BREVO_SMTP_SERVER` lives in `tide_constants.json`; `SMTP_PORT`
 lives separately, in `tide.env`. A missing or blank `SMTP_PORT`
@@ -707,7 +707,7 @@ that looks exactly like a credentials or server-address problem, but
 isn't. Check `tide.env` for `SMTP_PORT=587` before suspecting
 anything in `tide_constants.json`.
 
-### 6.4 Diagnosing CGI failures
+### 4.4 Diagnosing CGI failures
 
 A generic Apache "Internal Server Error" page gives no detail
 whatsoever in the browser — the actual Python traceback only ever
@@ -722,7 +722,7 @@ web root (several CGI scripts hardcode that exact path rather than
 searching from their own working directory), mailspool directory
 permissions, and the CGI file's own executable bit.
 
-### 6.5 Editing JSON configuration files
+### 4.5 Editing JSON configuration files
 
 JSON supports no comments at all, in any form — adding a
 comment-like line to `tide_constants.json` or `sensor_fields.json`
@@ -734,7 +734,7 @@ the key rather than try to comment it out:
 "_DISABLED_BREVO_SMTP_SERVER": "smtp-relay.brevo.com"
 ```
 
-### 6.6 Local vs. cloud InfluxDB credentials
+### 4.6 Local vs. cloud InfluxDB credentials
 
 The InfluxDB **Cloud** token is deliberately the *same* value shared
 across every station — all stations write to one org/bucket, and are
