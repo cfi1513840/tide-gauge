@@ -307,29 +307,29 @@ must be run from.
 
 The script opens by printing its own prerequisite checklist and
 asking whether everything is ready. This list overlaps with Section 2
-above, plus a few purely technical items: SQLite3 installed, the
-required Python modules installed, `tide_constants.json.template` and
-`tide.env.template` available as references, and two
-configuration-dependent items — a LoRa sensor's receiver plugged into
-the USB port named by `SERIAL_PORTS` in `tide.env`, and, for a
-Notecard sensor, a route already configured in notehub.io to deliver
-its data to this station.
+above, plus a few purely technical items — Apache2, SQLite3, and the
+Python virtual environment and its required modules are all
+automatically installed if missing, rather than needing to be
+confirmed here; site-specific configuration prepared with
+`tide_constants.json.template` and `tide.env.template` as a guide —
+and two configuration-dependent items: a LoRa sensor's receiver
+plugged into the USB port named by `SERIAL_PORTS` in `tide.env`, and,
+for a Notecard sensor, a route already configured in notehub.io to
+deliver its data to this station.
 
 Before answering, the prompt offers to look up further detail on any
 numbered item: entering an item number displays that item's tutorial
 file (`prereq_<N>_tutorial.txt`) if one exists, then asks again,
-looping until Enter is pressed with nothing typed. This is meant to
-grow over time — as tutorials are written for items that need more
-explanation than a one-line summary (notehub.io's route setup being
-the clearest current candidate), they simply need to be dropped in
-under that naming convention, with no further script changes.
+looping until Enter is pressed with nothing typed. Every item now
+has one, from the basic accounts (Brevo, Twilio, OpenWeatherMap)
+through to the more involved local installs (InfluxDB 3 Core,
+Grafana) and the Cloudflare/InfluxDB Cloud setup that ties everything
+together. As new prerequisites are added in the future, they simply
+need a same-named tutorial file dropped in, with no further script
+changes.
 
 Answering "N" to the final "have all prerequisites been completed?"
 question exits immediately with no changes made.
-
-If Apache2 itself isn't installed yet, the script checks for this
-next and exits with a clear message — install Apache2 and its
-supporting modules first, then rerun.
 
 ### 3.2 Apache CGI symlink fix
 
@@ -344,10 +344,10 @@ and offers to make the fix and reload Apache.
 
 ### 3.3 Python virtual environment
 
-The script checks that the `python3-venv` package is installed,
-exiting with a clear message if it isn't (this is a common gap on a
-fresh Raspberry Pi OS image, and `python3 -m venv` fails outright
-without it). It then creates the virtual environment at
+The script checks whether the `python3-venv` package is installed —
+a common gap on a fresh Raspberry Pi OS image, and `python3 -m venv`
+fails outright without it — and installs it automatically if
+missing. It then creates the virtual environment at
 `/home/tide/.tidenv` if it doesn't already exist, and either way runs
 `pip install -r requirements.txt` against it — safe to run every
 time, since `pip` itself skips anything already satisfied and this
