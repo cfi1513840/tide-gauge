@@ -282,10 +282,12 @@ InfluxDB Cloud tutorial (prerequisite 16).
 
 ### 2.7 Grafana
 
-InfluxDB 3 Core has no web interface of its own — without Grafana,
-a station's own local data has no way to actually be viewed or
-graphed at all. It is this project's actual means of access to that
-data, not an optional visualization add-on. Installation and the
+InfluxDB 3 Core has no web interface built in. InfluxData offers a
+separate web front end, InfluxDB 3 Explorer (run as a Docker
+container), but this project uses Grafana instead: it is more capable
+and easier to use for browsing and graphing a station's data. Grafana
+is the standard way to view a station's local data on every station,
+not an optional add-on. Installation and the
 local datasource configuration are covered in the Grafana tutorial
 (prerequisite 15).
 

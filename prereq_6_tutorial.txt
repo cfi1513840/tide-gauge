@@ -53,7 +53,7 @@ Notecard-linked sensor (see the separate notehub.io tutorial) -- but
 "www.", "ssh.", "vnc.", and "grafana." are all needed on every
 station: the first three for the public web page and for
 admin/maintenance access, and "grafana." because Grafana is this
-project's actual means of accessing a station's local InfluxDB
+project's standard means of viewing a station's local InfluxDB
 database, not an optional extra.
 
 Once configured, these routes can be tested from any network-

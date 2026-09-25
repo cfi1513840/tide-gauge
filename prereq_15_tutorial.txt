@@ -1,8 +1,8 @@
-Grafana is this project's actual means of accessing a station's
-local InfluxDB 3 Core database -- InfluxDB 3 Core has no built-in
-web UI of its own, so without Grafana, the data being collected has
-no way to actually be viewed or graphed locally. It is not an
-optional add-on.
+Grafana is this project's standard means of viewing a station's
+local InfluxDB 3 Core database. InfluxDB 3 Core has no built-in web
+UI; InfluxData offers a separate one, InfluxDB 3 Explorer, but
+Grafana is more capable and easier to use, so it is what every
+station uses. It is not an optional add-on.
 
 First confirm this station is running a 64-bit OS, since Grafana's
 official ARM builds require it:
