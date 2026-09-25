@@ -300,6 +300,18 @@ sudo systemctl enable tide
 if [ $keyfound -eq 0 ]; then
   python makekeys.py
 fi
+# Key file permissions, enforced on every run so existing stations
+# (and keys copied in during an upgrade) are brought into line too.
+# k1/k2/k3 are read by the CGI scripts through tidecrypto.py, running
+# as www-data, which is a member of the tide group -- so owner
+# read/write plus group read (640). ku is only ever read by tide.py and
+# the install-time scripts, running as tide -- so owner only (600).
+if test -e k1 && test -e k2 && test -e k3 && test -e ku; then
+  echo -e "\e[0mSetting encryption key file permissions (k1-k3: 640, ku: 600)"
+  sudo chown tide:tide k1 k2 k3 ku
+  sudo chmod 640 k1 k2 k3
+  sudo chmod 600 ku
+fi
 echo
 grep "HTML_DIRECTORY" tide.env > grep.tmp
 vari="$(cat grep.tmp)"

@@ -412,6 +412,13 @@ else — they, like `tide_constants.json`, `tide.env`, and
 `sensor_fields.json`, live exclusively in `~/bin/tidegauge`; nothing
 reads them from `/var/www/html`.
 
+Every run then sets the key files' ownership to `tide:tide` and their
+permissions to 640 for `k1`–`k3` and 600 for `ku`, so existing
+stations and keys copied in during an upgrade are corrected too. The
+web server's `www-data` account belongs to the `tide` group, so it can
+read `k1`–`k3`, which the CGI scripts need through `tidecrypto.py`.
+Only `tide` itself can read `ku`, which nothing on the web side uses.
+
 ### 3.8 Handling `tide_constants.json`
 
 If an encrypted `tide_constants.json` already exists, the script
