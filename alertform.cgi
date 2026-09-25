@@ -14,8 +14,8 @@ import tidecrypto
 # directly -- see process_mailspool() in tidehelper.py. Written to a temp
 # name first, then atomically renamed into place, so tide.py's spool scan
 # never observes a half-written file. The "From:" header is added by
-# process_mailspool() itself, which is the only place EMAIL_USERNAME is
-# now known.
+# process_mailspool() itself, using BREVO_EMAIL_ADDRESS from the
+# encrypted tide_constants.json, which this CGI never reads.
 #
 def queue_email(recipient, subject, message):
     headers = [f"Subject: {subject}",

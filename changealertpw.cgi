@@ -1,9 +1,14 @@
 #!/home/tide/.tidenv/bin/python3
 import cgi, cgitb
+import os
 from datetime import datetime
 import sqlite3
-import smtplib
+from dotenv import load_dotenv, find_dotenv
 import tidecrypto
+
+envfile = find_dotenv('/var/www/html/tide.env')
+load_dotenv(envfile)
+SQL_PATH = os.getenv('SQL_PATH')
 
 form = cgi.FieldStorage()
 emailAddress = form.getvalue("eaddr")
@@ -46,7 +51,7 @@ print ('}')
 print ('</style>')
 print ('<title>Tide Alert Login Request</title>')
 try: 
-   sqlcon = sqlite3.connect('/var/www/html/tides.db')
+   sqlcon = sqlite3.connect(SQL_PATH)
    sqlcur = sqlcon.cursor()
    f1 = tidecrypto.EMAIL_KEY
    emailAddressByte = emailAddress.encode()

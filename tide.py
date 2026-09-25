@@ -203,7 +203,7 @@ class Tide:
             if email_recip == None:
                 continue
             email_recipient = email_recip
-            email_headers = ["From: " + cons.EMAIL_USERNAME,
+            email_headers = ["From: " + cons.BREVO_ADDRESS,
               F"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
               +email_recipient,"MIME-Versiion:1.0",
               "Content-Type:text/html"]
@@ -564,7 +564,7 @@ class Tide:
                         if email_recip == None:
                             continue
                         email_recipient = email_recip
-                        email_headers = ["From: " + cons.EMAIL_USERNAME,
+                        email_headers = ["From: " + cons.BREVO_ADDRESS,
                           f"Subject: {cons.STATION_LOCATION} Tide Station Alert Message", "To: "
                           +email_recipient,"MIME-Versiion:1.0",
                           "Content-Type:text/html"]
@@ -603,7 +603,7 @@ class Tide:
             if email_recip == None:
                 continue
             email_recipient = email_recip
-            email_headers = ["From: " + cons.EMAIL_USERNAME,
+            email_headers = ["From: " + cons.BREVO_ADDRESS,
               f"Subject: {cons.STATION_LOCATION} Tide Station Visits", "To: "
               +email_recipient,"MIME-Versiion:1.0",
               "Content-Type:text/html"]

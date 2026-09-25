@@ -68,8 +68,7 @@ def reportit(parm1,parm2,parm3):
 def suspend_resume():
     global userclr, userenc, telclr, telenc, email_address,\
       tmsgaddr, tlevel, sensorloc, daylight, dayair, enalev, atemp, enaair,\
-      wtemp, enawind, form, currenttime, daywat, SMTP_SERVER, SMTP_PORT,\
-      EMAIL_USERNAME, EMAIL_PASSWORD, email_message,\
+      wtemp, enawind, form, currenttime, daywat, email_message,\
       activate, entryfound, sqlcon, sqlcur, actdeact, evnotice, evtype,\
       enaevent, evrepeat, evday, evthresh
 

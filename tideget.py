@@ -365,7 +365,7 @@ class GetWeather:
     def report_error(self, source):
         """Generate email and text notification for weather read errors"""
         for email_recipient in self.cons.ADMIN_EMAIL:
-            email_headers = ["From: " + self.cons.EMAIL_USERNAME,
+            email_headers = ["From: " + self.cons.BREVO_ADDRESS,
                     f"Subject: {source} Failure",
                     "To: "+email_recipient,"MIME-Versiion:1.0",
                     "Content-Type:text/html"]
@@ -383,7 +383,7 @@ class GetWeather:
     def report_success(self, count, source):
         for email_recipient in self.cons.ADMIN_EMAIL:
             email_headers = [
-              "From: " + self.cons.EMAIL_USERNAME,
+              "From: " + self.cons.BREVO_ADDRESS,
               f"Subject: {source} Restored",
               "To: "+email_recipient,"MIME-Versiion:1.0",
               "Content-Type:text/html"]

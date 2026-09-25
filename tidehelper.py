@@ -82,8 +82,6 @@ class Constants:
     if secure_dict.get('ADMINBRS') != None:
         ADMIN_TEL_NBRS = secure_dict.get('ADMINBRS')   
 
-    EMAIL_USERNAME = secure_dict.get('EMAIL_USERNAME')
-    EMAIL_PASSWORD = secure_dict.get('EMAIL_PASSWORD')
     BREVO_ADDRESS = secure_dict.get('BREVO_EMAIL_ADDRESS')
     BREVO_USERNAME = secure_dict.get('BREVO_EMAIL_USERNAME')
     BREVO_PASSWORD = secure_dict.get('BREVO_EMAIL_PASSWORD')
@@ -136,8 +134,8 @@ class Constants:
     OBSCAPE_USER = secure_dict.get('OBSCAPE_USER')
     OBSCAPE_KEY = secure_dict.get('OBSCAPE_KEY')
     NOTEHUB_SECRET = secure_dict.get('NOTEHUB_SECRET')
-    # (SMTP_SERVER/SMTP_PORT moved to tide.env -- not secrets, see the
-    # tide.env-derived block below)
+    # (SMTP_PORT is in tide.env -- not a secret, see the tide.env-derived
+    # block below. Brevo is the only email service; see send_email().)
     BREVO_SMTP_SERVER = secure_dict.get('BREVO_SMTP_SERVER')
     TWILIO_ACCOUNT_SID = secure_dict.get('TWILIO_ACCOUNT_SID')
     TWILIO_AUTH_TOKEN = secure_dict.get('TWILIO_AUTH_TOKEN')
@@ -175,7 +173,6 @@ class Constants:
         LONGITUDE = float(os.getenv('STATION_LONGITUDE'))
         SQL_PATH = os.getenv('SQL_PATH')
         SQL_COPY = os.getenv('SQL_COPY')
-        EMAIL_SERVICE = os.getenv('EMAIL_SERVICE')
         WX_SERVICE = os.getenv('WX_SERVICE')
         NDBC_STATIONS = os.getenv('NDBC_STATIONS').split(",")
         NOAA_STATION = os.getenv('NOAA_STATION')
@@ -208,7 +205,6 @@ class Constants:
         INFLUXDB_MEASUREMENT = os.getenv('INFLUXDB_MEASUREMENT')
         INFLUXDB_LOCATION = os.getenv('INFLUXDB_LOCATION')
         INFLUXDB_SENSOR = os.getenv('INFLUXDB_SENSOR')
-        SMTP_SERVER = os.getenv('SMTP_SERVER')
         SMTP_PORT = os.getenv('SMTP_PORT')
         NWS_RADAR = os.getenv('NWS_RADAR')
         TK_CANVAS_WIDTH = os.getenv('TK_CANVAS_WIDTH')
@@ -406,52 +402,37 @@ class Notify:
             logging.warning(str(errmsg), exc_info=True)
 
     def send_email(self, email_recipient, email_headers, email_message, debug):
-        """Method to send status or alert information via email message.
+        """Method to send status or alert information via email message,
+        through the Brevo SMTP relay (the only email service used). Only
+        the Subject line is taken from email_headers; the sender is
+        always BREVO_EMAIL_ADDRESS from tide_constants.json.
         Returns (success: bool, error: str or None) so callers can track
         delivery outcome; existing call sites that ignore the return value
         are unaffected."""
         if debug:
             print ('Email notify to '+email_recipient+'\n'+email_message)
             return True, None
-        if self.cons.EMAIL_SERVICE != 'brevo':
-            try:
-                session = smtplib.SMTP(self.cons.SMTP_SERVER,
-                self.cons.SMTP_PORT, timeout=10)
-                session.ehlo()
-                session.starttls()
-                session.ehlo()
-                session.login(self.cons.EMAIL_USERNAME,self.cons.EMAIL_PASSWORD)
-                session.sendmail(
-                    self.cons.EMAIL_USERNAME, email_recipient, \
-                    email_headers+"\r\n\r\n"+email_message)
-                session.quit()
-                return True, None
-            except Exception as errmsg:
-                logging.warning(str(errmsg), exc_info=True)
-                return False, str(errmsg)
-        else:    
-            try:
-                sub = None
-                fields = email_headers.split('\r\n')
-                for ent in fields:
-                    ent = ent.strip()
-                    if ent[:9] == 'Subject: ':
-                        sub = ent[9:]
-                        break
-                msg = EmailMessage()
-                #msg["From"] = "tidealert@bbitide.org"
-                msg["From"] = self.cons.BREVO_ADDRESS
-                msg["To"] = email_recipient
-                msg["Subject"] = sub
-                msg.set_content(email_message)
-                with smtplib.SMTP(self.cons.BREVO_SMTP_SERVER, self.cons.SMTP_PORT, timeout=10) as server:
-                    server.starttls()
-                    server.login(self.cons.BREVO_USERNAME, self.cons.BREVO_PASSWORD)
-                    server.send_message(msg)
-                return True, None
-            except Exception as errmsg:
-                logging.warning(str(errmsg), exc_info=True)
-                return False, str(errmsg)
+        try:
+            sub = None
+            fields = email_headers.split('\r\n')
+            for ent in fields:
+                ent = ent.strip()
+                if ent[:9] == 'Subject: ':
+                    sub = ent[9:]
+                    break
+            msg = EmailMessage()
+            msg["From"] = self.cons.BREVO_ADDRESS
+            msg["To"] = email_recipient
+            msg["Subject"] = sub
+            msg.set_content(email_message)
+            with smtplib.SMTP(self.cons.BREVO_SMTP_SERVER, self.cons.SMTP_PORT, timeout=10) as server:
+                server.starttls()
+                server.login(self.cons.BREVO_USERNAME, self.cons.BREVO_PASSWORD)
+                server.send_message(msg)
+            return True, None
+        except Exception as errmsg:
+            logging.warning(str(errmsg), exc_info=True)
+            return False, str(errmsg)
 
     MAILSPOOL_DIR = '/var/www/html/mailspool/'
     MAILSPOOL_FAILED_DIR = '/var/www/html/mailspool/failed/'
@@ -479,7 +460,7 @@ class Notify:
             except Exception as errmsg:
                 logging.warning(f'mailspool: could not read {filename}: {errmsg}', exc_info=True)
                 continue
-            full_headers = f"From: {self.cons.EMAIL_USERNAME}\r\n" + request['headers']
+            full_headers = f"From: {self.cons.BREVO_ADDRESS}\r\n" + request['headers']
             if request['recipient'] == 'ADMIN':
                 # CGI scripts write 'ADMIN' rather than a real address, since
                 # they no longer have access to ADMIN1/ADMIN2 (part of the

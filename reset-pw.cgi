@@ -2,7 +2,6 @@
 import cgi, cgitb
 from datetime import datetime
 import sqlite3
-import smtplib
 import secrets
 
 form = cgi.FieldStorage()

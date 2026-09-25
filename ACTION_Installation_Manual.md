@@ -751,6 +751,13 @@ development, just the ones likely to recur on a future station.
 
 ### 4.3 Email (Brevo/SMTP)
 
+Brevo is the only email service the code supports; there is no
+longer any fallback to another SMTP provider. Older stations may
+still have `EMAIL_SERVICE` in `tide.env`, and `CONTACT_EMAIL`,
+`EMAIL_USERNAME`, `EMAIL_PASSWORD`, `SMTP_SERVER` and `SMTP_PORT` in
+`tide_constants.json`. Nothing reads them any more, and `install.sh`
+reports them as obsolete; they can be deleted when it offers the edit.
+
 `BREVO_SMTP_SERVER` lives in `tide_constants.json`; `SMTP_PORT`
 lives separately, in `tide.env`. A missing or blank `SMTP_PORT`
 makes Python's `smtplib` silently fall back to its own default, port

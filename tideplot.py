@@ -1512,11 +1512,12 @@ class TidePlotRenderer:
               self.logfile.write (self.msgtime+ 'environment file read failed\n')                  
 
         #
-        # Establish SQLite3 connection to the tides.db database
+        # Establish SQLite3 connection to the periodic copy of tides.db
+        # (SQL_COPY in tide.env), not the live database tide.py writes to
         #
 
         try:
-           sqlcon = sqlite3.connect(f'/home/tide/Uploads/tides.db')
+           sqlcon = sqlite3.connect(os.getenv('SQL_COPY'))
            self.sqlcur = sqlcon.cursor()
         except:
            with open('/var/www/html/tideplot.log', 'a') as self.logfile:

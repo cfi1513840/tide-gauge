@@ -223,7 +223,7 @@ class TideAlerts:
             if (enabled and activated and tide_level != None and value != ''):
                 db_level = float(value)
                 email_headers = [
-                  "From: " +self.cons.EMAIL_USERNAME, 
+                  "From: " +self.cons.BREVO_ADDRESS, 
                   "Subject: Tide Level Alert",
                   "To: "+email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]
@@ -311,7 +311,7 @@ class TideAlerts:
             
             if (enabled and activated and temperature != None and value != ''):
                 db_level = float(value)
-                email_headers = ["From: " + self.cons.EMAIL_USERNAME,
+                email_headers = ["From: " + self.cons.BREVO_ADDRESS,
                   "Subject: Air Temperature Alert", "To: "+
                   email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]
@@ -352,7 +352,7 @@ class TideAlerts:
             
             if (enabled and activated and water_temp != None and value != ''):
                 db_level = float(value)
-                email_headers = ["From: " + self.cons.EMAIL_USERNAME,
+                email_headers = ["From: " + self.cons.BREVO_ADDRESS,
                   "Subject: Water Temperature Alert", "To: "+
                   email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]
@@ -394,7 +394,7 @@ class TideAlerts:
             
             if (enabled and activated and wind_speed != None and value != ''):
                 db_level = float(value)
-                email_headers = ["From: " + self.cons.EMAIL_USERNAME,
+                email_headers = ["From: " + self.cons.BREVO_ADDRESS,
                   "Subject: Wind Speed Alert", "To: "+
                   email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]
@@ -453,7 +453,7 @@ class TideAlerts:
               value != '' and (not dayonly or (dayonly and (localtime > sunrise and
               localtime < sunset)))):
                 db_level = float(value)
-                email_headers = ["From: " + self.cons.EMAIL_USERNAME,
+                email_headers = ["From: " + self.cons.BREVO_ADDRESS,
                   "Subject: Tidal Variation Alert", "To: "+
                   email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]
@@ -500,7 +500,7 @@ class TideAlerts:
             if ((enabled and activated and (not dayonly or (dayonly and 
               (localtime > sunrise and localtime < sunset)))) and
               repeat != 0 and notice != ''):
-                email_headers = ["From: " + self.cons.EMAIL_USERNAME,
+                email_headers = ["From: " + self.cons.BREVO_ADDRESS,
                   "Subject: Tidal Event Alert", "To: "+
                   email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]

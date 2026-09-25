@@ -3,7 +3,6 @@ import cgi, cgitb
 import os
 from datetime import datetime
 import sqlite3
-import smtplib
 from dotenv import load_dotenv, find_dotenv
 import tidecrypto
 
