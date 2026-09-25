@@ -1,0 +1,10 @@
+# Store all text files with Unix (LF) line endings, and check them
+# out that way on every platform, including Windows.
+* text=auto eol=lf
+
+# Binary files: never convert.
+*.docx binary
+*.pdf binary
+*.png binary
+*.db binary
+webimage.png.template binary
