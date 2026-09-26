@@ -20,11 +20,22 @@ Grafana's own official apt repository:
 
     sudo apt-get install -y apt-transport-https software-properties-common wget
     sudo mkdir -p /etc/apt/keyrings/
-    wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
+    wget -O /tmp/grafana-full.key https://apt.grafana.com/gpg-full.key
+    gpg --dearmor < /tmp/grafana-full.key | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
+    gpg --show-keys /etc/apt/keyrings/grafana.gpg
     echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
     sudo apt-get update
     sudo apt-get install -y grafana
     sudo systemctl enable --now grafana-server
+
+Grafana rotated its repository signing key in December 2025. The
+key file above, gpg-full.key, includes the current key; the older
+gpg.key does not, and using it makes "apt-get update" fail with
+"NO_PUBKEY 963FA27710458545" and "Unable to locate package grafana."
+The gpg --show-keys output should list a key whose fingerprint ends
+in 963FA27710458545. Converting the key with gpg --dearmor into a
+.gpg file, as above, works on both older (Debian 11 "bullseye") and
+newer Raspberry Pi OS releases.
 
 Once running, Grafana is reachable at port 3000. Log in and set a
 real administrator password immediately -- Grafana ships with the
