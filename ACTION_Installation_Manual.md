@@ -512,6 +512,20 @@ still only one real `tide.env`, living in `~/bin/tidegauge` as
 described in 3.5 — the CGI scripts simply reach it via a second path,
 with no separate copy to drift out of sync.
 
+Because `tide.env`, `tides.db` and the mail spool all live in the web
+root, the script also installs an Apache rule,
+`/etc/apache2/conf-available/tide-protect.conf`, that refuses to
+serve them over HTTP. It denies `tide.env`, any `.json`, `.db`,
+`.log`, `.tmp`, `.dev`, `.bak` or `.gz` file, and the whole
+`mailspool/` directory; the web pages, images and `webinfo.txt` are
+unaffected. The CGI scripts and `tide.py` read these files directly
+from disk, so the rule doesn't affect them. To check a station from
+any computer:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://<domain>/tide.env    # expect 403
+```
+
 ### 3.13 Final file deployment
 
 The script copies every git-tracked `.cgi`, `.html`, and `.pdf` file

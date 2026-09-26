@@ -464,6 +464,41 @@ ensure_dir() {
 ensure_dir "${htmldir}mailspool" 770
 ensure_dir "${htmldir}mailspool/failed" 700
 echo
+echo -e "\e[0mChecking Apache protection for files in the web root..."
+# tide.env (symlinked here for the CGI scripts), tides.db and the mail
+# spool all live in the web root, so without this Apache would serve
+# them to anyone who asked. The CGI scripts and tide.py read them
+# straight from disk and are unaffected. The rule is written for this
+# station's HTML_DIRECTORY and only replaced if it has changed.
+protect_conf=/etc/apache2/conf-available/tide-protect.conf
+cat > /tmp/tide-protect.conf <<PROTECT_EOF
+# Installed by install.sh. Keeps station configuration and data files
+# that live in the web root (tide.env, tides.db, the mail spool, logs)
+# from being served over HTTP. The CGI scripts and tide.py read these
+# files directly from disk and are unaffected.
+<Directory "${htmldir}">
+    <FilesMatch "^(tide\.env|.*\.(json|db|db-journal|db-wal|db-shm|log|tmp|dev|bak|gz))\$">
+        Require all denied
+    </FilesMatch>
+</Directory>
+<Directory "${htmldir}mailspool/">
+    Require all denied
+</Directory>
+PROTECT_EOF
+if test -e $protect_conf && cmp -s /tmp/tide-protect.conf $protect_conf; then
+  echo "OK (already installed): $protect_conf"
+else
+  sudo cp -v /tmp/tide-protect.conf $protect_conf
+fi
+rm -f /tmp/tide-protect.conf
+sudo a2enconf -q tide-protect
+if sudo apache2ctl configtest 2>&1 | grep -q "Syntax OK"; then
+  sudo systemctl reload apache2
+else
+  echo -e "\e[31mWARNING: Apache configuration test failed -- not reloading."
+  echo "  Run 'sudo apache2ctl configtest' to see the error.\e[0m"
+fi
+echo
 echo -e "\e[0mChecking symlinks..."
 ensure_symlink() {
   local target="$1" link="$2"
