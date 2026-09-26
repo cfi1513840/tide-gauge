@@ -762,6 +762,21 @@ development, just the ones likely to recur on a future station.
   connectivity first with something schema-independent — Grafana's
   own Save & Test, or a bare `SHOW TABLES` — before treating a
   table-specific query failure as a connection problem.
+- Grafana's `$__timeFilter(time)` macro fails against InfluxDB 3 Core
+  with a bare "InternalError" (seen with Grafana 13.2 and InfluxDB 3
+  Core 3.11 on bbitide), even though the same query without it works.
+  Use the `$__timeFrom` / `$__timeTo` macros instead; they still follow
+  the dashboard's time picker:
+
+  ```sql
+  SELECT time, sensor_measurement_mm
+  FROM tide_station
+  WHERE time >= $__timeFrom AND time <= $__timeTo AND sensor_id = 'BBI'
+  ORDER BY time
+  ```
+
+  Times are stored in UTC; Grafana converts them to local time for
+  display.
 
 ### 4.3 Email (Brevo/SMTP)
 
@@ -822,3 +837,21 @@ authentication. Easy to reach for the wrong one when editing
 `influxdb3 create token --admin` prints the plaintext token exactly
 once — copy it immediately; it's hashed server-side right after,
 with no way to recover the original value later.
+
+### 4.7 "Illegal instruction" on a Raspberry Pi 4
+
+If `tide.py` dies immediately with nothing but `Illegal instruction`,
+a compiled Python package is using processor instructions the Pi's
+CPU doesn't have. On a Raspberry Pi 4 (Cortex-A72, ARMv8.0) the known
+case is pyarrow 21.0.0, which the InfluxDB 3 client and pandas both
+load. Its ARM64 builds need ARMv8.1. pyarrow 22.0.0 fixed this, but
+needs Python 3.10 or newer; a Pi still on Python 3.9 (Debian 11
+"bullseye") needs 20.0.0. `requirements.txt` excludes 21.x for this
+reason. To check and fix an existing station:
+
+```bash
+cat /proc/device-tree/model
+~/.tidenv/bin/pip show pyarrow | grep Version
+~/.tidenv/bin/pip install "pyarrow==20.0.0"        # Python 3.9 Pis
+~/.tidenv/bin/python3 -c "import pandas, influxdb_client_3; print('OK')"
+```

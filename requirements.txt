@@ -104,6 +104,14 @@ influxdb3-python    # InfluxDB 3 native query client (import name: influxdb_clie
                     # tables). Install may take noticeably longer on Raspberry Pi
                     # (arm64) than the other packages in this file -- this is
                     # expected, not a hang.
+pyarrow!=21.*       # Installed by influxdb3-python anyway; listed here only to
+                    # exclude 21.x. pyarrow 21.0.0's arm64 wheels use ARMv8.1
+                    # instructions, so importing it (directly, or through pandas
+                    # or influxdb_client_3) kills Python with "Illegal instruction"
+                    # on a Raspberry Pi 4 (Cortex-A72, ARMv8.0). Fixed upstream in
+                    # 22.0.0, but 22+ needs Python 3.10+, so a Pi still on
+                    # Python 3.9 (Debian 11 "bullseye") gets 20.x instead.
+                    # Found on bbitide (Pi 4, Python 3.9), Sep 26 2026.
 pandas              # Required for converting InfluxDB 3 query results
                     # (fetch_tide(), sync_influxdb_cloud() in tidedatabase.py):
                     # InfluxDB 3 stores timestamps at nanosecond precision, and
