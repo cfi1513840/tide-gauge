@@ -570,7 +570,7 @@ class TideDisplay:
                   fill="RoyalBlue3", outline="RoyalBlue3")
                 if len(coords) >= 4:
                     self.plot_window.create_line(
-                      *coords, fill="RoyalBlue3", width=3, joinstyle="round")
+                      *coords, fill="RoyalBlue3", width=2, joinstyle="round")
             tide = measurements[len(measurements)-1][1]
         tide_text = format(tide, '.2f')+' ft'
         current_time = datetime.now()
@@ -578,7 +578,7 @@ class TideDisplay:
         text_font = tkfont.Font(family="Arial", size=12, weight="bold")
         start_text = self.x_plot_start
         self.plot_window.create_line(
-          start_text, 15, start_text+30, 15, fill="RoyalBlue3", width=3)
+          start_text, 15, start_text+30, 15, fill="RoyalBlue3", width=2)
         text_field = "Actual Tide Trace"
         text_size = text_font.measure(text_field)
         self.plot_window.create_text(start_text+35,15,
@@ -586,7 +586,7 @@ class TideDisplay:
            font=("Arial", 12, 'bold'))
         self.plot_window.create_line(
           start_text+40+text_size, 15, start_text+70+text_size,
-          15, fill="RoyalBlue3", width=3)
+          15, fill="RoyalBlue3", width=2)
         cdbox = self.plot_window.create_text(
            self.canvas_width/2-145, 18, fill="RoyalBlue3", text=" Measured Tide "+
            tide_text+" ", font=("Arial", 14, 'bold'))
