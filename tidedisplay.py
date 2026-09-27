@@ -19,6 +19,7 @@ import tkinter.font as tkfont
 from tkinter import StringVar
 from datetime import datetime, timedelta, timezone
 import logging
+import tideprocess
 
 class TideDisplay:
 
@@ -419,6 +420,12 @@ class TideDisplay:
             self.ndbc_wave_direction_tk_var.set(ndbc_data['Wave Direction'])
             self.ndbc_baro_tk_var.set(ndbc_data['Atmospheric Pressure'])
 
+    def _padded_bbox(self, item, pad_x=3, pad_y=1):
+        """Bounding box of a canvas text item, widened slightly so the
+        rectangle drawn around it doesn't sit tight against the text."""
+        x1, y1, x2, y2 = self.plot_window.bbox(item)
+        return (x1-pad_x, y1-pad_y, x2+pad_x, y2+pad_y)
+
     def tide(self, predicts, measurements):
         """Plot grid lines,  predicted tide level and annotation"""
         max_tide = -99
@@ -519,52 +526,51 @@ class TideDisplay:
                       start_plot_x,self.canvas_height/2+40, width=64,
                       fill="gray30", text=peaks, font=("Arial", 12),
                       justify="center")
-                    hboxcors = self.plot_window.bbox(hbox)
                     hboxwid = self.plot_window.create_rectangle(
-                      hboxcors, outline="gray30", fill="white")
+                      self._padded_bbox(hbox), outline="gray30", fill="white")
                     self.plot_window.tag_lower(hboxwid,hbox)
             start_plot_x = end_plot_x
             start_plot_y = end_plot_y
         """Plot measured tide"""
+        # Raw readings, drawn as one polyline per run of contiguous
+        # readings: the line breaks wherever readings are more than 5
+        # minutes apart (tideprocess.split_into_runs, shared with
+        # tidehtml.py), and each run starts with a dot so a lone reading
+        # between two gaps still shows.
         tide = 0
         if measurements:
             start_time = datetime.strptime(measurements[0][0], "%Y-%m-%d %H:%M:%S")
             off_time = start_time.timestamp() - start_plot_time.timestamp()
-            for pidx, entry in enumerate(measurements):
-                try:
-                    this_time = datetime.strptime(entry[0], "%Y-%m-%d %H:%M:%S")
+            for run in tideprocess.split_into_runs(measurements):
+                coords = []
+                for this_time, entry in run:
                     plot_time = this_time.timestamp() - start_time.timestamp()
-                    hrmin = datetime.strftime(this_time, "%H:%M")
-                    linedate = datetime.strftime(this_time, "%d %b")
-                except:
-                    continue
-                end_plot_x = (
-                  int((plot_time+off_time)*(self.canvas_width-30)/86400/2+30))
-                end_plot_y = self.y_plot_end+((entry[1]-min_y)*self.y_grid_size)
-                if pidx == 0:
-                    start_plot_x = end_plot_x
-                    start_plot_y = end_plot_y
-                    continue           
-                self.plot_window.create_line(
-                  start_plot_x, self.canvas_height-start_plot_y, end_plot_x, 
-                  self.canvas_height-end_plot_y, fill="RoyalBlue3", width=3)  
-                thistate = entry[2]
-                hourtime = this_time.hour
-                if thistate != None and (thistate == 'low' or thistate == 'high'):
-                    if (self.tide_turn_time == 0 or 
-                      abs(hourtime-self.tide_turn_time) >= 3):
-                        self.tide_turn_time = hourtime
-                        peaks = format(entry[1],'.2f')+' ft '+hrmin
-                        abox = self.plot_window.create_text(
-                          start_plot_x,self.canvas_height/2, width=64,
-                          fill="blue", text=peaks, font=("Arial", 12),
-                          justify="center")
-                        aboxcors = self.plot_window.bbox(abox)
-                        aboxwid = self.plot_window.create_rectangle(
-                          aboxcors, outline="blue", fill="white")
-                        self.plot_window.tag_lower(aboxwid,abox)
-                start_plot_x = end_plot_x
-                start_plot_y = end_plot_y
+                    plot_x = int((plot_time+off_time)*(self.canvas_width-30)/86400/2+30)
+                    plot_y = self.canvas_height-(
+                      self.y_plot_end+((entry[1]-min_y)*self.y_grid_size))
+                    coords.extend((plot_x, plot_y))
+                    # High/low tide annotation, at this reading's own position
+                    thistate = entry[2]
+                    if thistate == 'low' or thistate == 'high':
+                        hourtime = this_time.hour
+                        if (self.tide_turn_time == 0 or
+                          abs(hourtime-self.tide_turn_time) >= 3):
+                            self.tide_turn_time = hourtime
+                            hrmin = datetime.strftime(this_time, "%H:%M")
+                            peaks = format(entry[1],'.2f')+' ft '+hrmin
+                            abox = self.plot_window.create_text(
+                              plot_x,self.canvas_height/2, width=64,
+                              fill="blue", text=peaks, font=("Arial", 12),
+                              justify="center")
+                            aboxwid = self.plot_window.create_rectangle(
+                              self._padded_bbox(abox), outline="blue", fill="white")
+                            self.plot_window.tag_lower(aboxwid,abox)
+                self.plot_window.create_oval(
+                  coords[0]-2, coords[1]-2, coords[0]+2, coords[1]+2,
+                  fill="RoyalBlue3", outline="RoyalBlue3")
+                if len(coords) >= 4:
+                    self.plot_window.create_line(
+                      *coords, fill="RoyalBlue3", width=3, joinstyle="round")
             tide = measurements[len(measurements)-1][1]
         tide_text = format(tide, '.2f')+' ft'
         current_time = datetime.now()

@@ -19,6 +19,7 @@ import math
 import re
 from pytz import timezone
 import logging
+import tideprocess
 from dotenv import load_dotenv, find_dotenv
 
 class CreateHTML:
@@ -28,9 +29,6 @@ class CreateHTML:
         self.html_directory = self.cons.HTML_DIRECTORY
         self.plotspan = 24
         self.offtime = 0
-        self.lastidetime = 0
-        self.lastidesams = [0 for x in range(0,5)]
-        self.samcnt = 0
         self.wxexit = ''
         envfile = find_dotenv(os.path.join(self.cons.HOME_DIRECTORY, 'tide.env'))
         if load_dotenv(envfile):
@@ -799,10 +797,10 @@ class CreateHTML:
         outfile.write ('ctx.strokeStyle = "#1A53FF";\n')
         outfile.write ('ctx.lineWidth = 2;\n')
         outfile.write (f'ctx.fillStyle = "white";\n')
-        outfile.write (f'ctx.fillRect({canvas_width/2-270}, 4, 215, 23);\n')
-        outfile.write (f'ctx.strokeRect({canvas_width/2-270}, 4, 215, 23);\n')
+        outfile.write (f'ctx.fillRect({canvas_width/2-273}, 4, 219, 23);\n')
+        outfile.write (f'ctx.strokeRect({canvas_width/2-273}, 4, 219, 23);\n')
         outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
-        outfile.write (f'ctx.fillText("Measured Tide {tide} Ft ", {canvas_width/2-160},22);\n')
+        outfile.write (f'ctx.fillText("Measured Tide {tide} ft ", {canvas_width/2-162},22);\n')
         outfile.write (f'ctx.font = "bold 14px Arial";\n')
         outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
         #outfile.write (f'ctx.fillText("Actual Tide Trace", {canvas_width/2-400},20);\n')    
@@ -838,31 +836,31 @@ class CreateHTML:
         outfile.write ('ctx.strokeStyle = "#1A53FF";\n')
         outfile.write ('ctx.lineWidth = 2;\n')
         #
-        # Plot the actual tide
+        # Plot the actual tide: raw readings, drawn as lines through each
+        # run of contiguous readings. The line breaks wherever readings
+        # are more than 5 minutes apart (tideprocess.split_into_runs), and
+        # each run starts with a dot, so a lone reading between two gaps
+        # still shows.
         #
         if tidelist:
             x_start = bored+(offtime*plotsecs)
-            for pidx, ent in enumerate(tidelist):
-                try:
-                    thistime = datetime.strptime(ent[0], timeformat)
-                except:
-                    continue
-                plottime = thistime.timestamp() - starttime.timestamp()
-                plotx = int((plotsecs*plottime)+x_start)
-                if self.lastidetime == 0 or thistime > self.lastidetime+timedelta(minutes=3):
-                    self.samcnt = 0
-                else:
-                    self.samcnt += 1
-                    self.lastidesams = self.lastidesams[1:]+[ent[1]]              
-                self.lastidetime = thistime                   
-                if self.samcnt > 4:
-                    avetide = 0
-                    for x in self.lastidesams:
-                        avetide += x
-                    avetide = avetide/len(self.lastidesams)              
-                    outfile.write ('ctx.fillStyle = "#1932E1";\n')
-                    ploty = int(plot_base-(avetide-min_y)*y_grid_size)
-                    outfile.write (f'ctx.fillRect({plotx},{ploty},2,2);\n')                                             
+            outfile.write('ctx.lineJoin = "round";\n')
+            outfile.write('function plotRun(p) {\n'
+                          '  ctx.fillRect(p[0]-1.5, p[1]-1.5, 3, 3);\n'
+                          '  if (p.length < 4) return;\n'
+                          '  ctx.beginPath();\n'
+                          '  ctx.moveTo(p[0], p[1]);\n'
+                          '  for (var i = 2; i < p.length; i += 2) ctx.lineTo(p[i], p[i+1]);\n'
+                          '  ctx.stroke();\n'
+                          '}\n')
+            for run in tideprocess.split_into_runs(tidelist, timeformat):
+                points = []
+                for thistime, ent in run:
+                    plottime = thistime.timestamp() - starttime.timestamp()
+                    plotx = int((plotsecs*plottime)+x_start)
+                    ploty = int(plot_base-(ent[1]-min_y)*y_grid_size)
+                    points.append(f'{plotx},{ploty}')
+                outfile.write('plotRun([' + ','.join(points) + ']);\n')
         outfile.write ('</script>\n')
         outfile.close()
         self.wxexit = filetag

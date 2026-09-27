@@ -10,7 +10,52 @@ the tide values: once the average has moved more than 0.05 ft from
 its value at the last 15-sample checkpoint, it records the min (for a
 low->high transition) or max (high->low) tide seen since the previous
 turning point as the epoch, then starts tracking the new trend.
+
+split_into_runs() splits a measurement list into contiguous runs at
+reporting gaps, so tidedisplay.py and tidehtml.py draw the measured
+tide as lines that break where data is missing.
 """
+from datetime import datetime
+
+# A gap longer than this between consecutive measurements breaks the
+# plotted tide line. Same value as tidehelper.OutlierTracker's
+# OUTLIER_GAP_RESET_SECONDS, so a break in the plot always corresponds to
+# a gap long enough to have reset the outlier baseline.
+PLOT_GAP_SECONDS = 5 * 60
+
+
+def split_into_runs(measurements, time_format="%Y-%m-%d %H:%M:%S"):
+    """Split a time-ordered measurement list ([time_str, tide_ft, ...]
+    entries, as built by DbManage.fetch_tide()) into runs of contiguous
+    readings, for plotting as lines. Used by both tidedisplay.py and
+    tidehtml.py so the two displays always break the line in the same
+    places.
+
+    A new run starts wherever the time since the previous reading is
+    more than PLOT_GAP_SECONDS, or where the time goes backwards (the
+    repeated hour at the end of daylight saving time), so a line never
+    bridges missing data or doubles back on itself. Entries whose time
+    can't be parsed are skipped.
+
+    Returns a list of runs; each run is a list of (datetime, entry)
+    pairs. A run may contain a single reading, which callers draw as a
+    dot since there is nothing to join it to.
+    """
+    runs = []
+    previous = None
+    for entry in measurements:
+        try:
+            this_time = datetime.strptime(entry[0], time_format)
+        except (TypeError, ValueError):
+            continue
+        if (previous is None or this_time < previous or
+                (this_time - previous).total_seconds() > PLOT_GAP_SECONDS):
+            runs.append([])
+        runs[-1].append((this_time, entry))
+        previous = this_time
+    return runs
+
+
 class ProcTide:
     """Analyzes a rolling window of tide measurements to detect high
     and low tide turning points -- see module docstring for the
