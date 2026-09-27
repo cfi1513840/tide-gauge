@@ -501,7 +501,7 @@ class TideDisplay:
             end_plot_y = self.y_plot_end+((entry[2]-min_y)*self.y_grid_size)
             self.plot_window.create_line(
               start_plot_x, self.canvas_height-start_plot_y, end_plot_x, 
-              self.canvas_height-end_plot_y, fill="snow4", width=3)  
+              self.canvas_height-end_plot_y, fill="snow4", width=2)  
             if this_time.minute == 0 and this_time.hour % 2 == 0:
                 self.plot_window.create_line(
                   start_plot_x,self.y_plot_start, start_plot_x,
@@ -605,11 +605,11 @@ class TideDisplay:
         text_size = text_font.measure(text_field)
         start_text = self.canvas_width-(text_size+80)
         self.plot_window.create_line(start_text, 15, start_text+30, 15,
-          fill="gray", width=3)
+          fill="gray", width=2)
         self.plot_window.create_text(start_text+35,15,
           anchor="w", fill="gray", text=text_field,
           font=("Arial", 12, 'bold'))
         self.plot_window.create_line(start_text+40+text_size, 15,
           start_text+70+text_size, 15,
-          fill="gray", width=3)
+          fill="gray", width=2)
 
