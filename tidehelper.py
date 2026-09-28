@@ -347,6 +347,62 @@ class OutlierTracker:
             self.chain = []
         return True, None, gap_reset_seconds
 
+class TrendTracker:
+    """Rising/falling state for a slowly updated measurement -- air
+    and water temperature -- used to add a trend word to tidealerts.py's
+    messages.
+
+    Same idea as check_alerts()' tide phase: compare the mean of the
+    newer half of a window of readings against the mean of the older
+    half, with a deadband so ordinary jitter reads as steady. The
+    difference is that this window is measured in time, not in calls.
+    check_alerts() runs on every tide reading -- about once a minute on
+    LoRa, but a whole Notecard batch within milliseconds -- while the
+    weather behind these values only changes every 5 minutes (NDBC
+    every 30 or more). So add() keeps at most one sample per
+    SAMPLE_SECONDS of wall-clock time, and trend() only answers once
+    the samples it holds span most of the window.
+
+    trend() returns 'up', 'down', 'steady', or None when there isn't
+    enough history yet (after a restart, or after a long gap in the
+    weather feed). Callers turn that into their own wording.
+    """
+    SAMPLE_SECONDS = 60
+    MIN_SPAN_FRACTION = 0.75
+
+    def __init__(self, window_minutes, deadband):
+        self.window = timedelta(minutes=window_minutes)
+        self.deadband = deadband
+        self.samples = []   # (datetime, value), oldest first
+
+    def add(self, value, now):
+        if value is None:
+            return
+        if (self.samples and
+          (now - self.samples[-1][0]).total_seconds() < self.SAMPLE_SECONDS):
+            return
+        self.samples.append((now, value))
+        cutoff = now - self.window
+        self.samples = [s for s in self.samples if s[0] >= cutoff]
+
+    def trend(self):
+        if len(self.samples) < 4:
+            return None
+        span = self.samples[-1][0] - self.samples[0][0]
+        if span < self.window * self.MIN_SPAN_FRACTION:
+            return None
+        middle = self.samples[0][0] + span / 2
+        older = [v for t, v in self.samples if t < middle]
+        newer = [v for t, v in self.samples if t >= middle]
+        if not older or not newer:
+            return None
+        change = sum(newer)/len(newer) - sum(older)/len(older)
+        if change > self.deadband:
+            return 'up'
+        if change < -self.deadband:
+            return 'down'
+        return 'steady'
+
 class TideState:
     """Store state variables"""
     def __init__(self):

@@ -9,7 +9,9 @@ weather/NDBC data.
 Alert types: tide level crossing a threshold (rising or falling),
 tidal variation from the next predicted high/low, an upcoming
 high/low tide event reminder (N minutes ahead), wind speed, air
-temperature, and water temperature. Each subscriber's per-alert
+temperature, and water temperature. The air and water temperature
+messages also say which way the value is heading ("... and rising"),
+from a tidehelper.TrendTracker per value. Each subscriber's per-alert
 "status" is tracked across calls (self.save_alert_list) so a threshold
 only fires once per crossing rather than on every cycle it stays past
 it.
@@ -27,7 +29,7 @@ path -- that one guards what gets stored, this one guards what
 triggers a live notification.
 """
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import pytz
 import logging
@@ -55,7 +57,33 @@ class TideAlerts:
         self.last_average = 0
         self.average = 0
         self.phase = ''
-        self.wind_samples = [0 for x in range(0,30)]
+        # Wind alerts. Three measures keep a gusty day hovering around a
+        # subscriber's threshold from producing a stream of
+        # exceeded/abated pairs:
+        #   - the alert works on the average wind over the last
+        #     WIND_AVG_MINUTES, not a single reading, so one gust can't
+        #     trip it;
+        #   - it clears only when that average drops below the threshold
+        #     by WIND_CLEAR_FRACTION of it (at least WIND_CLEAR_MIN_MPH),
+        #     e.g. below 21.25 mph for a 25 mph alert -- hysteresis;
+        #   - after an abated message, no new exceeded message for that
+        #     alert for WIND_REPEAT_MINUTES.
+        # Each reading is the larger of sustained speed and gust (as
+        # before), or the sustained speed alone when the source reports
+        # no gust.
+        self.WIND_AVG_MINUTES = 10
+        self.WIND_CLEAR_FRACTION = 0.15
+        self.WIND_CLEAR_MIN_MPH = 3
+        self.WIND_REPEAT_MINUTES = 120
+        self.wind_samples = []        # (time, mph), oldest first
+        self.wind_abated_time = {}    # alert dtime -> time of last abated message
+        # Trend words for the air and water temperature alerts ("... and
+        # rising"). Air temperature is judged over the last hour (weather
+        # updates every 5 minutes), water temperature over 3 hours (NDBC
+        # updates every 30 minutes or more). The wind alerts need no
+        # trend word: "exceeded" and "abated" already say which way.
+        self.air_temp_trend = tidehelper.TrendTracker(60, 0.5)
+        self.water_temp_trend = tidehelper.TrendTracker(180, 0.3)
         self.f1 = tidecrypto.EMAIL_KEY
         self.f2 = tidecrypto.PHONE_KEY
        
@@ -113,6 +141,36 @@ class TideAlerts:
         wind_direction = weather.get('wind_direction_symbol')
         tide_level = tide
         water_temp = to_float_or_none(ndbc_data.get('Water Temperature'))
+        # Trend history is sampled on wall-clock time, not candidate_time:
+        # the weather values are current observations even when the tide
+        # reading being checked is an older one from a Notecard batch.
+        # Fed before the outlier check below so a rejected tide reading
+        # doesn't leave a hole in the weather history.
+        wall_time = datetime.now()
+        self.air_temp_trend.add(temperature, wall_time)
+        self.water_temp_trend.add(water_temp, wall_time)
+        # One wind sample per minute of wall-clock time, taken here, once
+        # per call. It used to be appended inside the per-subscriber loop
+        # below, once for every subscriber with a wind alert, which
+        # shortened the window by the number of such subscribers. The
+        # once-a-minute limit keeps a Notecard batch (many calls within
+        # milliseconds) from counting as many samples.
+        if wind_speed is not None:
+            windfact = (max(wind_speed, wind_gust) if wind_gust is not None
+              else wind_speed)
+            if (not self.wind_samples or
+              (wall_time - self.wind_samples[-1][0]).total_seconds() >= 55):
+                self.wind_samples.append((wall_time, windfact))
+        wind_cutoff = wall_time - timedelta(minutes=self.WIND_AVG_MINUTES)
+        self.wind_samples = [w for w in self.wind_samples if w[0] >= wind_cutoff]
+        if self.wind_samples:
+            wind_avg = sum(w[1] for w in self.wind_samples)/len(self.wind_samples)
+        else:
+            wind_avg = None
+        temp_words = {'up': ' and rising', 'down': ' and falling',
+          'steady': ' and steady', None: ''}
+        air_temp_word = temp_words[self.air_temp_trend.trend()]
+        water_temp_word = temp_words[self.water_temp_trend.trend()]
         #
         # Get the times for the next high and low tides
         #
@@ -326,7 +384,7 @@ class TideAlerts:
                             text_message = (
                               message_time+
                               " - The Air Temperature has reached "+
-                              str(temperature)+" degrees F"+
+                              str(temperature)+" degrees F"+air_temp_word+
                               f", please check {self.cons.TIDE_URL} "+
                               "for current conditions")
                             self.notify.send_email(email_recipient,
@@ -367,7 +425,8 @@ class TideAlerts:
                             text_message = (
                               message_time+
                               " - The Water Temperature has reached "+
-                              str(int(round(water_temp)))+" degrees F,"+ 
+                              str(int(round(water_temp)))+" degrees F"+
+                              water_temp_word+","+
                               f" please check {self.cons.TIDE_URL} for "+
                               "current conditions")
                             self.notify.send_email(email_recipient,
@@ -392,28 +451,29 @@ class TideAlerts:
                 value = ''
             direction = alert_dict['wind_direction']
             
-            if (enabled and activated and wind_speed != None and value != ''):
+            if (enabled and activated and wind_avg is not None and value != ''):
                 db_level = float(value)
+                clear_level = db_level - max(db_level*self.WIND_CLEAR_FRACTION,
+                  self.WIND_CLEAR_MIN_MPH)
+                last_abated = self.wind_abated_time.get(alert_dict['dtime'])
+                repeat_ok = (last_abated is None or wall_time - last_abated >=
+                  timedelta(minutes=self.WIND_REPEAT_MINUTES))
                 email_headers = ["From: " + self.cons.BREVO_ADDRESS,
                   "Subject: Wind Speed Alert", "To: "+
                   email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]
                 email_headers = "\r\n".join(email_headers)
-                if wind_speed is not None and wind_gust is not None:
-                    windfact = max(wind_speed,wind_gust)
-                    self.wind_samples = self.wind_samples[1:]+[windfact]
-                else:
-                    windfact = 0
                 if status == 0:
-                    if ((windfact > db_level) and (direction == '' or
-                      direction == wind_direction)):
+                    if ((wind_avg > db_level) and repeat_ok and
+                      (direction == '' or direction == wind_direction)):
                         alert_list[index]['wind_speed_status'] = 1
                         if (not dayonly or (dayonly and (localtime > sunrise and
                           localtime < sunset))):
                             text_message = (
                               message_time+
                               " The wind speed has exceeded "+str(db_level)+ 
-                              " mph "+direction+" - please check "+
+                              " mph"+(" "+direction if direction else "")+
+                              " - please check "+
                               f"{self.cons.TIDE_URL} for "+
                               "current conditions")
                             self.notify.send_email(email_recipient,
@@ -423,9 +483,11 @@ class TideAlerts:
                                   text_message, debug, self.cons.STATION_LOCATION) 
 
                 elif status == 1:
-                    if max(self.wind_samples) < db_level:
-                        logging.debug('db: '+str(db_level)+'stat: '+str(status)+' wind_samples: '+str(self.wind_samples))
+                    if wind_avg < clear_level:
+                        logging.debug(f'wind alert cleared: threshold {db_level}, '
+                          f'clear below {clear_level:.2f}, average {wind_avg:.2f}')
                         alert_list[index]['wind_speed_status'] = 0
+                        self.wind_abated_time[alert_dict['dtime']] = wall_time
                         if (not dayonly or (dayonly and (localtime > sunrise and
                           localtime < sunset))):
                             text_message = (
