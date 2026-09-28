@@ -123,8 +123,12 @@ class Constants:
     # exception, even with write_accept_partial=False set). The v2
     # endpoint's per-write latency is addressed via a background write
     # thread in tidedatabase.py instead of switching write APIs.
+    # Local writes run on tidedatabase.py's background thread, so a long
+    # wait costs nothing; 30 s (the client default is 10 s) rides out an
+    # occasional SD-card stall on the Pi, during which InfluxDB still
+    # stores the point but answers late.
     INFLUXDB_WRITE_CLIENT = InfluxDBClient(url=INFLUXDB_LOCAL_URL,
-      token=INFLUXDB_LOCAL_TOKEN, org=ORG_FOR_LOCAL_WRITES)
+      token=INFLUXDB_LOCAL_TOKEN, org=ORG_FOR_LOCAL_WRITES, timeout=30_000)
     INFLUXDB_CLOUD_WRITE_CLIENT = InfluxDBClient(url=INFLUXDB_CLOUD_URL,
       token=INFLUXDB_CLOUD_TOKEN, org=INFLUXDB_CLOUD_ORG)
     # Queries only (local) -- InfluxDB 3 native client, required since
