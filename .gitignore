@@ -12,3 +12,15 @@ wx.html
 checktide*.py
 !requirements.txt
 !prereq_*_tutorial.txt
+
+# Per-station files that live in the working directory on a station
+# (so git status stays empty there)
+newtide.log.*
+*.dev
+.cloud_sync_watermark
+/influxdb3.service
+
+# Working files on the development PC
+*.patch
+*_checklist.md
+Claude outputs/
