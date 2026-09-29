@@ -565,9 +565,11 @@ class TideDisplay:
                             aboxwid = self.plot_window.create_rectangle(
                               self._padded_bbox(abox), outline="blue", fill="white")
                             self.plot_window.tag_lower(aboxwid,abox)
+                # Run-start dot, no wider than the 2 px line, so it only
+                # shows on its own for a lone reading between two gaps.
                 self.plot_window.create_oval(
-                  coords[0]-2, coords[1]-2, coords[0]+2, coords[1]+2,
-                  fill="RoyalBlue3", outline="RoyalBlue3")
+                  coords[0]-1, coords[1]-1, coords[0]+1, coords[1]+1,
+                  fill="RoyalBlue3", outline="")
                 if len(coords) >= 4:
                     self.plot_window.create_line(
                       *coords, fill="RoyalBlue3", width=2, joinstyle="round")

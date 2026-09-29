@@ -839,14 +839,18 @@ class CreateHTML:
         # Plot the actual tide: raw readings, drawn as lines through each
         # run of contiguous readings. The line breaks wherever readings
         # are more than 5 minutes apart (tideprocess.split_into_runs), and
-        # each run starts with a dot, so a lone reading between two gaps
-        # still shows.
+        # each run starts with a dot the same size and colour as the line,
+        # so a lone reading between two gaps still shows without the start
+        # of every run standing out.
         #
         if tidelist:
             x_start = bored+(offtime*plotsecs)
             outfile.write('ctx.lineJoin = "round";\n')
             outfile.write('function plotRun(p) {\n'
-                          '  ctx.fillRect(p[0]-1.5, p[1]-1.5, 3, 3);\n'
+                          '  ctx.save();\n'
+                          '  ctx.fillStyle = ctx.strokeStyle;\n'
+                          '  ctx.fillRect(p[0]-1, p[1]-1, 2, 2);\n'
+                          '  ctx.restore();\n'
                           '  if (p.length < 4) return;\n'
                           '  ctx.beginPath();\n'
                           '  ctx.moveTo(p[0], p[1]);\n'
