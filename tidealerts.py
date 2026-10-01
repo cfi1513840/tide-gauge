@@ -558,6 +558,16 @@ class TideAlerts:
             notice = alert_dict['event_notice']
             repeat = alert_dict['event_repeat']
             thresh = alert_dict['event_thresh']
+            # The alert form's Repeat box defaults to -1, meaning no limit,
+            # but a subscriber can clear it, which stores an empty string.
+            # Treat a blank (or anything else non-numeric) the same as -1,
+            # rather than letting "repeat-1" below raise a TypeError that
+            # abandons the rest of this check_alerts() call for every
+            # subscriber.
+            try:
+                repeat = int(repeat)
+            except (TypeError, ValueError):
+                repeat = -1
            
             if ((enabled and activated and (not dayonly or (dayonly and 
               (localtime > sunrise and localtime < sunset)))) and
@@ -580,7 +590,7 @@ class TideAlerts:
                         if len(telnbr) != 0:
                             self.notify.send_SMS(telnbr,
                               text_message, debug, self.cons.STATION_LOCATION)
-                        if repeat != 0:
+                        if repeat > 0:
                             repeat = repeat-1
                             alert_list[index]['event_repeat'] = repeat
                             
@@ -596,7 +606,7 @@ class TideAlerts:
                         if len(telnbr) != 0:
                             self.notify.send_SMS(telnbr,
                               text_message, debug, self.cons.STATION_LOCATION)
-                        if repeat != 0:
+                        if repeat > 0:
                             repeat = repeat-1
                             alert_list[index]['event_repeat'] = repeat
 
