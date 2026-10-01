@@ -8,3 +8,6 @@
 *.png binary
 *.db binary
 webimage.png.template binary
+
+# Windows batch files need Windows (CRLF) line endings.
+*.cmd text eol=crlf
