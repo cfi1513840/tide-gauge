@@ -31,6 +31,7 @@ triggers a live notification.
 import sqlite3
 from datetime import datetime, timedelta
 import time
+import math
 import pytz
 import logging
 import tidecrypto
@@ -85,9 +86,42 @@ class TideAlerts:
         # trend word: "exceeded" and "abated" already say which way.
         self.air_temp_trend = tidehelper.TrendTracker(60, 0.5)
         self.water_temp_trend = tidehelper.TrendTracker(180, 0.3)
+        # Tidal event alerts ("high tide in 30 minutes"). Each one is sent
+        # once per predicted tide: when the time to that tide first drops
+        # to the subscriber's notice time or less, as long as that is no
+        # more than EVENT_WINDOW_SECONDS past the notice point (so a
+        # restart, or readings resuming after an outage, doesn't send a
+        # notice long after it was due). event_sent remembers, per alert
+        # and event type, the predicted tide time last notified.
+        self.EVENT_WINDOW_SECONDS = 180
+        self.event_sent = {}
         self.f1 = tidecrypto.EMAIL_KEY
         self.f2 = tidecrypto.PHONE_KEY
        
+    def _event_due(self, key, notice, secs_to_tide, tide_time):
+        """True if a tidal event notice for this alert should go out now
+        for the tide at tide_time. Replaces an exact match of the rounded
+        minutes-to-tide against the notice, which could send twice or not
+        at all depending on where in the minute the check ran: Python's
+        round() takes 29.5 and 30.5 both to 30 and 28.5 to 28, so with the
+        once-a-minute check falling near :30 seconds a 30-minute notice
+        went out on two successive minutes and a 29-minute notice never.
+        A missed reading at the one matching minute also lost the notice.
+        """
+        if tide_time is None:
+            return False
+        try:
+            notice_secs = int(notice)*60
+        except (TypeError, ValueError):
+            return False
+        if not (notice_secs - self.EVENT_WINDOW_SECONDS < secs_to_tide
+          <= notice_secs):
+            return False
+        if self.event_sent.get(key) == tide_time:
+            return False
+        self.event_sent[key] = tide_time
+        return True
+
     def check_alerts(self, tide, weather, ndbc_data, sunrise, sunset, debug,
       stationid=None, candidate_time=None):
         # tide_average and the outlier tracker are both single, shared
@@ -183,6 +217,10 @@ class TideAlerts:
         nextides = self.sql_cursor.fetchall()
         nextlowtime = datetime.now()
         nexthightime = datetime.now()
+        # Set only when the predicts table actually gave a next low/high,
+        # so an event notice is never sent for the datetime.now() default.
+        found_low = None
+        found_high = None
         for nextide in nextides:
             if nextide[2] == 'L':
                 nextlowtide_f = nextide[1]
@@ -190,18 +228,18 @@ class TideAlerts:
                 nextlowtime = nextide[0]
                 nextlowtime = datetime.strptime(
                   nextlowtime, self.cons.TIME_FORMAT)
+                found_low = nextlowtime
             elif nextide[2] == 'H':
                 nexthightide_f = nextide[1]
                 nexthightide = format(nextide[1],'.2f')
                 nexthightime = nextide[0]
                 nexthightime = datetime.strptime(
                   nexthightime, self.cons.TIME_FORMAT)
+                found_high = nexthightime
                   
         localtime = datetime.now(pytz.timezone('US/Eastern'))
         secstohigh = round((nexthightime-current_time).total_seconds())
-        mintohigh = round(secstohigh/60)
         secstolow = round((nextlowtime-current_time).total_seconds())
-        mintolow = round(secstolow/60)
 
         self.sql_cursor.execute("select * from useralerts")
         column_names = [description[0] for description in self.sql_cursor.description]
@@ -582,13 +620,14 @@ class TideAlerts:
                   "Content-Type:text/html"]
                 email_headers = "\r\n".join(email_headers)
 
-                if notice == mintolow and event_type == 1:
+                if event_type == 1 and self._event_due(
+                  (alert_dict['dtime'], 1), notice, secstolow, found_low):
                     if (thresh == '' or thresh == None or
                       thresh > nextlowtide_f): 
                         text_message = (
                           alert_time+" - The next predicted low tide "+
                           "of "+nextlowtide+" feet will occur in "+
-                          str(mintolow)+" minutes at "+
+                          str(math.ceil(secstolow/60))+" minutes at "+
                           tidetime.format_time(nextlowtime))
                         self.notify.send_email(email_recipient,
                           email_headers, text_message, debug)
@@ -599,13 +638,14 @@ class TideAlerts:
                             repeat = repeat-1
                             alert_list[index]['event_repeat'] = repeat
                             
-                elif notice == mintohigh and event_type == 2:
+                elif event_type == 2 and self._event_due(
+                  (alert_dict['dtime'], 2), notice, secstohigh, found_high):
                     if (thresh == '' or thresh == None or
                       thresh < nexthightide_f): 
                         text_message = (
                           alert_time+" The next predicted high tide of "+
                           nexthightide+" feet will occur in "+
-                          str(mintohigh)+" minutes at "+
+                          str(math.ceil(secstohigh/60))+" minutes at "+
                           tidetime.format_time(nexthightime))
                         self.notify.send_email(email_recipient,
                           email_headers, text_message, debug)
