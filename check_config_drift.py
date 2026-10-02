@@ -36,7 +36,9 @@ def json_keys(path):
 
 def env_keys(path):
     keys = set()
-    pattern = re.compile(r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=')
+    # Names may start with a digit (12H_TIME): python-dotenv accepts
+    # them, and tide.env is only ever read through python-dotenv.
+    pattern = re.compile(r'^\s*([A-Za-z0-9_]+)\s*=')
     with open(path, 'r') as f:
         for line in f:
             stripped = line.strip()

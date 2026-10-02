@@ -20,6 +20,7 @@ from tkinter import StringVar
 from datetime import datetime, timedelta, timezone
 import logging
 import tideprocess
+import tidetime
 
 class TideDisplay:
 
@@ -491,7 +492,7 @@ class TideDisplay:
             thistate = entry[3]
             this_time = entry[0]
             try:
-                hrmin = datetime.strftime(this_time, "%H:%M")
+                hrmin = tidetime.format_time(this_time)
             except Exception as errmsg:
                 #logging.warning(entry[0]+str(errmsg), exc_info=True)
                 continue
@@ -509,7 +510,8 @@ class TideDisplay:
             if this_time.minute == 0 and this_time.hour % 4 == 0:
                 self.plot_window.create_text(
                   start_plot_x,self.canvas_height-20, fill="black",
-                  text=hrmin, font=("Arial", 10))
+                  text=tidetime.format_time(this_time, 'hour'),
+                  font=("Arial", 10))
                 if (this_time.hour == 4 or this_time.hour == 12 or
                   this_time.hour == 20):
                     self.plot_window.create_text(
@@ -517,13 +519,16 @@ class TideDisplay:
                       fill="black", text=linedate, font=("Arial", 10))
                
             if thistate == 'L' or thistate == 'H':
-                peaks = format(entry[2],'.2f')+' ft '+hrmin
+                # Level and time on separate lines. These used to be one
+                # line wrapped by a fixed width=64, which split "2:05 PM"
+                # across lines once the 12-hour time was wider than that.
+                peaks = format(entry[2],'.2f')+' ft\n'+hrmin
                 if preliminary_tide_state == '':
                     preliminary_tide_state = thistate
                 elif preliminary_tide_state != thistate:
                     preliminary_tide_state = thistate 
                     hbox = self.plot_window.create_text(
-                      start_plot_x,self.canvas_height/2+40, width=64,
+                      start_plot_x,self.canvas_height/2+40,
                       fill="gray30", text=peaks, font=("Arial", 12),
                       justify="center")
                     hboxwid = self.plot_window.create_rectangle(
@@ -556,10 +561,10 @@ class TideDisplay:
                         if (self.tide_turn_time == 0 or
                           abs(hourtime-self.tide_turn_time) >= 3):
                             self.tide_turn_time = hourtime
-                            hrmin = datetime.strftime(this_time, "%H:%M")
-                            peaks = format(entry[1],'.2f')+' ft '+hrmin
+                            hrmin = tidetime.format_time(this_time)
+                            peaks = format(entry[1],'.2f')+' ft\n'+hrmin
                             abox = self.plot_window.create_text(
-                              plot_x,self.canvas_height/2, width=64,
+                              plot_x,self.canvas_height/2,
                               fill="blue", text=peaks, font=("Arial", 12),
                               justify="center")
                             aboxwid = self.plot_window.create_rectangle(
@@ -576,7 +581,7 @@ class TideDisplay:
             tide = measurements[len(measurements)-1][1]
         tide_text = format(tide, '.2f')+' ft'
         current_time = datetime.now()
-        curhrmin = datetime.strftime(current_time, "%H:%M")
+        curhrmin = tidetime.format_time(current_time)
         text_font = tkfont.Font(family="Arial", size=12, weight="bold")
         start_text = self.x_plot_start
         self.plot_window.create_line(
@@ -592,10 +597,13 @@ class TideDisplay:
         cdbox = self.plot_window.create_text(
            self.canvas_width/2-145, 18, fill="RoyalBlue3", text=" Measured Tide "+
            tide_text+" ", font=("Arial", 14, 'bold'))
-        tbox = self.plot_window.create_text(
-          self.canvas_width/2+10,18, fill="black", text=" Time "+curhrmin+" ",
-          font=("Arial", 14, 'bold'))
         cdboxcors = self.plot_window.bbox(cdbox)
+        # The Time box starts just right of the Measured Tide box, rather
+        # than at a fixed centre, so neither box can overlap the other
+        # however wide the tide value or the time ("12:45 PM") gets.
+        tbox = self.plot_window.create_text(
+          cdboxcors[2]+8, 18, anchor="w", fill="black",
+          text=" Time "+curhrmin+" ", font=("Arial", 14, 'bold'))
         cdboxwid = self.plot_window.create_rectangle(
           cdboxcors, outline="RoyalBlue3", fill="white", width=2)
         self.plot_window.tag_lower(cdboxwid,cdbox)

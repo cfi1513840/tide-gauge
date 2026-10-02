@@ -34,6 +34,7 @@ from dotenv import load_dotenv, find_dotenv
 from twilio.rest import Client
 from email.message import EmailMessage
 from urllib.parse import urlparse
+import tidetime
 
 
 class Constants:
@@ -427,8 +428,11 @@ class SunTime:
             sunset = sun.get_local_sunset_time(time_zone=cons.LOCAL_TZ)
             if sunset < sunrise:
                 sunset = sunset + timedelta(1)
-            display_sunrise = sunrise.strftime("%H:%M")
-            display_sunset = sunset.strftime("%H:%M")
+            # 12- or 24-hour per tide.env 12H_TIME. These strings are
+            # display-only: the title bar here, and the banner table that
+            # tidehtml.py reads for the web page heading.
+            display_sunrise = tidetime.format_time(sunrise)
+            display_sunset = tidetime.format_time(sunset)
             db.update_datetime(display_date, display_sunrise, display_sunset)
             return display_date, display_sunrise, display_sunset, sunrise, sunset
         except Exception as errmsg:

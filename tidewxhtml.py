@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 import time
 import sqlite3
 from dotenv import load_dotenv, find_dotenv
+import tidetime
 
 class CreateWxHTML:
     
@@ -572,7 +573,9 @@ class CreateWxHTML:
         self.outfile.write (f'{rowHeader[0]}</td>\n')
         for time in timeOut:
             disptime = datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
-            disptime = datetime.strftime(disptime, "%I:%M%p")
+            # 12- or 24-hour per tide.env 12H_TIME; the non-breaking
+            # space keeps "10:00 PM" on one line in the narrow last column
+            disptime = tidetime.format_time(disptime).replace(' ', '&nbsp;')
             self.outfile.write (f'<td class="day-time">\n')
             self.outfile.write (f'{disptime}</td>\n')
         self.outfile.write ('</tr>\n')

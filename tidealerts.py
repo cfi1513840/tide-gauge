@@ -35,6 +35,7 @@ import pytz
 import logging
 import tidecrypto
 import tidehelper
+import tidetime
 
 class TideAlerts:
     """Check conditions against alert table and provide notification as required"""
@@ -120,6 +121,9 @@ class TideAlerts:
         # compared.
         current_time = candidate_time if candidate_time is not None else datetime.now()
         message_time = datetime.strftime(current_time, self.cons.TIME_FORMAT)
+        # Subscriber-facing time for the alert texts below, 12- or 24-hour
+        # per tide.env 12H_TIME. message_time stays for log lines.
+        alert_time = tidetime.format_time(current_time, 'datetime')
 
 
         def to_float_or_none(raw_value):
@@ -293,7 +297,7 @@ class TideAlerts:
                         if (not dayonly or (dayonly and (localtime > sunrise and
                           localtime < sunset))):
                             text_message = (
-                              message_time+" - The tide level is "+
+                              alert_time+" - The tide level is "+
                               format(tide_level, '.2f')+
                               " feet and Rising, please check "+
                               f"{self.cons.TIDE_URL} "+
@@ -311,7 +315,7 @@ class TideAlerts:
                         if (not dayonly or (dayonly and (localtime > sunrise and
                           localtime < sunset))):
                             text_message = (
-                              message_time+" - The tide Level is "+
+                              alert_time+" - The tide Level is "+
                               format(tide_level, '.2f')+
                               " feet and Falling, please check "+
                               f"{self.cons.TIDE_URL} "+
@@ -329,7 +333,7 @@ class TideAlerts:
                         if (not dayonly or (dayonly and (localtime > sunrise and
                           localtime < sunset))):
                             text_message = (
-                              message_time+" - The tide level is "+
+                              alert_time+" - The tide level is "+
                               format(tide_level, '.2f')+
                               " feet and Rising, please check "+
                               f"{self.cons.TIDE_URL} "+
@@ -347,7 +351,7 @@ class TideAlerts:
                         if (not dayonly or (dayonly and (localtime > sunrise and
                           localtime < sunset))):
                             text_message = (
-                              message_time+" - The tide level is "+
+                              alert_time+" - The tide level is "+
                               format(tide_level, '.2f')+" feet and Falling, "+
                               f"please check {self.cons.TIDE_URL} "+
                               "for current conditions")
@@ -382,7 +386,7 @@ class TideAlerts:
                         if (not dayonly or (dayonly and (localtime > sunrise and
                           localtime < sunset))):
                             text_message = (
-                              message_time+
+                              alert_time+
                               " - The Air Temperature has reached "+
                               str(temperature)+" degrees F"+air_temp_word+
                               f", please check {self.cons.TIDE_URL} "+
@@ -423,7 +427,7 @@ class TideAlerts:
                         if (not dayonly or (dayonly and (localtime > sunrise and
                           localtime < sunset))):
                             text_message = (
-                              message_time+
+                              alert_time+
                               " - The Water Temperature has reached "+
                               str(int(round(water_temp)))+" degrees F"+
                               water_temp_word+","+
@@ -470,7 +474,7 @@ class TideAlerts:
                         if (not dayonly or (dayonly and (localtime > sunrise and
                           localtime < sunset))):
                             text_message = (
-                              message_time+
+                              alert_time+
                               " The wind speed has exceeded "+str(db_level)+ 
                               " mph"+(" "+direction if direction else "")+
                               " - please check "+
@@ -491,7 +495,7 @@ class TideAlerts:
                         if (not dayonly or (dayonly and (localtime > sunrise and
                           localtime < sunset))):
                             text_message = (
-                              message_time+" - The wind speed has abated to "+
+                              alert_time+" - The wind speed has abated to "+
                               "less than "+str(db_level)+" mph, please check "+
                               f"{self.cons.TIDE_URL} for "+
                               "current conditions")
@@ -525,7 +529,7 @@ class TideAlerts:
                   (tide_level-nexthightide_f) >= db_level and secstohigh < 60):
                     dispdiff = format(abs(tide_level-nexthightide_f), '.2f')
                     text_message = (
-                      message_time+" - The tide level is higher than the "+
+                      alert_time+" - The tide level is higher than the "+
                       "predicted high tide by "+dispdiff+" feet"+
                       f", please check {self.cons.TIDE_URL} for "+
                       "current conditions")
@@ -539,7 +543,7 @@ class TideAlerts:
                   (tide_level-nextlowtide_f) <= db_level and secstolow < 60):
                     dispdiff = format(abs(tide_level-nextlowtide_f), '.2f')
                     text_message = (
-                      message_time+" - The tide level is lower than the "+
+                      alert_time+" - The tide level is lower than the "+
                       "predicted low tide by "+dispdiff+" feet"+
                       f", please check {self.cons.TIDE_URL} for "+
                       "current conditions")
@@ -582,9 +586,10 @@ class TideAlerts:
                     if (thresh == '' or thresh == None or
                       thresh > nextlowtide_f): 
                         text_message = (
-                          message_time+" - The next predicted low tide "+
+                          alert_time+" - The next predicted low tide "+
                           "of "+nextlowtide+" feet will occur in "+
-                          str(mintolow)+" minutes at "+str(nextlowtime))
+                          str(mintolow)+" minutes at "+
+                          tidetime.format_time(nextlowtime))
                         self.notify.send_email(email_recipient,
                           email_headers, text_message, debug)
                         if len(telnbr) != 0:
@@ -598,9 +603,10 @@ class TideAlerts:
                     if (thresh == '' or thresh == None or
                       thresh < nexthightide_f): 
                         text_message = (
-                          message_time+" The next predicted high tide of "+
+                          alert_time+" The next predicted high tide of "+
                           nexthightide+" feet will occur in "+
-                          str(mintohigh)+" minutes at "+str(nexthightime))
+                          str(mintohigh)+" minutes at "+
+                          tidetime.format_time(nexthightime))
                         self.notify.send_email(email_recipient,
                           email_headers, text_message, debug)
                         if len(telnbr) != 0:

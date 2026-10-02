@@ -33,6 +33,9 @@ import cgi, cgitb
 from dataclasses import dataclass, field
 from dotenv import load_dotenv, find_dotenv
 from suntimes import SunTimes
+# Shared 12/24-hour clock formatting (tide.env 12H_TIME). Imported by name
+# because "tidetime" is already a local variable throughout this file.
+from tidetime import format_time, use_12_hour
 
 #
 # Function to generate the predicted tide at one minute intervals. The predicted tide
@@ -1222,7 +1225,7 @@ class TidePlotRenderer:
               for pidx, ent in enumerate(self.tidelist):
                  try:
                     tidetime = datetime.strptime(ent[0], self.sqltimeformat)
-                    hrmin = datetime.strftime(tidetime, "%H:%M")
+                    hrmin = format_time(tidetime)
                     linedate = datetime.strftime(tidetime, "%d %b")
                     plottime = tidetime.timestamp() - starttime.timestamp()
                     startx = int((plottime+offtime)*(self.plot_width-30)/86400/self.plotdays+30)
@@ -1246,8 +1249,8 @@ class TidePlotRenderer:
                              # assumed from the label name.
                              high_shift = 30 if tidestate == 'low' else 0
                              self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                             self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-19+high_shift}, 42, 30);\n')
-                             self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-19+high_shift}, 42, 30);\n')
+                             self.outfile.write (f'ctx.strokeRect({startx-self.tag_half}, {self.tag_y-19+high_shift}, {self.tag_w}, 30);\n')
+                             self.outfile.write (f'ctx.fillRect({startx-self.tag_half}, {self.tag_y-19+high_shift}, {self.tag_w}, 30);\n')
                              self.outfile.write (f'ctx.fillStyle = "blue";\n')
                              self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y+9+high_shift});\n')
                              self.outfile.write (f'ctx.fillText("{peak} ft", {startx}, {self.tag_y-6+high_shift});\n')
@@ -1267,8 +1270,8 @@ class TidePlotRenderer:
                              # assumed from the label name.
                              high_shift = 30 if tidestate == 'low' else 0
                              self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                             self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-51+high_shift}, 42, 30);\n')
-                             self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-51+high_shift}, 42, 30);\n')
+                             self.outfile.write (f'ctx.strokeRect({startx-self.tag_half}, {self.tag_y-51+high_shift}, {self.tag_w}, 30);\n')
+                             self.outfile.write (f'ctx.fillRect({startx-self.tag_half}, {self.tag_y-51+high_shift}, {self.tag_w}, 30);\n')
                              self.outfile.write (f'ctx.fillStyle = "darkgreen";\n')
                              self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y-23+high_shift});\n')
                              self.outfile.write (f'ctx.fillText("{peak} ft", {startx}, {self.tag_y-38+high_shift});\n')
@@ -1288,8 +1291,8 @@ class TidePlotRenderer:
                              # assumed from the label name.
                              high_shift = 30 if tidestate == 'low' else 0
                              self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                             self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y-83+high_shift}, 42, 30);\n')
-                             self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y-83+high_shift}, 42, 30);\n')
+                             self.outfile.write (f'ctx.strokeRect({startx-self.tag_half}, {self.tag_y-83+high_shift}, {self.tag_w}, 30);\n')
+                             self.outfile.write (f'ctx.fillRect({startx-self.tag_half}, {self.tag_y-83+high_shift}, {self.tag_w}, 30);\n')
                              self.outfile.write (f'ctx.fillStyle = "brown";\n')
                              self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y-55+high_shift});\n')
                              self.outfile.write (f'ctx.fillText("{peak} ft", {startx}, {self.tag_y-70+high_shift});\n')
@@ -1309,7 +1312,7 @@ class TidePlotRenderer:
                  continue
               predstate = ent[3]
               predtime = ent[0]
-              hrmin = datetime.strftime(predtime, "%H:%M")
+              hrmin = format_time(predtime)
               linedate = datetime.strftime(predtime, "%d %b")
 
               endx = int(pstart+ent[1]*(self.plot_width-30)/86400/self.plotdays)
@@ -1377,8 +1380,8 @@ class TidePlotRenderer:
                        # assumed from the variable name.
                        high_shift = 30 if predstate == 'L' else 0
                        self.outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                       self.outfile.write (f'ctx.strokeRect({startx-21}, {self.tag_y+13+high_shift}, 42, 30);\n')
-                       self.outfile.write (f'ctx.fillRect({startx-21}, {self.tag_y+13+high_shift}, 42, 30);\n')
+                       self.outfile.write (f'ctx.strokeRect({startx-self.tag_half}, {self.tag_y+13+high_shift}, {self.tag_w}, 30);\n')
+                       self.outfile.write (f'ctx.fillRect({startx-self.tag_half}, {self.tag_y+13+high_shift}, {self.tag_w}, 30);\n')
                        self.outfile.write (f'ctx.fillStyle = "gray";\n')
                        self.outfile.write (f'ctx.fillText("{peak} ft", {startx}, {self.tag_y+27+high_shift});\n')
                        self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y+42+high_shift});\n')
@@ -1511,6 +1514,13 @@ class TidePlotRenderer:
            with open('/var/www/html/tideplot.log', 'a') as self.logfile:
               self.logfile.write (self.msgtime+ 'environment file read failed\n')                  
 
+        #
+        # High/low tag box width: "12:45 PM" in 12px Arial is 51 px, too
+        # wide for the 42 px box that fits a 24-hour "12:45" (tide.env
+        # 12H_TIME, read above with the rest of tide.env).
+        #
+        self.tag_w = 58 if use_12_hour() else 42
+        self.tag_half = self.tag_w // 2
         #
         # Establish SQLite3 connection to the periodic copy of tides.db
         # (SQL_COPY in tide.env), not the live database tide.py writes to

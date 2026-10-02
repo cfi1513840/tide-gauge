@@ -20,6 +20,7 @@ import re
 from pytz import timezone
 import logging
 import tideprocess
+import tidetime
 from dotenv import load_dotenv, find_dotenv
 
 class CreateHTML:
@@ -55,7 +56,18 @@ class CreateHTML:
         reform = []
         timeformat = "%Y-%m-%d %H:%M:%S"
         current_time = datetime.now()
-        hrtime = datetime.strftime(current_time, "%H:%M")
+        hrtime = tidetime.format_time(current_time)
+        # High/low tag boxes and the top-centre Time box are wider for
+        # 12-hour times: "12:45 PM" in bold 14px Arial is 61 px against
+        # a 52 px tag box, and " Time 12:45 PM " in bold 20px is 150 px
+        # against a 110 px Time box. The Time box grows to the right,
+        # into the empty space before the predicted-tide station name,
+        # so the Measured Tide box beside it stays where it was.
+        if tidetime.use_12_hour():
+            tag_w, time_w = 68, 145
+        else:
+            tag_w, time_w = 52, 110
+        tag_half = tag_w // 2
         minute = datetime.strftime(current_time, "%M")
         filetag = "tides"+datetime.strftime(current_time, "%y%m%d%H%M%S")+".tmp"
         outfile = open(filetag, "w")    
@@ -609,7 +621,7 @@ class CreateHTML:
                 plottime = thistime.timestamp() - starttime.timestamp()
                 plotx = int((plotsecs*plottime)+x_start)
                 hourtime = thistime.hour
-                hm = datetime.strftime(thistime, "%H:%M")
+                hm = tidetime.format_time(thistime)
                 linedate = datetime.strftime(thistime, "%d %b")
                 ploty = 1
                 thistate = ent[2]
@@ -711,7 +723,7 @@ class CreateHTML:
             thistate = ent[3]
             thistime = ent[0]
             try:
-                hrmin = datetime.strftime(thistime, "%H:%M")
+                hrmin = tidetime.format_time(thistime)
             except:
                 continue
             linedate = datetime.strftime(thistime, "%d %b")
@@ -724,7 +736,7 @@ class CreateHTML:
        
             if thistime.minute == 0 and thistime.hour % 4 == 0:
                 outfile.write ('ctx.fillStyle = "black";\n')
-                outfile.write (f'ctx.fillText("{hrmin}", {endx}, {ploty+6});\n')
+                outfile.write (f'ctx.fillText("{tidetime.format_time(thistime, "hour")}", {endx}, {ploty+6});\n')
                 if thistime.hour == 4 or thistime.hour == 12 or thistime.hour == 20:
                     outfile.write (f'ctx.fillText("{linedate}", {endx}, {ploty+17});\n')
         outfile.write (f'ctx.font = "bold 14px Arial";\n')
@@ -737,7 +749,7 @@ class CreateHTML:
             thistate = ent[3]
             thistime = ent[0]
             try:
-                hrmin = datetime.strftime(thistime, "%H:%M")
+                hrmin = tidetime.format_time(thistime)
             except:
                 continue
             linedate = datetime.strftime(thistime, "%d %b")
@@ -750,15 +762,15 @@ class CreateHTML:
                     peak = format(ent[2], '.2f')+' ft'
                     if prestate == 'H':
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({endx-26}, {midcanvas+28}, 52, 30);\n')
-                        outfile.write (f'ctx.fillRect({endx-26}, {midcanvas+28}, 52, 30);\n')
+                        outfile.write (f'ctx.strokeRect({endx-tag_half}, {midcanvas+28}, {tag_w}, 30);\n')
+                        outfile.write (f'ctx.fillRect({endx-tag_half}, {midcanvas+28}, {tag_w}, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#808080";\n')
                         outfile.write (f'ctx.fillText("{peak}", {endx}, {midcanvas+42});\n')
                         outfile.write (f'ctx.fillText("{hrmin}", {endx}, {midcanvas+57});\n')
                     else:
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({endx-26}, {midcanvas-28}, 52, 30);\n')
-                        outfile.write (f'ctx.fillRect({endx-26}, {midcanvas-28}, 52, 30);\n')
+                        outfile.write (f'ctx.strokeRect({endx-tag_half}, {midcanvas-28}, {tag_w}, 30);\n')
+                        outfile.write (f'ctx.fillRect({endx-tag_half}, {midcanvas-28}, {tag_w}, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#808080";\n')
                         outfile.write (f'ctx.fillText("{hrmin}", {endx}, {midcanvas+1});\n')
                         outfile.write (f'ctx.fillText("{peak}", {endx}, {midcanvas-14});\n')
@@ -772,15 +784,15 @@ class CreateHTML:
                 if ent[5] != '':
                     if ent[5] == 'high':
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({plotx-26}, {midcanvas-60}, 52, 30);\n')
-                        outfile.write (f'ctx.fillRect({plotx-26}, {midcanvas-60}, 52, 30);\n')
+                        outfile.write (f'ctx.strokeRect({plotx-tag_half}, {midcanvas-60}, {tag_w}, 30);\n')
+                        outfile.write (f'ctx.fillRect({plotx-tag_half}, {midcanvas-60}, {tag_w}, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
                         outfile.write (f'ctx.fillText("{peak}", {plotx}, {midcanvas-49});\n')
                         outfile.write (f'ctx.fillText("{hm}", {plotx}, {midcanvas-34});\n')
                     else:
                         outfile.write (f'ctx.fillStyle = "#ffffff";\n')
-                        outfile.write (f'ctx.strokeRect({plotx-26}, {midcanvas-4}, 52, 30);\n')
-                        outfile.write (f'ctx.fillRect({plotx-26}, {midcanvas-4}, 52, 30);\n')
+                        outfile.write (f'ctx.strokeRect({plotx-tag_half}, {midcanvas-4}, {tag_w}, 30);\n')
+                        outfile.write (f'ctx.fillRect({plotx-tag_half}, {midcanvas-4}, {tag_w}, 30);\n')
                         outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
                         outfile.write (f'ctx.fillText("{hm}", {plotx}, {midcanvas+24});\n')
                         outfile.write (f'ctx.fillText("{peak}", {plotx}, {midcanvas+9});\n')
@@ -789,10 +801,10 @@ class CreateHTML:
         outfile.write ('ctx.strokeStyle = "black";\n')
         outfile.write ('ctx.lineWidth = 2;\n')
         outfile.write (f'ctx.fillStyle = "white";\n')
-        outfile.write (f'ctx.fillRect({canvas_width/2-50}, 4, 110, 23);\n')
-        outfile.write (f'ctx.strokeRect({canvas_width/2-50}, 4, 110, 23);\n')
+        outfile.write (f'ctx.fillRect({canvas_width/2-50}, 4, {time_w}, 23);\n')
+        outfile.write (f'ctx.strokeRect({canvas_width/2-50}, 4, {time_w}, 23);\n')
         outfile.write ('ctx.fillStyle = "black";\n')
-        outfile.write (f'ctx.fillText(" Time {hrtime} ", {canvas_width/2+5},22);\n')
+        outfile.write (f'ctx.fillText(" Time {hrtime} ", {canvas_width/2-50+time_w/2},22);\n')
         
         outfile.write ('ctx.strokeStyle = "#1A53FF";\n')
         outfile.write ('ctx.lineWidth = 2;\n')
