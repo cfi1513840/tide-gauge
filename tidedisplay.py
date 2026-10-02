@@ -339,7 +339,8 @@ class TideDisplay:
 
         self.title_bar_tk_var.set(self.state.title_bar)
         if weather:
-            self.local_wx_time_tk_var.set(weather['obs_time'])
+            self.local_wx_time_tk_var.set(
+              tidetime.format_obs_time(weather['obs_time']))
             wind_speed = weather['wind_speed']
             if wind_speed != 0 and wind_speed != '':
                 self.wind_speed_tk_var.set(str(wind_speed)+ ' mph')
@@ -389,7 +390,8 @@ class TideDisplay:
                 return
             air_temp_display = ''
             water_temp_display = ''
-            self.ndbc_time_tk_var.set(ndbc_data['DateTime'])
+            self.ndbc_time_tk_var.set(
+              tidetime.format_obs_time(ndbc_data['DateTime']))
             wind_display = ndbc_data['Wind Speed']
             if wind_display != 0 and wind_display != '' and wind_display != None:
                 self.ndbc_wind_tk_var.set(wind_display+' kts')

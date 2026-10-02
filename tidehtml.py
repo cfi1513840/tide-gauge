@@ -467,7 +467,7 @@ class CreateHTML:
                 outfile.write ('<td colspan = "8" style="background-color: snow;"> <p>Local Weather Temporarily Unavailable</p>\n')
             else:
                 outfile.write ('<td colspan="2" style="background-color: snow;"><p>\n')
-                outfile.write (f'{obs_time}</p>\n')
+                outfile.write (f'{tidetime.format_obs_time(obs_time)}</p>\n')
                 outfile.write (f'</td>\n')
                 outfile.write ('<td style="background-color: snow;"><p>\n')
                 outfile.write (f'{temperature}</p>\n')
@@ -544,7 +544,7 @@ class CreateHTML:
             outfile.write ('</span>\n')
             outfile.write ('<tr valign="middle">\n')
             outfile.write ('<td colspan = "2" style="background-color: snow;"><p>\n')
-            outfile.write (f'{ndbc_time}</p>\n')
+            outfile.write (f'{tidetime.format_obs_time(ndbc_time)}</p>\n')
             outfile.write (f'</td>\n')
             outfile.write (f'<td style="background-color: snow;"><p>\n')
             outfile.write (f'{ndbc_air_temp}</p>\n')
