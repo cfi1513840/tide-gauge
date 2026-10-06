@@ -28,6 +28,7 @@ import tidealerts
 import tidehtml
 import tidewxhtml
 import tidesensors
+import tidecloud
 from tidenote import NotehubReceiver
 #
 # Setup Logging to console and file
@@ -137,6 +138,10 @@ sensor = (tideget.ReadSensor(cons, val)
   if 'lora' in station_types.values() else None)
 note_receiver = (NotehubReceiver(cons, sensor_ctx)
   if station_mode == 'note' else None)
+cloud_reader = (tidecloud.CloudReader(cons, sensor_ctx)
+  if station_mode == 'cloud' else None)
+# Readings tide.py reads from the cloud are never synced back up to it.
+db.cloud_read_slots = set(sensor_ctx.slots_of_type('cloud'))
 
 class Tide:
     """The Tide class is the primary tide station processor and scheduler"""
@@ -197,6 +202,15 @@ class Tide:
             self.stationcal = self.station3cal
         self.stype = station_types.get(self.stationid)
         self.influx_duration = '-24h'
+        if cloud_reader:
+            # First cloud read (catching up since the newest local
+            # reading) right away, not a minute from now.
+            sensor_ctx.refresh(
+              {1: self.station1cal, 2: self.station2cal, 3: self.station3cal},
+              {1: self.s1enable, 2: self.s2enable, 3: self.s3enable},
+              self.stationid, {}, {}, None, None,
+              self.iparams_dict.get('debug'))
+            cloud_reader.start_query()
         state.debug = self.iparams_dict.get('debug')
         self.tide_only = self.iparams_dict.get('tide_only')
         display_date_and_time = sunny.get_suntimes(cons, db)
@@ -348,6 +362,11 @@ class Tide:
             # tidesensors.ingest_records().
             if note_receiver:
                 note_receiver.poll()
+            # Cloud readings: whatever the background query (started at
+            # the top of each minute, below) has returned, stored and
+            # alert-checked the same way -- see tidecloud.py.
+            if cloud_reader:
+                cloud_reader.poll()
 
             if self.main_loop_count == 2 and int(current_minute) % 5 == 0: 
                 #
@@ -463,6 +482,10 @@ class Tide:
 
                 #print (self.message_time+' One minute processing')
                 self.main_loop_count = 0
+                # Start this minute's InfluxDB Cloud read on its background
+                # thread; poll() picks up the results on the next passes.
+                if cloud_reader:
+                    cloud_reader.start_query()
                 # Reset every cycle so a stale value from a previous minute
                 # can never be mistaken for a fresh reading -- see the
                 # check_alerts() call below, which now depends on this

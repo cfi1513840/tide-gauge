@@ -92,6 +92,11 @@ class DbManage:
         # already pushed to InfluxDB Cloud, so _sync_influxdb_cloud() only
         # sends what's new since the last successful sync. Stored in a flat
         # file (not the database) so it survives tide.py restarts.
+        # Slots tide.py reads FROM InfluxDB Cloud ('cloud' type, set by
+        # tide.py at startup): never synced back up, whatever their
+        # S<n>CLOUD_ENABLE says, or every reading would be written to
+        # the cloud a second time under this station's tags.
+        self.cloud_read_slots = set()
         self.cloud_sync_watermark_path = os.path.join(
           self.cons.HOME_DIRECTORY, '.cloud_sync_watermark')
 
@@ -304,7 +309,10 @@ class DbManage:
                 pass
             message_time = datetime.now(timezone.utc)
             if "T" in data_dict:
-                message_time = int(data_dict["T"]*1000)
+                # round(), not int(), so a millisecond T (cloud
+                # readings) can never be stored 1 ms early through float
+                # rounding -- tidecloud.py matches readings by exact ms.
+                message_time = int(round(data_dict["T"]*1000))
             # Sensor height above MLLW ("H") is expected to already be set
             # on data_dict by the caller (tide.py), using its in-memory
             # cached stationNcal values -- not queried here on every write,
@@ -539,9 +547,9 @@ class DbManage:
         # those stations' data is now routed directly from Notehub to
         # InfluxDB Cloud (see STATION_CLOUD_ENABLE in tidehelper.py), so
         # forwarding it here again would just duplicate it.
-        disabled_stations = [
-          n for n, enabled in self.cons.STATION_CLOUD_ENABLE.items()
-          if not enabled]
+        disabled_stations = sorted(
+          {n for n, enabled in self.cons.STATION_CLOUD_ENABLE.items()
+           if not enabled} | set(self.cloud_read_slots))
         station_filter = ''
         if disabled_stations:
             station_filter = (
