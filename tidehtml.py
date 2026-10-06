@@ -156,8 +156,12 @@ class CreateHTML:
                     ndbc_time = datetime.strftime(timecheck,'%b %d, %Y %H:%M')
             except:
                 logging.info('Error processing NDBC time parameter')
-            ndbc_wind = ndbc_wind+' kts'
-            ndbc_gust = ndbc_gust+' kts'
+            # Units only with a value, so an empty report doesn't show a
+            # bare "kts".
+            if ndbc_wind != '':
+                ndbc_wind = ndbc_wind+' kts'
+            if ndbc_gust != '':
+                ndbc_gust = ndbc_gust+' kts'
         #
         # Extract weather dictionary data
         #
@@ -497,28 +501,24 @@ class CreateHTML:
             outfile.write ('<tr valign="middle">\n')
             #outfile.write ('<td colspan="10" style="background-color: #1A53FF;">\n')
             outfile.write ('<td colspan="10" style="background-color: #6BB4E2;">\n')
-            if ndbc_currency == 0:
-                outfile.write (
-                  f'<p><a href="{self.NDBC_URL}" '+
-                  f'style="color: black">{self.cons.NDBC_TITLE}</a></p>\n')
-                  #f'style="color: white">NDBC Marine Observation - '+
-                  #f'{self.cons.NDBC_LOCATION} - '+
-                  #f'Location: {str(self.cons.NDBC_LATITUDE)} '+
-                  #f'{str(self.cons.NDBC_LONGITUDE)}</a></span></p>\n')
-            elif ndbc_currency == 1:
-                outfile.write (
-                  f'<a href="{self.NDBC_URL}" '+
-                  f'style="color: white">NDBC Marine Observation - {self.cons.NDBC_LOCATION} - '+
-                  f'Location: {str(self.cons.NDBC_LATITUDE)} '+
-                  f'{str(self.cons.NDBC_LONGITUDE)}<font color="#FF9999"> '+
-                  f'(This report is more than 2 hours old)</font></a></span></p>\n')
+            # Same title, link colour and centred paragraph for every state,
+            # with a warning added when the report is old or missing. The
+            # two warning versions used to leave out the opening <p> (so
+            # they lost the page's centred bold text style) and kept the
+            # white link and pale-red text from when this row had a dark
+            # blue background.
+            if ndbc_currency == 1:
+                ndbc_warning = (' <span style="color: #A00000">'
+                                '(This report is more than 2 hours old)</span>')
             elif ndbc_currency == 2:
-                outfile.write (
-                  f'<a href="{self.NDBC_URL}" '+
-                  f'style="color: white">NDBC Marine Observation - {self.cons.NDBC_LOCATION} - '+
-                  f'Location: {str(self.cons.NDBC_LATITUDE)} '+
-                  f'{str(self.cons.NDBC_LONGITUDE)}<font color="red"> '+
-                  f'Temporarily Out of Service</a></span></p>\n')
+                ndbc_warning = (' <span style="color: #A00000">'
+                                '- Temporarily Out of Service</span>')
+            else:
+                ndbc_warning = ''
+            outfile.write (
+              f'<p><a href="{self.NDBC_URL}" '+
+              f'style="color: black">{self.cons.NDBC_TITLE}</a>'+
+              f'{ndbc_warning}</p>\n')
             outfile.write (f'</td>\n')
             outfile.write ('</tr>\n')
             outfile.write ('<tr valign="middle" style="background-color: #6BB4E2;">\n')
