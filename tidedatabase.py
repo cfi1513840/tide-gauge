@@ -100,26 +100,60 @@ class DbManage:
         self.cloud_sync_watermark_path = os.path.join(
           self.cons.HOME_DIRECTORY, '.cloud_sync_watermark')
 
+    # Most points the background thread sends to local InfluxDB in one
+    # write request. A request costs about the same whether it carries one
+    # point or hundreds -- InfluxDB 3 Core answers each write only once its
+    # write-ahead log is flushed, by default about once a second.
+    WRITE_BATCH_MAX = 500
+
     def _write_worker(self):
-        """Background thread: pulls Points off self._write_queue and
-        writes them to local InfluxDB one at a time, off the Tk main
-        thread. Runs for the life of the process (daemon thread, so it
-        doesn't block interpreter shutdown). A slow or stuck write here
-        never blocks main(), sensor reads, or Notehub HTTP responses --
-        it only delays how quickly OTHER queued points get written.
+        """Background thread: takes Points off self._write_queue and writes
+        them to local InfluxDB, off the Tk main thread. Whatever has queued
+        up is sent together, up to WRITE_BATCH_MAX points per request: a
+        lone reading still goes as soon as it arrives, but a backlog (a
+        Notecard batch, a cloud catch-up of up to 24 hours) is written in a
+        few requests instead of one per point, about a second each. If a
+        batch is refused, its points are retried one at a time so a single
+        bad point doesn't cost the rest. Runs for the life of the process
+        (daemon thread, so it doesn't block interpreter shutdown). A slow
+        or stuck write here never blocks main(), sensor reads, or Notehub
+        HTTP responses -- it only delays how quickly queued points land.
         """
         while True:
-            point_command = self._write_queue.get()
+            batch = [self._write_queue.get()]
+            while len(batch) < self.WRITE_BATCH_MAX:
+                try:
+                    batch.append(self._write_queue.get_nowait())
+                except queue.Empty:
+                    break
             try:
-                self._influxdb_write_api.write(
-                  self.cons.INFLUXDB_LOCAL_DATABASE,
-                  self.cons.ORG_FOR_LOCAL_WRITES, point_command)
+                self._write_local(batch)
             except Exception as errmsg:
-                logging.warning(
-                  'insert_tide (background write thread): '+str(errmsg),
-                  exc_info=True)
+                if len(batch) == 1:
+                    logging.warning(
+                      'insert_tide (background write thread): '+str(errmsg),
+                      exc_info=True)
+                else:
+                    logging.warning(
+                      f'insert_tide (background write thread): batch of '
+                      f'{len(batch)} refused ({errmsg}); writing them one '
+                      f'at a time')
+                    for point_command in batch:
+                        try:
+                            self._write_local(point_command)
+                        except Exception as errmsg:
+                            logging.warning(
+                              'insert_tide (background write thread): '
+                              +str(errmsg), exc_info=True)
             finally:
-                self._write_queue.task_done()
+                for _ in batch:
+                    self._write_queue.task_done()
+
+    def _write_local(self, points):
+        """One write request to local InfluxDB: a Point or a list of them."""
+        self._influxdb_write_api.write(
+          self.cons.INFLUXDB_LOCAL_DATABASE,
+          self.cons.ORG_FOR_LOCAL_WRITES, points)
 
     def insert_weather(self, weather):
         now = datetime.now()
