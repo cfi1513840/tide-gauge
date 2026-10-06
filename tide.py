@@ -556,8 +556,16 @@ class Tide:
                                 self.tide_ft = round(self.station3cal-tide_mm/304.8, 2)
                                 self.station_oos = False
                         if self.tide_ft != 99:
-                            self.tide_list = self.process.update_tide_list(
-                              tide_list)
+                            # self.process is only created at startup when
+                            # there were already readings; a station that
+                            # started with none (new, or after an outage)
+                            # creates it with its first readings here.
+                            if getattr(self, 'process', None) is None:
+                                self.process = tideprocess.ProcTide(tide_list)
+                                self.tide_list = self.process.get_tide_list()
+                            else:
+                                self.tide_list = self.process.update_tide_list(
+                                  tide_list)
                               #self.tide_list, self.tide_ft, tide_time)
                     except Exception as errmsg:
                         pass
