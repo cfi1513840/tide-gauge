@@ -3,9 +3,10 @@
 """configure_iparams.py
 
 Interactively configures the iparams table of a freshly-copied tides.db
-for a new station: which sensors (1-3) are installed, each one's LoRa or
-Notecard link type and calibration value, and which sensor serves as the
-primary station display (stationid). Meant to run once, immediately after
+for a new station: which sensors (1-3) are installed, each one's
+calibration value, and which sensor serves as the primary station
+display (stationid). Each sensor's type (lora/note/cloud) is set in
+tide.env as STATION<n>_TYPE, not here. Meant to run once, immediately after
 tides.db is first copied into place for a fresh install -- not meant to
 be re-run against an already-configured, in-service database, since it
 overwrites every station-specific iparams field unconditionally.
@@ -32,13 +33,8 @@ for n in (1, 2, 3):
             break
         print("Please answer Y or N.")
     if answer == 'n':
-        sensors[n] = {'enable': 0, 'type': None, 'cal': None}
+        sensors[n] = {'enable': 0, 'cal': None}
         continue
-    while True:
-        link_type = input(f"  Sensor {n} link type -- lora or note: ").strip().lower()
-        if link_type in ('lora', 'note'):
-            break
-        print("  Please enter 'lora' or 'note'.")
     while True:
         cal_raw = input(f"  Sensor {n} calibration value (e.g. 14.08): ").strip()
         try:
@@ -46,7 +42,7 @@ for n in (1, 2, 3):
             break
         except ValueError:
             print("  Please enter a number.")
-    sensors[n] = {'enable': 1, 'type': link_type, 'cal': cal}
+    sensors[n] = {'enable': 1, 'cal': cal}
 
 installed = [n for n in (1, 2, 3) if sensors[n]['enable'] == 1]
 if not installed:
@@ -69,31 +65,33 @@ else:
 
 con = sqlite3.connect(db_path)
 cur = con.cursor()
+# The s<n>type columns are no longer used (types are in tide.env) and
+# are left as they are.
 cur.execute(
     "UPDATE iparams SET stationid=?, "
-    "station1cal=?, s1enable=?, s1type=?, "
-    "station2cal=?, s2enable=?, s2type=?, "
-    "station3cal=?, s3enable=?, s3type=?",
+    "station1cal=?, s1enable=?, "
+    "station2cal=?, s2enable=?, "
+    "station3cal=?, s3enable=?",
     (
         stationid,
-        sensors[1]['cal'], sensors[1]['enable'], sensors[1]['type'],
-        sensors[2]['cal'], sensors[2]['enable'], sensors[2]['type'],
-        sensors[3]['cal'], sensors[3]['enable'], sensors[3]['type'],
+        sensors[1]['cal'], sensors[1]['enable'],
+        sensors[2]['cal'], sensors[2]['enable'],
+        sensors[3]['cal'], sensors[3]['enable'],
     )
 )
 if cur.rowcount == 0:
     # iparams was genuinely empty (no starter row to update) -- insert one.
     cur.execute(
         "INSERT INTO iparams (stationid, "
-        "station1cal, s1enable, s1type, "
-        "station2cal, s2enable, s2type, "
-        "station3cal, s3enable, s3type) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "station1cal, s1enable, "
+        "station2cal, s2enable, "
+        "station3cal, s3enable) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
         (
             stationid,
-            sensors[1]['cal'], sensors[1]['enable'], sensors[1]['type'],
-            sensors[2]['cal'], sensors[2]['enable'], sensors[2]['type'],
-            sensors[3]['cal'], sensors[3]['enable'], sensors[3]['type'],
+            sensors[1]['cal'], sensors[1]['enable'],
+            sensors[2]['cal'], sensors[2]['enable'],
+            sensors[3]['cal'], sensors[3]['enable'],
         )
     )
 con.commit()
@@ -104,6 +102,8 @@ print(f"iparams updated: stationid={stationid}")
 for n in (1, 2, 3):
     s = sensors[n]
     if s['enable']:
-        print(f"  sensor {n}: enabled, type={s['type']}, cal={s['cal']}")
+        print(f"  sensor {n}: enabled, cal={s['cal']}")
     else:
         print(f"  sensor {n}: disabled")
+print("Set each installed sensor's type (lora, note or cloud) in tide.env "
+      "as STATION<n>_TYPE.")

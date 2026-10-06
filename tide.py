@@ -27,6 +27,7 @@ import tideprocess
 import tidealerts
 import tidehtml
 import tidewxhtml
+import tidesensors
 from tidenote import NotehubReceiver
 #
 # Setup Logging to console and file
@@ -91,12 +92,51 @@ val = tidehelper.ValType()
 visits = tidehelper.DailyVisitReport("/var/log/apache2/access.log.1")
 getwx = tideget.GetWeather(cons, val, notify)
 db = tidedatabase.DbManage(cons)
-note_receiver = NotehubReceiver(cons, db)
 getnoaa = tideget.GetNOAA(cons, val)
-sensor = tideget.ReadSensor(cons, val)
 predict = tidepredict.TidePredict(cons, db)
 alerts = tidealerts.TideAlerts(cons, db, notify)
 wxhtml = tidewxhtml.CreateWxHTML(cons)
+
+def station_config_exit(text):
+    """Stop tide.py on a station configuration error: logged, printed and
+    emailed to the admins. Exits with status 0 so tide.service
+    (Restart=on-failure) doesn't restart it every 30 seconds into the
+    same error."""
+    text = f'tide.py not started -- station configuration error: {text}'
+    logging.error(text)
+    print(text)
+    for email_recip in cons.ADMIN_EMAIL:
+        if email_recip == None:
+            continue
+        email_headers = "\r\n".join(["From: " + cons.BREVO_ADDRESS,
+          f"Subject: {cons.STATION_LOCATION} Tide Station Alert Message",
+          "To: "+email_recip, "MIME-Versiion:1.0", "Content-Type:text/html"])
+        notify.send_email(email_recip, email_headers, text, 0)
+    sys.exit(0)
+
+#
+# Tide sensor slots 1-3: each slot's type (lora/note/cloud/blank) comes
+# from tide.env's STATION<n>_TYPE and is fixed until tide.py restarts.
+# Only the readers the configured types need are created: the serial
+# ports only with a 'lora' slot, the Notehub receiver (port 8088) only
+# with a 'note' slot. A station uses Notehub or InfluxDB Cloud, never
+# both -- see tidesensors.py.
+#
+try:
+    station_types, type_notes = tidesensors.resolve_station_types(
+      getattr(cons, 'STATION_TYPES', {}), db.fetch_iparams())
+    station_mode = tidesensors.station_mode(station_types)
+    tidesensors.check_station_config(station_types, cons)
+except tidesensors.StationConfigError as errmsg:
+    station_config_exit(str(errmsg))
+for note in type_notes:
+    logging.warning(note)
+logging.info(f'Sensor slot types {station_types}, mode {station_mode}')
+sensor_ctx = tidesensors.SensorContext(cons, db, alerts, station_types)
+sensor = (tideget.ReadSensor(cons, val)
+  if 'lora' in station_types.values() else None)
+note_receiver = (NotehubReceiver(cons, sensor_ctx)
+  if station_mode == 'note' else None)
 
 class Tide:
     """The Tide class is the primary tide station processor and scheduler"""
@@ -146,21 +186,16 @@ class Tide:
         self.station1cal = self.iparams_dict.get('station1cal')
         self.station2cal = self.iparams_dict.get('station2cal')
         self.station3cal = self.iparams_dict.get('station3cal')
-        self.s1type = self.iparams_dict.get('s1type')
-        self.s2type = self.iparams_dict.get('s2type')
-        self.s3type = self.iparams_dict.get('s3type')
         self.s1enable = self.iparams_dict.get('s1enable')
         self.s2enable = self.iparams_dict.get('s2enable')
         self.s3enable = self.iparams_dict.get('s3enable')
         if self.stationid == 1:
             self.stationcal = self.station1cal
-            self.stype = self.s1type
         elif self.stationid == 2:
             self.stationcal = self.station2cal
-            self.stype = self.s2type
         elif self.stationid == 3:
             self.stationcal = self.station3cal
-            self.stype = self.s3type
+        self.stype = station_types.get(self.stationid)
         self.influx_duration = '-24h'
         state.debug = self.iparams_dict.get('debug')
         self.tide_only = self.iparams_dict.get('tide_only')
@@ -288,46 +323,31 @@ class Tide:
             #
             station_cal = {1: self.station1cal, 2: self.station2cal,
                             3: self.station3cal}
-            station_link_type = {1: self.s1type, 2: self.s2type,
-                            3: self.s3type}
-            for port in cons.SERIAL_PORTS:
-                sensor_packet = sensor.read_sensor(port)
-                if sensor_packet:
-                    cal = station_cal.get(sensor_packet.get('S'))
-                    if cal is not None:
-                        sensor_packet['H'] = cal
-                    link_type = station_link_type.get(sensor_packet.get('S'))
-                    if link_type is not None:
-                        sensor_packet['L'] = link_type
-                    db.insert_tide(sensor_packet)
-
-            # Notecard records are populated the same way, via
-            # note_receiver.server.station_cal (set just below) so
-            # tidenote.py's _normalize() can attach "H" without any of its
-            # own sqlite3 access.
-            note_receiver.server.station_cal = station_cal
-            note_receiver.server.station_link_type = station_link_type
-            # Everything do_POST() needs to run check_alerts() itself, per
-            # record, rather than tide.py only ever seeing the single most
-            # recent point once a minute -- which silently skips every
-            # earlier reading in a Notecard station's 15-reading burst,
-            # including any that crossed an alert threshold. Only the
-            # active (self.stationid) station's own readings should ever
-            # reach check_alerts(), same as the LoRa path below.
-            note_receiver.server.active_stationid = self.stationid
-            note_receiver.server.active_stype = self.stype
-            note_receiver.server.alerts = alerts
-            note_receiver.server.weather = self.weather
-            note_receiver.server.ndbc_data = self.ndbc_data
-            note_receiver.server.sunrise = self.sunrise
-            note_receiver.server.sunset = self.sunset
-            note_receiver.server.debug = state.debug
-            if self.s1type == 'note':                
-                note_receiver.poll(1)
-            elif self.s2type == 'note':
-                note_receiver.poll(2)
-            elif self.s3type == 'note':
-                note_receiver.poll(3)
+            # Current calibration, enable flags (shut-off valves), active
+            # slot and weather for the readers below, so the Notehub (and
+            # cloud) readers can store readings and run per-reading alert
+            # checks without their own sqlite3 access.
+            sensor_ctx.refresh(station_cal,
+              {1: self.s1enable, 2: self.s2enable, 3: self.s3enable},
+              self.stationid, self.weather, self.ndbc_data, self.sunrise,
+              self.sunset, state.debug)
+            if sensor:
+                for port in cons.SERIAL_PORTS:
+                    sensor_packet = sensor.read_sensor(port)
+                    # Only stored for a slot tide.env sets as 'lora' and
+                    # iparams has enabled.
+                    if (sensor_packet and
+                      sensor_ctx.accepts(sensor_packet.get('S'), 'lora')):
+                        cal = station_cal.get(sensor_packet.get('S'))
+                        if cal is not None:
+                            sensor_packet['H'] = cal
+                        sensor_packet['L'] = 'lora'
+                        db.insert_tide(sensor_packet)
+            # Notecard readings: each one stored, and the active slot's
+            # checked for alerts at its own time, inside poll() -- see
+            # tidesensors.ingest_records().
+            if note_receiver:
+                note_receiver.poll()
 
             if self.main_loop_count == 2 and int(current_minute) % 5 == 0: 
                 #
@@ -454,21 +474,16 @@ class Tide:
                 self.station1cal = self.iparams_dict.get('station1cal')
                 self.station2cal = self.iparams_dict.get('station2cal')
                 self.station3cal = self.iparams_dict.get('station3cal')
-                self.s1type = self.iparams_dict.get('s1type')
-                self.s2type = self.iparams_dict.get('s2type')
-                self.s3type = self.iparams_dict.get('s3type')
                 self.s3enable = self.iparams_dict.get('s3enable')
                 self.s1enable = self.iparams_dict.get('s1enable')
                 self.s2enable = self.iparams_dict.get('s2enable')
                 if self.stationid == 1:
                     self.stationcal = self.station1cal
-                    self.stype = self.s1type
                 elif self.stationid == 2:
                     self.stationcal = self.station2cal
-                    self.stype = self.s2type
                 elif self.stationid == 3:
                     self.stationcal = self.station3cal
-                    self.stype = self.s3type
+                self.stype = station_types.get(self.stationid)
                 state.debug = self.iparams_dict.get('debug')
                 self.tide_only = self.iparams_dict.get('tide_only')
                 predict_list = predict.tide_predict()

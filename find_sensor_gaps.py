@@ -7,8 +7,9 @@ of how many gaps fall into each duration bucket. Runs entirely
 against sqlite3 directly on the RPi -- no separate export step.
 
 Intended for checking LoRa reception specifically: by default, the
-stations analyzed are auto-selected from the iparams table --
-whichever of s1/s2/s3 have s<n>type == 'lora' and s<n>enable == 1 --
+stations analyzed are auto-selected -- whichever slots tide.env sets
+as STATION<n>_TYPE='lora' (falling back to the old iparams s<n>type
+column if that line is missing) and iparams has s<n>enable == 1 --
 rather than every station that happens to appear in the data. Use
 --station to check just one specific station instead (bypasses the
 iparams lookup), or --all-stations to analyze every station present
@@ -38,6 +39,7 @@ Usage examples:
     python3 find_sensor_gaps.py --db /path/to/tides.db
 """
 import argparse
+import os
 import sqlite3
 from datetime import datetime, timedelta
 
@@ -77,12 +79,30 @@ def parse_args():
     return p.parse_args()
 
 
+def env_station_types():
+    """{n: type or None} from STATION<n>_TYPE in the tide.env beside this
+    script (None where the line is missing)."""
+    types = {1: None, 2: None, 3: None}
+    try:
+        from dotenv import dotenv_values
+        values = dotenv_values(os.path.join(
+          os.path.dirname(os.path.realpath(__file__)), 'tide.env'))
+    except Exception:
+        return types
+    for n in types:
+        if values.get(f'STATION{n}_TYPE') is not None:
+            types[n] = values[f'STATION{n}_TYPE'].strip().lower()
+    return types
+
+
 def lora_enabled_stations(conn):
-    """Returns the list of station numbers (from 1/2/3) where iparams
-    has s<n>type == 'lora' and s<n>enable == 1 (accepting int 1 or
-    string '1' for the enable flag, since sqlite3's storage of it can
-    vary). Returns an empty list if iparams has no rows or none match.
+    """Returns the list of station numbers (from 1/2/3) whose type is
+    'lora' (tide.env STATION<n>_TYPE, else iparams s<n>type) and iparams
+    has s<n>enable == 1 (accepting int 1 or string '1' for the enable
+    flag, since sqlite3's storage of it can vary). Returns an empty list
+    if iparams has no rows or none match.
     """
+    env_types = env_station_types()
     cur = conn.cursor()
     cur.execute("SELECT s1type, s1enable, s2type, s2enable, "
                 "s3type, s3enable FROM iparams LIMIT 1")
@@ -93,6 +113,8 @@ def lora_enabled_stations(conn):
     stations = []
     for n, stype, senable in ((1, s1type, s1enable), (2, s2type, s2enable),
                                (3, s3type, s3enable)):
+        if env_types[n] is not None:
+            stype = env_types[n]
         if stype == 'lora' and str(senable) == '1':
             stations.append(n)
     return stations

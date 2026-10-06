@@ -215,7 +215,10 @@ class Constants:
         TK_CANVAS_WIDTH = os.getenv('TK_CANVAS_WIDTH')
         TK_CANVAS_HEIGHT = os.getenv('TK_CANVAS_HEIGHT')
         TK_FULLSCREEN = os.getenv('TK_FULLSCREEN')
-        SERIAL_PORTS = os.getenv('SERIAL_PORTS').split(",")
+        # Blank or missing SERIAL_PORTS = no serial ports (a station with
+        # no LoRa receiver), rather than [''] or a crash.
+        SERIAL_PORTS = [p.strip() for p in
+          (os.getenv('SERIAL_PORTS') or '').split(',') if p.strip()]
         WX_OPEN_URL = os.getenv('WX_OPEN_URL')
         USB0_BAUDRATE = os.getenv('USB0_BAUDRATE')
         USB1_BAUDRATE = os.getenv('USB1_BAUDRATE')
@@ -229,6 +232,14 @@ class Constants:
         # are skipped.
         STATION_SENSOR_IDS = {}
         STATION_LOCATIONS = {}
+        # Slot type (lora/note/cloud/blank) from STATION<n>_TYPE, fixed
+        # for the life of tide.py -- see tidesensors.py. None when the
+        # line is missing, so tide.py can fall back to the old iparams
+        # s<n>type column.
+        STATION_TYPES = {}
+        for _n in (1, 2, 3):
+            _t = os.getenv(f'STATION{_n}_TYPE')
+            STATION_TYPES[_n] = None if _t is None else _t.strip().lower()
         # Per-station toggle for whether sync_influxdb_cloud() should
         # forward that station's local InfluxDB rows to the cloud.
         # Intended for LoRa-sourced stations only (True) -- Notecard-

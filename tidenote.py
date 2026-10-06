@@ -7,12 +7,15 @@ write-lock contention that occurs when two processes each hold their own
 connection: there is now a single process and a single shared DbManage
 instance, so all writes are serialized through one connection.
 
-Usage from tide.py:
+Usage from tide.py (only on a station with a 'note' slot -- see
+tidesensors.py):
 
     from tidenote import NotehubReceiver
 
-    # Reuse the SAME db instance the main loop already writes through.
-    receiver = NotehubReceiver(constants, db)        # db = your DbManage
+    # ctx is tide.py's tidesensors.SensorContext: the shared db, the
+    # alert checker, and each slot's type, sensor ID, calibration and
+    # enable flag.
+    receiver = NotehubReceiver(constants, ctx)
 
     while running:
         ...                                           # normal tide work
@@ -20,12 +23,16 @@ Usage from tide.py:
         ...
 
     receiver.close()                                  # on shutdown
+
+Each event's readings go to the 'note' slot whose STATION<n>_SENSOR_ID
+matches the Notecard's own sensor ID (status.S, e.g. "PRO"), so a
+station can have more than one Notecard sensor.
 """
 import json
 import select
 import time
-from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import tidesensors
 
 
 class NotehubHandler(BaseHTTPRequestHandler):
@@ -44,29 +51,13 @@ class NotehubHandler(BaseHTTPRequestHandler):
         except (ValueError, KeyError, TypeError):
             self._reply(400, b"bad request")
             return
-        is_active_station = (
-          getattr(self.server, 'active_stationid', None) == self.server.station and
-          getattr(self.server, 'active_stype', None) == 'note')
-        for record in records:
-            # print(record)
-            self.server.db.insert_tide(record)
-            if (is_active_station and record.get('H') is not None and
-              record.get('R') is not None):
-                tide_level = round(record['H'] - record['R']/304.8, 2)
-                # record['T'] is this specific measurement's own Unix
-                # timestamp -- naive/local, matching datetime.now()'s own
-                # convention, since this feeds the same shared outlier
-                # tracker as tide.py's LoRa path. Without this, an entire
-                # batch of readings (each really about a minute apart)
-                # gets processed within milliseconds of each other here,
-                # making them look simultaneous to the tracker's gap
-                # logic while the real ~15-minute gap between batches
-                # still shows up correctly -- exactly backwards.
-                candidate_time = datetime.fromtimestamp(record['T'])
-                self.server.alerts.check_alerts(
-                  tide_level, self.server.weather, self.server.ndbc_data,
-                  self.server.sunrise, self.server.sunset, self.server.debug,
-                  self.server.active_stationid, candidate_time)
+        # Stores each reading and checks the active slot's readings for
+        # alerts one at a time at their own time (see
+        # tidesensors.ingest_records). Readings for a disabled or
+        # unmatched slot are dropped there, but the reply is still 200 so
+        # Notehub doesn't keep retrying them; the Worker's copy in
+        # InfluxDB Cloud is unaffected.
+        tidesensors.ingest_records(self.server.ctx, records, 'note')
         self._reply(200, b"ok")
 
     def _normalize(self, event):
@@ -79,15 +70,15 @@ class NotehubHandler(BaseHTTPRequestHandler):
         # is distinct from "S" below, which stays the numeric station
         # number (1-3) to preserve existing legacy processing.
         sensor_id = status.get("S")
-        station = self.server.station
-        # Sensor height above MLLW, from tide.py's already-cached
-        # stationNcal values (set fresh each poll() call as
-        # self.server.station_cal), not a fresh sqlite3 query per record.
-        height_ft = getattr(self.server, 'station_cal', {}).get(station)
-        # Radio link type ('lora' or 'note'), from tide.py's already-
-        # cached s<n>type iparams values (self.server.station_link_type),
-        # same pattern as height_ft above.
-        link_type = getattr(self.server, 'station_link_type', {}).get(station)
+        ctx = self.server.ctx
+        station = ctx.slot_for_sensor_id(sensor_id, 'note')
+        if station is None:
+            return []
+        # Sensor height above MLLW, from tide.py's cached stationNcal
+        # values (ctx.cal, refreshed every pass), not a sqlite3 query
+        # per record.
+        height_ft = ctx.cal.get(station)
+        link_type = 'note'
         records = []
         for m in event.get("measurements", []):
             records.append({
@@ -120,23 +111,23 @@ class NotehubHandler(BaseHTTPRequestHandler):
 class NotehubReceiver:
     """A pollable HTTP receiver. Does not block the caller."""
 
-    def __init__(self, constants, db, host="127.0.0.1", port=8088):
+    def __init__(self, constants, ctx, host="127.0.0.1", port=8088):
         self.server = HTTPServer((host, port), NotehubHandler)
         # handle_request() will fall through via handle_timeout() instead of
         # blocking if (somehow) nothing is actually ready.
         self.server.timeout = 0
-        # Make secret and the shared db available to every handler instance.
+        # Make the secret and tide.py's SensorContext (shared db, alerts,
+        # per-slot settings) available to every handler instance.
         self.server.secret = constants.NOTEHUB_SECRET
-        self.server.db = db
+        self.server.ctx = ctx
 
-    def poll(self, station, max_requests=50):
+    def poll(self, max_requests=50):
         """Handle every request currently queued, then return immediately.
 
         Returns the number of requests handled this call. If nothing is
         waiting, returns 0 without blocking. max_requests caps how many are
         drained per call so a flood cannot starve the main loop.
         """
-        self.server.station = station
         handled = 0
         while handled < max_requests and self._has_pending():
             try:
@@ -168,7 +159,13 @@ def main():
 
     constants = Constants()
     db = DbManage(constants)
-    receiver = NotehubReceiver(constants, db)
+    types, _ = tidesensors.resolve_station_types(constants.STATION_TYPES, {})
+    ctx = tidesensors.SensorContext(constants, db, None, types)
+    # Standalone: store readings for every 'note' slot, no alert checks.
+    ctx.refresh({n: None for n in tidesensors.SLOTS},
+                {n: types[n] == 'note' for n in tidesensors.SLOTS},
+                None, {}, {}, None, None, 0)
+    receiver = NotehubReceiver(constants, ctx)
     try:
         while True:
             if receiver.poll() == 0:

@@ -561,32 +561,42 @@ class ReadSensor:
         import serial
         self.cons = cons
         self.val = val
+        # Port name -> open serial.Serial. A port that can't be opened (the
+        # LoRa receiver unplugged, or a name other than USB0/USB1) is
+        # logged and left out, and read_sensor() returns nothing for it,
+        # instead of tide.py failing to start. Reconnect the receiver and
+        # restart tide.py to read it again.
+        self.ports = {}
+        for port in (self.cons.SERIAL_PORTS or []):
+            if port == 'USB0':
+                device, baud = '/dev/ttyUSB0', self.cons.USB0_BAUDRATE
+            elif port == 'USB1':
+                device, baud = '/dev/ttyUSB1', self.cons.USB1_BAUDRATE
+            else:
+                logging.warning(
+                  f"SERIAL_PORTS: unknown port '{port}' (use USB0 or USB1)")
+                continue
+            try:
+                serial_input = serial.Serial(device, f'{baud}', 8, 'N', 1,
+                  timeout = 1)
+                serial_input.reset_input_buffer()
+                self.ports[port] = serial_input
+            except Exception as errmsg:
+                logging.warning(
+                  f'Cannot open LoRa receiver on {device}: {errmsg} -- no '
+                  f'LoRa readings from it until tide.py is restarted')
 
-        if self.cons.SERIAL_PORTS != None:
-            for port in self.cons.SERIAL_PORTS:
-                if port == 'USB0':
-                    self.usb0_serial_input = serial.Serial(
-                      '/dev/ttyUSB0',f'{self.cons.USB0_BAUDRATE}', 8, 'N', 1, timeout = 1)
-                    self.usb0_serial_input.reset_input_buffer()
-                elif port == 'USB1':
-                    self.usb1_serial_input = serial.Serial(
-                      '/dev/ttyUSB1',f'{self.cons.USB1_BAUDRATE}', 8, 'N', 1, timeout = 1)
-                    self.usb1_serial_input.reset_input_buffer()
-        
     def read_sensor(self, port):
 
         try:
             data_dict = {}
-            if port == 'USB0':
-                if self.usb0_serial_input.in_waiting > 0:
-                    packet = self.usb0_serial_input.readline()
-                else:
-                    return data_dict
-            elif port == 'USB1':
-                if self.usb1_serial_input.in_waiting > 0:
-                    packet = self.usb1_serial_input.readline()
-                else:
-                    return data_dict
+            serial_input = self.ports.get(port)
+            if serial_input is None:
+                return data_dict
+            if serial_input.in_waiting > 0:
+                packet = serial_input.readline()
+            else:
+                return data_dict
             try:
                 packet = packet.decode().split(',')
             except:
