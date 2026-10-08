@@ -10,8 +10,10 @@ Alert types: tide level crossing a threshold (rising or falling),
 tidal variation from the next predicted high/low, an upcoming
 high/low tide event reminder (N minutes ahead), wind speed, air
 temperature, and water temperature. The air and water temperature
-messages also say which way the value is heading ("... and rising"),
-from a tidehelper.TrendTracker per value. Each subscriber's per-alert
+messages also say which way the value is heading ("... and rising"):
+air temperature from a tidehelper.TrendTracker over the last hour,
+water temperature from the NDBC report history in the ndbcdata table,
+comparing the last day's average with the day before. Each subscriber's per-alert
 "status" is tracked across calls (self.save_alert_list) so a threshold
 only fires once per crossing rather than on every cycle it stays past
 it.
@@ -81,11 +83,21 @@ class TideAlerts:
         self.wind_abated_time = {}    # alert dtime -> time of last abated message
         # Trend words for the air and water temperature alerts ("... and
         # rising"). Air temperature is judged over the last hour (weather
-        # updates every 5 minutes), water temperature over 3 hours (NDBC
-        # updates every 30 minutes or more). The wind alerts need no
-        # trend word: "exceeded" and "abated" already say which way.
+        # updates every 5 minutes). Water temperature changes far more
+        # slowly, and in shallow water swings with the time of day, so it
+        # is judged from the buoy's own report history (ndbcdata): the last
+        # 24 hours against the 24 before, hour of day by hour of day, so
+        # the daily swing cancels out and only the day-to-day change
+        # counts (see _water_temp_trend); WATER_TREND_DEADBAND (degrees F)
+        # is how much it must change to be rising or falling. Read from the database, so
+        # it is available straight after a restart. The wind alerts need
+        # no trend word: "exceeded" and "abated" already say which way.
         self.air_temp_trend = tidehelper.TrendTracker(60, 0.5)
-        self.water_temp_trend = tidehelper.TrendTracker(180, 0.3)
+        self.WATER_TREND_HOURS = 24
+        self.WATER_TREND_DEADBAND = 0.3
+        self.WATER_TREND_MIN_HOURS = 12     # hours of day reported in both days
+        self.WATER_TREND_MAX_AGE_HOURS = 6  # newest report older: no trend
+        self._water_trend = (None, None)    # (computed at, trend)
         # Tidal event alerts ("high tide in 30 minutes"). Each one is sent
         # once per predicted tide: when the time to that tide first drops
         # to the subscriber's notice time or less, as long as that is no
@@ -121,6 +133,60 @@ class TideAlerts:
             return False
         self.event_sent[key] = tide_time
         return True
+
+    def _water_temp_trend(self, now):
+        """'up', 'down' or 'steady' from the ndbcdata report history.
+
+        The last WATER_TREND_HOURS (24) are compared with the 24 before,
+        hour of day by hour of day: the average for, say, 2 to 3 PM today
+        against 2 to 3 PM yesterday. The mean of those differences is the
+        day-to-day change, compared with WATER_TREND_DEADBAND (degrees F).
+        Matching hours this way keeps the daily warm-and-cool swing of
+        shallow water out of it even when some reports are missing, and
+        works for buoys reporting every 10 minutes or every hour.
+
+        None -- no trend word -- when fewer than WATER_TREND_MIN_HOURS
+        hours of the day have reports in both days, or the newest report
+        is more than WATER_TREND_MAX_AGE_HOURS old. Recomputed at most
+        every 10 minutes (NDBC reports come every 10-60 minutes).
+        """
+        computed, trend = self._water_trend
+        if computed is not None and now - computed < timedelta(minutes=10):
+            return trend
+        trend = None
+        try:
+            half = timedelta(hours=self.WATER_TREND_HOURS)
+            fmt = self.cons.TIME_FORMAT
+            self.sql_cursor.execute(
+              "select dtime, watertemp from ndbcdata where dtime > ? "
+              "and dtime <= ?", ((now - 2*half).strftime(fmt), now.strftime(fmt)))
+            older, newer, newest = {}, {}, None
+            for dtime, text in self.sql_cursor.fetchall():
+                try:
+                    value = float(text)
+                    when = datetime.strptime(dtime, fmt)
+                except (TypeError, ValueError):
+                    continue
+                day = newer if when > now - half else older
+                day.setdefault(when.hour, []).append(value)
+                if newest is None or when > newest:
+                    newest = when
+            hours = [h for h in newer if h in older]
+            if (newest is not None and
+              now - newest <= timedelta(hours=self.WATER_TREND_MAX_AGE_HOURS) and
+              len(hours) >= self.WATER_TREND_MIN_HOURS):
+                change = sum(sum(newer[h])/len(newer[h]) - sum(older[h])/len(older[h])
+                             for h in hours) / len(hours)
+                if change > self.WATER_TREND_DEADBAND:
+                    trend = 'up'
+                elif change < -self.WATER_TREND_DEADBAND:
+                    trend = 'down'
+                else:
+                    trend = 'steady'
+        except Exception as errmsg:
+            logging.warning('water temperature trend: '+str(errmsg))
+        self._water_trend = (now, trend)
+        return trend
 
     def check_alerts(self, tide, weather, ndbc_data, sunrise, sunset, debug,
       stationid=None, candidate_time=None):
@@ -186,7 +252,6 @@ class TideAlerts:
         # doesn't leave a hole in the weather history.
         wall_time = datetime.now()
         self.air_temp_trend.add(temperature, wall_time)
-        self.water_temp_trend.add(water_temp, wall_time)
         # One wind sample per minute of wall-clock time, taken here, once
         # per call. It used to be appended inside the per-subscriber loop
         # below, once for every subscriber with a wind alert, which
@@ -208,7 +273,7 @@ class TideAlerts:
         temp_words = {'up': ' and rising', 'down': ' and falling',
           'steady': ' and steady', None: ''}
         air_temp_word = temp_words[self.air_temp_trend.trend()]
-        water_temp_word = temp_words[self.water_temp_trend.trend()]
+        water_temp_word = temp_words[self._water_temp_trend(wall_time)]
         #
         # Get the times for the next high and low tides
         #

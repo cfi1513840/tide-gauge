@@ -365,8 +365,9 @@ class OutlierTracker:
 
 class TrendTracker:
     """Rising/falling state for a slowly updated measurement -- air
-    and water temperature -- used to add a trend word to tidealerts.py's
-    messages.
+    temperature -- used to add a trend word to tidealerts.py's messages.
+    (Water temperature's trend is judged from the NDBC report history
+    instead; see TideAlerts._water_temp_trend.)
 
     Same idea as check_alerts()' tide phase: compare the mean of the
     newer half of a window of readings against the mean of the older
