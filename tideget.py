@@ -55,6 +55,11 @@ class GetWeather:
         self.local_tz = pytz.timezone('America/New_york')
         self.NDBC_report_flag = 0
         self.NDBC_error_count = 0
+        # Every observation in the first NDBC station's realtime2 file
+        # (about 45 days), one dict per buoy report, set by
+        # read_NDBC_station() for DbManage.insert_ndbc_data() to keep as
+        # history in the ndbcdata table.
+        self.ndbc_history = []
         self.rain_24h = 0.0
         current_time = datetime.now()
         self.message_time = current_time.strftime(
@@ -403,6 +408,46 @@ class GetWeather:
         pline = f'{source} restored'
         logging.info(pline)
 
+    def ndbc_report_rows(self, filines, station):
+        """Every report in an NDBC realtime2 file, oldest first, each as a
+        dict in the same units and text format read_NDBC_station() uses
+        ('Water Temperature' in degrees F as text, etc.), plus 'ObsTime',
+        the report time as local '%Y-%m-%d %H:%M:%S'. A value the buoy
+        marked missing ('MM') is ''. Unlike read_NDBC_station()'s current
+        report, nothing is carried forward from earlier lines."""
+        keys = ('YY','MM','DD','hh','mm','WDIR','WSPD','GST','WVHT','DPD',
+                'APD','MWD','PRES','ATMP','WTMP','DEWP','VIS','PTDY','TIDE')
+        rows = []
+        for inline in filines:
+            fields = inline.split()
+            if len(fields) < len(keys) or fields[0].startswith('#'):
+                continue
+            raw = {k: ('' if v == 'MM' else v) for k, v in zip(keys, fields)}
+            try:
+                utc_dt = datetime.strptime(
+                  f"{raw['YY']}-{raw['MM']}-{raw['DD']} {raw['hh']}:{raw['mm']}",
+                  '%Y-%m-%d %H:%M')
+                local_dt = utc_dt.replace(tzinfo=pytz.utc).astimezone(self.local_tz)
+                f = lambda k, conv: conv(float(raw[k])) if raw[k] != '' else ''
+                rows.append({
+                  'ObsTime': local_dt.strftime('%Y-%m-%d %H:%M:%S'),
+                  'DateTime': local_dt.strftime('%b %d, %Y %H:%M'),
+                  'Location': station,
+                  'Wind Direction': f('WDIR', self.deg_to_direction),
+                  'Wind Speed': f('WSPD', lambda v: str(round(v/0.51444,1))),
+                  'Wind Gust': f('GST', lambda v: str(round(v/0.51444,1))),
+                  'Wave Height': f('WVHT', lambda v: str(round(v*3.28084,1))),
+                  'Wave Period': raw['DPD'],
+                  'Air Temperature': f('ATMP', lambda v: str(round(v*1.8+32,1))),
+                  'Water Temperature': f('WTMP', lambda v: str(round(v*1.8+32,1))),
+                  'Wave Direction': f('MWD', lambda v: self.deg_to_direction(int(v))),
+                  'Atmospheric Pressure': f('PRES', lambda v: str(round(v*0.02953,2))),
+                  })
+            except (ValueError, TypeError):
+                continue
+        rows.sort(key=lambda r: r['ObsTime'])
+        return rows
+
     def read_NDBC_station(self, tide_only):
         #print ('getting NDBC')
         if tide_only: return {}
@@ -424,6 +469,7 @@ class GetWeather:
               'Atmospheric Pressure': ''
               }
               
+            self.ndbc_history = []
             for station in stations:
                 if location != '':
                     location = location+','+station
@@ -454,6 +500,8 @@ class GetWeather:
 
                 with open(f'{station}.txt', 'r') as infile:
                     filines = infile.readlines()
+                if not self.ndbc_history:
+                    self.ndbc_history = self.ndbc_report_rows(filines, station)
                 report_dict = dict(
                   YY='',MM='',DD='',hh='',mm='',WDIR='',WSPD='',GST='',WVHT='',DPD='',
                   APD='',MWD='',PRES='',ATMP='',WTMP='',DEWP='',VIS='',PTDY='',TIDE='')  

@@ -176,44 +176,62 @@ class DbManage:
           database_values)
         self.sql_connection.commit()
 
-    def insert_ndbc_data(self, ndbc_data, init_flag):
-        now = datetime.now()
-        if init_flag:
-            self.sql_cursor.execute("delete from ndbcdata")
+    # ndbcdata columns, in table order, and the ndbc dict key each holds.
+    NDBC_COLUMNS = (
+      ('dtime', 'ObsTime'), ('reporttime', 'DateTime'),
+      ('location', 'Location'), ('windir', 'Wind Direction'),
+      ('windspeed', 'Wind Speed'), ('windgust', 'Wind Gust'),
+      ('waveheight', 'Wave Height'), ('waveperiod', 'Wave Period'),
+      ('airtemp', 'Air Temperature'), ('watertemp', 'Water Temperature'),
+      ('wavedirection', 'Wave Direction'),
+      ('barometer', 'Atmospheric Pressure'))
+    # How far back fetch_ndbc() looks for a value the latest report lacks.
+    NDBC_CARRY_HOURS = 24
+
+    def insert_ndbc_data(self, ndbc_data, init_flag, history=None):
+        """Keep NDBC buoy reports in ndbcdata, one row per report, so the
+        table holds the buoy's history (tideplot.py plots water
+        temperature from it) as well as the latest report.
+
+        history: every report in the buoy's realtime2 file (about 45 days,
+        GetWeather.ndbc_history). Each is added once, keyed by its own
+        report time (dtime, local '%Y-%m-%d %H:%M:%S') -- so the first
+        call after this change backfills 45 days, and later calls add
+        only reports not already stored. Without it, the current report
+        (ndbc_data) is added the same way.
+
+        init_flag (tide.py startup) no longer empties the table. The first
+        call after tide.py starts removes only the old single row from
+        before rows were kept per report, whose dtime was the time it was
+        written rather than the report time.
+        """
+        try:
+            if not getattr(self, '_ndbc_cleaned', False):
+                self._ndbc_cleaned = True
+                self.sql_cursor.execute("select dtime, reporttime from ndbcdata")
+                for dtime, reporttime in self.sql_cursor.fetchall():
+                    try:
+                        obs = datetime.strptime(reporttime, '%b %d, %Y %H:%M')
+                    except (TypeError, ValueError):
+                        obs = None
+                    if obs is None or obs.strftime(self.cons.TIME_FORMAT) != dtime:
+                        self.sql_cursor.execute(
+                          "delete from ndbcdata where dtime = ?", (dtime,))
+            reports = list(history or [])
+            if not reports and ndbc_data and ndbc_data.get('DateTime'):
+                current = dict(ndbc_data)
+                current['ObsTime'] = datetime.strptime(
+                  current['DateTime'], '%b %d, %Y %H:%M').strftime(
+                  self.cons.TIME_FORMAT)
+                reports = [current]
+            for report in reports:
+                self.sql_cursor.execute(
+                  "INSERT OR IGNORE INTO ndbcdata VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                  tuple(report.get(key, '') for column, key in self.NDBC_COLUMNS))
             self.sql_connection.commit()
-        else:            
-            self.sql_cursor.execute("select reporttime from ndbcdata")
-            sql_reply = self.sql_cursor.fetchone()
-            new_report_time = ndbc_data.get('DateTime')
-            if sql_reply and sql_reply[0] == new_report_time:
-                return            
-        database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
-        database_columns = ['dtime','reporttime','location','windir','windspeed','windgust',
-          'waveheight','waveperiod','airtemp','watertemp','wavedirection','barometer']
-        database_values = (
-          database_time,
-          ndbc_data.get('DateTime'), 
-          ndbc_data.get('Location'), 
-          ndbc_data.get('Wind Direction'), 
-          ndbc_data.get('Wind Speed'), 
-          ndbc_data.get('Wind Gust'), 
-          ndbc_data.get('Wave Height'),
-          ndbc_data.get('Wave Period'), 
-          ndbc_data.get('Air Temperature'), 
-          ndbc_data.get('Water Temperature'), 
-          ndbc_data.get('Wave Direction'),
-          ndbc_data.get('Atmospheric Pressure'))
-        if init_flag:
-            self.sql_cursor.execute (
-              f"INSERT INTO ndbcdata VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-              database_values)
-        else:             
-            for indx, value in enumerate(database_values):
-                if value != '' and value != None:
-                    self.sql_cursor.execute (
-                      f"update ndbcdata set {database_columns[indx]} = '{value}'")
-        self.sql_connection.commit()          
-        
+        except Exception as errmsg:
+            logging.warning('insert_ndbc_data: '+str(errmsg), exc_info=True)
+
     def insert_tide_predicts(self, noaa_data):
         db_commit = False
         for predict in noaa_data:
@@ -412,28 +430,34 @@ class DbManage:
         return iparams_dict
 
     def fetch_ndbc(self):
-        ndbc_list = (
-          '',
-          'DateTime', 
-          'Location', 
-          'Wind Direction', 
-          'Wind Speed', 
-          'Wind Gust', 
-          'Wave Height',
-          'Wave Period', 
-          'Air Temperature', 
-          'Water Temperature', 
-          'Wave Direction',
-          'Atmospheric Pressure')
-        ndbc_dict = {}
-        try:        
-            self.sql_cursor.execute("select * from ndbcdata")
-            params = self.sql_cursor.fetchone()
-            for index, entry in enumerate(params):
+        """The latest NDBC report, as the dict read_NDBC_station() returns
+        ('DateTime', 'Water Temperature', ...). A value the latest report
+        lacks is taken from the most recent earlier report that has it,
+        within NDBC_CARRY_HOURS -- as the single-row table used to keep
+        the previous value when a report left a field out."""
+        try:
+            self.sql_cursor.execute(
+              "select * from ndbcdata order by dtime desc limit 1")
+            latest = self.sql_cursor.fetchone()
+            if latest is None:
+                return {}
+            ndbc_dict = {}
+            oldest = (datetime.strptime(latest[0], self.cons.TIME_FORMAT)
+              - timedelta(hours=self.NDBC_CARRY_HOURS)).strftime(
+              self.cons.TIME_FORMAT)
+            for index, (column, key) in enumerate(self.NDBC_COLUMNS):
                 if index == 0:
                     continue
-                ndbc_dict[ndbc_list[index]] = entry
-            return ndbc_dict                
+                value = latest[index]
+                if value is None or value == '':
+                    self.sql_cursor.execute(
+                      f"select {column} from ndbcdata where dtime >= ? and "
+                      f"{column} is not null and {column} != '' "
+                      f"order by dtime desc limit 1", (oldest,))
+                    earlier = self.sql_cursor.fetchone()
+                    value = earlier[0] if earlier else ''
+                ndbc_dict[key] = value
+            return ndbc_dict
 
         except Exception as errmsg:
             logging.warning('fetch_ndbc: '+str(errmsg), exc_info=True)

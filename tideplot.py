@@ -100,6 +100,8 @@ class TidePlotRenderer:
     sqltimeformat = "%Y-%m-%d %H:%M:%S"
     sam_int = 60
     selectedtide = 'predicts'
+    # Water temperature reports further apart than this break the line.
+    WTEMP_GAP = timedelta(hours=3)
     title_height = 10
     dtime_start_y = 0
     windarrow = [[0, 8], [0, -8], [-3, 3], [3, 3]]  # read-only (iterated, never mutated)
@@ -440,8 +442,10 @@ class TidePlotRenderer:
            self.outfile.write (f'<input type="checkbox" id="wind" name="wind" value="1" {self.windchk}>&nbsp&nbsp&nbsp&nbsp\n')
            self.outfile.write ('<label for="rain">Rain</label>\n')
            self.outfile.write (f'<input type="checkbox" id="rain" name="rain" value="1" {self.rainchk}>&nbsp&nbsp&nbsp&nbsp\n')
-           self.outfile.write ('<label for="temp">Temperature</label>\n')
+           self.outfile.write ('<label for="temp">Air Temp</label>\n')
            self.outfile.write (f'<input type="checkbox" id="temp" name="temp" value="1" {self.tempchk}>&nbsp&nbsp&nbsp&nbsp\n')
+           self.outfile.write ('<label for="wtemp">Water Temp</label>\n')
+           self.outfile.write (f'<input type="checkbox" id="wtemp" name="wtemp" value="1" {self.wtempchk}>&nbsp&nbsp&nbsp&nbsp\n')
            for s in self.stations:
               if s.enabled:
                  field_id = 'batv' if s.num == 1 else f'batv{s.num}'
@@ -663,6 +667,30 @@ class TidePlotRenderer:
               self.outfile.write ('ctx.beginPath();\n')
               self.outfile.write (f'ctx.moveTo({self.plot_width},{self.temp_start_y});\n')
               self.outfile.write (f'ctx.lineTo({self.plot_width},{self.temp_end_y});\n')
+              self.outfile.write ('ctx.stroke();\n')
+           if self.wtemp:
+              gridy = 0
+              for x in range(0,self.wtemp_grid_nbr+1):
+                 if x == 0 or x == self.wtemp_grid_nbr:
+                    self.outfile.write ('ctx.strokeStyle = "black";\n')
+                 else:
+                    self.outfile.write ('ctx.strokeStyle = "gray";\n')
+                 self.outfile.write ('ctx.beginPath();\n')
+                 self.outfile.write (f'ctx.moveTo({x_start},{int(self.wtemp_start_y+gridy)});\n')
+                 self.outfile.write (f'ctx.lineTo({self.plot_width},{int(self.wtemp_start_y+gridy)});\n')
+                 self.outfile.write ('ctx.stroke();\n')
+                 self.outfile.write ('ctx.fillStyle = "black";\n')
+                 label = str((self.wtemp_grid_nbr-x)*self.wtemp_step+self.wtemp_base)
+                 self.outfile.write (f'ctx.fillText("{label}", {self.left_scale_x}, {int(self.wtemp_start_y+gridy+5)});\n')
+                 self.outfile.write (f'ctx.fillText("{label}", {self.right_scale_x}, {int(self.wtemp_start_y+gridy+5)});\n')
+                 gridy += self.wtemp_grid_y
+              self.outfile.write ('ctx.beginPath();\n')
+              self.outfile.write (f'ctx.moveTo({x_start},{self.wtemp_start_y});\n')
+              self.outfile.write (f'ctx.lineTo({x_start},{self.wtemp_end_y});\n')
+              self.outfile.write ('ctx.stroke();\n')
+              self.outfile.write ('ctx.beginPath();\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width},{self.wtemp_start_y});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width},{self.wtemp_end_y});\n')
               self.outfile.write ('ctx.stroke();\n')
            for s in self.stations:
               if not (s.show_battery and s.enabled):
@@ -1059,6 +1087,11 @@ class TidePlotRenderer:
                     self.outfile.write (f'ctx.moveTo({predstartx},{self.temp_start_y});\n')
                     self.outfile.write (f'ctx.lineTo({predstartx},{self.temp_end_y});\n')
                     self.outfile.write (f'ctx.stroke();\n')
+                 if self.wtemp:
+                    self.outfile.write (f'ctx.beginPath();\n')
+                    self.outfile.write (f'ctx.moveTo({predstartx},{self.wtemp_start_y});\n')
+                    self.outfile.write (f'ctx.lineTo({predstartx},{self.wtemp_end_y});\n')
+                    self.outfile.write (f'ctx.stroke();\n')
                  if self.s1enable and self.batv1:
                     self.outfile.write (f'ctx.beginPath();\n')
                     self.outfile.write (f'ctx.moveTo({predstartx},{self.batv1_start_y});\n')
@@ -1206,6 +1239,27 @@ class TidePlotRenderer:
                     pline = '\n'+self.msgtime+' Error: '+str(errmsg)
                     with open('/var/www/html/tideplot.log', 'a') as self.logfile:
                        self.logfile.write (pline+'\n')   
+
+           #
+           # Water temperature trace: one point per buoy report, the line
+           # broken where reports are more than WTEMP_GAP apart.
+           #
+           if self.wtemp:
+              self.outfile.write ('ctx.strokeStyle = "darkcyan";\n')
+              self.outfile.write ('ctx.lineWidth = 1;\n')
+              last_time = None
+              for wtime, wvalue in self.wtemplist:
+                 wx = int((wtime.timestamp()-starttime.timestamp()+offtime)*(self.plot_width-30)/86400/self.plotdays+30)
+                 wy = int(self.wtemp_end_y-(wvalue-self.wtemp_base)/self.wtemp_step*self.grid_height)
+                 if last_time is None or wtime-last_time > self.WTEMP_GAP:
+                    if last_time is not None:
+                       self.outfile.write ('ctx.stroke();\n')
+                    self.outfile.write ('ctx.beginPath();\n')
+                    self.outfile.write (f'ctx.moveTo({wx},{wy});\n')
+                 else:
+                    self.outfile.write (f'ctx.lineTo({wx},{wy});\n')
+                 last_time = wtime
+              self.outfile.write ('ctx.stroke();\n')
 
            self.outfile.write (f'ctx.strokeStyle = "black";\n')
            self.outfile.write (f'ctx.beginPath();\n')
@@ -1453,7 +1507,10 @@ class TidePlotRenderer:
               self.outfile.write (f'ctx.fillText("Daily rainfall in inches", {self.plot_width/2}, {self.rain_start_y-4});\n')                          
            if self.temp:      
               self.outfile.write ('ctx.fillStyle = "red";\n')
-              self.outfile.write (f'ctx.fillText("Temperature in degrees F", {self.plot_width/2}, {self.temp_start_y-4});\n')                          
+              self.outfile.write (f'ctx.fillText("Air temperature in degrees F", {self.plot_width/2}, {self.temp_start_y-4});\n')
+           if self.wtemp:
+              self.outfile.write ('ctx.fillStyle = "darkcyan";\n')
+              self.outfile.write (f'ctx.fillText("Water temperature in degrees F (NDBC buoy {self.ndbc_station})", {self.plot_width/2}, {self.wtemp_start_y-4});\n')
            if self.s1enable and self.batv1:      
               self.outfile.write ('ctx.fillStyle = "black";\n')
               self.outfile.write (f'ctx.fillText("Sensor 1 Battery Voltage", {self.plot_width/2}, {self.batv1_start_y-4});\n')                          
@@ -1498,6 +1555,9 @@ class TidePlotRenderer:
         self.wind = False
         self.rain = False
         self.temp = False
+        self.wtemp = False
+        self.wtempchk = ''
+        self.ndbc_station = ''
         default_station_id = 1
         #
         # Get station name for webpage title
@@ -1506,6 +1566,7 @@ class TidePlotRenderer:
           os.path.dirname(os.path.realpath(__file__)), 'tide.env'))
         if load_dotenv(envfile):
            self.station_location = os.getenv('STATION_LOCATION')
+           self.ndbc_station = (os.getenv('NDBC_STATIONS') or '').split(',')[0].strip()
            station_latitude = os.getenv('STATION_LATITUDE')
            station_longitude = os.getenv('STATION_LONGITUDE')
            #with open('/var/www/html/tideplot.log', 'a') as logfile:
@@ -1600,6 +1661,8 @@ class TidePlotRenderer:
               self.rainchk = 'checked'
               self.temp = True
               self.tempchk = 'checked'
+              self.wtemp = True
+              self.wtempchk = 'checked'
               self.batv1 = (default_station_id == 1)
               self.batv1chk = 'checked' if self.batv1 else ''
               self.batv2 = (default_station_id == 2)
@@ -1657,6 +1720,13 @@ class TidePlotRenderer:
               else:
                  self.temp = True
                  self.tempchk = 'checked'
+              self.wtemp = form.getvalue('wtemp')
+              if self.wtemp == None:
+                 self.wtemp = False
+                 self.wtempchk = ''
+              else:
+                 self.wtemp = True
+                 self.wtempchk = 'checked'
               self.batv1 = form.getvalue('batv')
               if self.batv1 == None:
                  self.batv1 = False
@@ -1783,6 +1853,28 @@ class TidePlotRenderer:
               self.wxsup = True
            else:
               self.wxsup = False
+           #
+           # Water temperature: the NDBC buoy's reports in the ndbcdata
+           # table, one row per report (dtime = report time, local),
+           # watertemp stored as text and blank when the buoy sent none.
+           #
+           self.wtemplist = []
+           if self.wtemp:
+              try:
+                 self.sqlcur.execute("select dtime, watertemp from ndbcdata "+ \
+                   "where dtime between ? and ? order by dtime",
+                   (str(self.dbquerytime), str(self.curtime)))
+                 for dtime, wtext in self.sqlcur.fetchall():
+                    try:
+                       self.wtemplist.append(
+                         (datetime.strptime(dtime, self.sqltimeformat), float(wtext)))
+                    except (TypeError, ValueError):
+                       continue
+              except sqlite3.Error as errmsg:
+                 with open('/var/www/html/tideplot.log', 'a') as self.logfile:
+                    self.logfile.write (self.msgtime+' water temperature query: '+str(errmsg)+'\n')
+           if not self.wtemplist:
+              self.wtemp = False
            self.tidesup = False
            tidesum = 0
            tidesum2 = 0
@@ -1931,6 +2023,27 @@ class TidePlotRenderer:
               nbr_gaps += 1
               temp_height = self.temp_grid_nbr*self.grid_height
               self.temp_grid_y = round(temp_height/self.temp_grid_nbr,3)
+           wtemp_height = 0
+           if self.wtemp:
+              # Sized to the data's range like the other plots, with a
+              # step of 1, 2, 5 or 10 degrees F per grid line -- the
+              # smallest giving at most 5 lines -- since water temperature
+              # usually moves only a few degrees over the plot span.
+              wvalues = [w for t, w in self.wtemplist]
+              wmin, wmax = min(wvalues), max(wvalues)
+              for step in (1, 2, 5, 10):
+                 if (wmax-wmin)/step <= 5:
+                    break
+              self.wtemp_step = step
+              self.wtemp_base = math.floor(wmin/step)*step
+              wtop = math.ceil(wmax/step)*step
+              if wtop <= self.wtemp_base:
+                 wtop = self.wtemp_base+step
+              self.wtemp_grid_nbr = int(round((wtop-self.wtemp_base)/step))
+              total_grids += self.wtemp_grid_nbr
+              nbr_gaps += 1
+              wtemp_height = self.wtemp_grid_nbr*self.grid_height
+              self.wtemp_grid_y = round(wtemp_height/self.wtemp_grid_nbr,3)
            for s in self.stations:
               if s.show_battery and s.enabled:
                  s.batv_grid_nbr = round((s.max_batv-s.min_batv)/0.05)
@@ -1993,6 +2106,10 @@ class TidePlotRenderer:
               self.temp_start_y = next_y+gap_size
               self.temp_end_y = int(temp_height+self.temp_start_y)
               next_y = self.temp_end_y
+           if self.wtemp:
+              self.wtemp_start_y = next_y+gap_size
+              self.wtemp_end_y = int(wtemp_height+self.wtemp_start_y)
+              next_y = self.wtemp_end_y
            for s in self.stations:
               if s.show_battery and s.enabled:
                  s.batv_start_y = next_y+gap_size

@@ -267,7 +267,7 @@ class Tide:
             wxhtml.wxproc(self.iparams_dict)
         self.ndbc_data = getwx.read_NDBC_station(self.tide_only)
         if self.ndbc_data:
-            db.insert_ndbc_data(self.ndbc_data, True)
+            db.insert_ndbc_data(self.ndbc_data, True, getwx.ndbc_history)
         if self.display:
             self.display.update(self.weather, self.ndbc_data)
         if 'noaa' in sys.argv:
@@ -414,7 +414,7 @@ class Tide:
                 self.last_ndbc_time = self.current_time
                 self.ndbc_data = getwx.read_NDBC_station(self.tide_only)
                 if self.ndbc_data:
-                    db.insert_ndbc_data(self.ndbc_data, False)
+                    db.insert_ndbc_data(self.ndbc_data, False, getwx.ndbc_history)
                     self.ndbc_retry = False
                 else:
                     self.ndbc_retry = True
