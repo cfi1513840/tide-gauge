@@ -100,6 +100,62 @@ class TidePlotRenderer:
     sqltimeformat = "%Y-%m-%d %H:%M:%S"
     sam_int = 60
     selectedtide = 'predicts'
+    # "Plot Options" drop-down: styles and script written into the page.
+    # The panel is positioned against the form and floats over the top
+    # of the plot; on a narrow screen its groups stack and it scrolls
+    # within the window. The page-wide div rule (width = canvas width,
+    # auto margins) is overridden for the panel.
+    PLOT_OPTIONS_CSS = '''
+#myForm { position: relative; }
+details.plotopts { display: inline-block; }
+details.plotopts summary {
+  cursor: pointer; padding: 1px 8px; border: 1px solid #767676;
+  border-radius: 3px; background-color: #FFFFFF; list-style: none;
+}
+details.plotopts summary::-webkit-details-marker { display: none; }
+details.plotopts summary::after { content: " \\25BE"; }
+details.plotopts[open] summary::after { content: " \\25B4"; }
+details.plotopts .optpanel {
+  position: absolute; z-index: 10; top: 100%; left: 50%;
+  transform: translateX(-50%); width: max-content; max-width: 95vw;
+  max-height: calc(100vh - 140px); overflow-y: auto;
+  margin: 4px 0 0 0; padding: 10px 14px; text-align: left;
+  background-color: #E0F8F1; border: 2px solid #1B3A5C; border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+details.plotopts fieldset {
+  display: inline-block; vertical-align: top; margin: 0 6px 6px 6px;
+  padding: 4px 12px 8px 12px; border: 1px solid #8FB8A8; border-radius: 4px;
+}
+details.plotopts legend { padding: 0 4px; font-weight: bold; color: #1B3A5C; }
+details.plotopts label { display: block; padding: 3px 0; white-space: nowrap; cursor: pointer; }
+details.plotopts .optapply { text-align: center; margin-top: 4px; }
+#optcount { color: #555555; }
+@media (max-width: 600px) {
+  details.plotopts fieldset { display: block; }
+}
+'''
+    PLOT_OPTIONS_JS = '''<script>
+(function () {
+  var opts = document.getElementById("plotopts");
+  var count = document.getElementById("optcount");
+  var boxes = opts.querySelectorAll('input[type="checkbox"]');
+  function update() {
+    var n = 0;
+    for (var i = 0; i < boxes.length; i++) { if (boxes[i].checked) n++; }
+    count.textContent = "(" + n + " selected)";
+  }
+  for (var i = 0; i < boxes.length; i++) { boxes[i].addEventListener("change", update); }
+  document.addEventListener("click", function (e) {
+    if (opts.open && !opts.contains(e.target)) opts.open = false;
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") opts.open = false;
+  });
+  update();
+})();
+</script>
+'''
     # Water temperature reports further apart than this break the line.
     WTEMP_GAP = timedelta(hours=3)
     title_height = 10
@@ -409,6 +465,7 @@ class TidePlotRenderer:
            self.outfile.write ('margin: 0 8px;\n')
            self.outfile.write ('cursor: pointer;\n')
            self.outfile.write ('}\n')
+           self.outfile.write (self.PLOT_OPTIONS_CSS)
            self.outfile.write ('</style>\n')
            self.outfile.write ('</head>\n')
            self.outfile.write ('<body style="background-color:black;">\n')
@@ -432,27 +489,43 @@ class TidePlotRenderer:
            # preserved exactly rather than unified. station3 (new) uses "1".
            station_chk_value = {1: '1', 2: '0', 3: '1'}
            batv_chk_value = {1: '1', 2: '0', 3: '1'}
+           #
+           # The plot selections sit in a "Plot Options" drop-down that
+           # floats over the top of the plot when opened. The checkboxes
+           # stay inside this form with the same names and ids, so what
+           # the browser posts -- and the parsing in run() -- is
+           # unchanged. Refresh (or Apply in the panel) redraws.
+           #
+           def option(field_id, value, chk, text):
+              return (f'<label><input type="checkbox" id="{field_id}" '
+                      f'name="{field_id}" value="{value}" {chk}> {text}</label>\n')
+           tide_opts = ''
            for s in self.stations:
               if s.enabled:
-                 self.outfile.write (f'<label for="station{s.num}">Sensor {s.num}</label>\n')
-                 self.outfile.write (f'<input type="checkbox" id="station{s.num}" name="station{s.num}" value="{station_chk_value[s.num]}" {s.selected_chk}>&nbsp&nbsp&nbsp&nbsp\n')
-           self.outfile.write ('<label for="tags">Tide Markers</label>\n')
-           self.outfile.write (f'<input type="checkbox" id="tags" name="tags" value="1" {self.tagchk}>&nbsp&nbsp&nbsp&nbsp\n')
-           self.outfile.write ('<label for="wind"> Wind</label>\n')
-           self.outfile.write (f'<input type="checkbox" id="wind" name="wind" value="1" {self.windchk}>&nbsp&nbsp&nbsp&nbsp\n')
-           self.outfile.write ('<label for="rain">Rain</label>\n')
-           self.outfile.write (f'<input type="checkbox" id="rain" name="rain" value="1" {self.rainchk}>&nbsp&nbsp&nbsp&nbsp\n')
-           self.outfile.write ('<label for="temp">Air Temp</label>\n')
-           self.outfile.write (f'<input type="checkbox" id="temp" name="temp" value="1" {self.tempchk}>&nbsp&nbsp&nbsp&nbsp\n')
-           self.outfile.write ('<label for="wtemp">Water Temp</label>\n')
-           self.outfile.write (f'<input type="checkbox" id="wtemp" name="wtemp" value="1" {self.wtempchk}>&nbsp&nbsp&nbsp&nbsp\n')
+                 tide_opts += option(f'station{s.num}', station_chk_value[s.num], s.selected_chk, f'Sensor {s.num}')
+           tide_opts += option('tags', '1', self.tagchk, 'Tide Markers')
+           weather_opts = (option('wind', '1', self.windchk, 'Wind') +
+                           option('rain', '1', self.rainchk, 'Rain') +
+                           option('temp', '1', self.tempchk, 'Air Temp') +
+                           option('wtemp', '1', self.wtempchk, 'Water Temp'))
+           battery_opts = ''
            for s in self.stations:
               if s.enabled:
                  field_id = 'batv' if s.num == 1 else f'batv{s.num}'
-                 self.outfile.write (f'<label for="{field_id}">BatV {s.num}</label>\n')
-                 self.outfile.write (f'<input type="checkbox" id="{field_id}" name="{field_id}" value="{batv_chk_value[s.num]}" {s.battery_chk}>&nbsp&nbsp&nbsp&nbsp\n')
+                 battery_opts += option(field_id, batv_chk_value[s.num], s.battery_chk, f'BatV {s.num}')
+           self.outfile.write ('<details class="plotopts" id="plotopts">\n')
+           self.outfile.write ('<summary>Plot Options <span id="optcount"></span></summary>\n')
+           self.outfile.write ('<div class="optpanel">\n')
+           self.outfile.write (f'<fieldset><legend>Tide</legend>\n{tide_opts}</fieldset>\n')
+           self.outfile.write (f'<fieldset><legend>Weather</legend>\n{weather_opts}</fieldset>\n')
+           if battery_opts:
+              self.outfile.write (f'<fieldset><legend>Battery</legend>\n{battery_opts}</fieldset>\n')
+           self.outfile.write ('<p class="optapply"><input type="submit" value="Apply"/></p>\n')
+           self.outfile.write ('</div>\n')
+           self.outfile.write ('</details>&nbsp&nbsp&nbsp&nbsp\n')
            self.outfile.write ('<input type="submit" value="Refresh"/>\n')
            self.outfile.write ('</form>\n')
+           self.outfile.write (self.PLOT_OPTIONS_JS)
            self.outfile.write ('</div>')
            self.outfile.write ('<script>\n')
            self.outfile.write ('var w = window.innerWidth;\n')
