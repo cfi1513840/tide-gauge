@@ -120,28 +120,36 @@ class CreateHTML:
                 timecheck = datetime.strptime(ndbc_time,'%b %d, %Y %H:%M')
             if 'Location' in ndbcdata:
                 ndbc_location = ndbcdata['Location']
-            if 'Wind Direction' in ndbcdata:
-                ndbc_wind_direction = ndbcdata['Wind Direction']
-            if 'Wind Speed' in ndbcdata:
-                ndbc_wind = ndbcdata['Wind Speed']
-                if ndbc_wind != 0:
-                    ndbc_wind_f = float(ndbc_wind)               
-                    ndbc_wind = ndbc_wind_direction+' '+ndbc_wind               
-            if 'Wind Gust' in ndbcdata:
-                ndbc_gust = ndbcdata['Wind Gust']
-                if ndbc_gust != 0:
-                    ndbc_gust_f = float(ndbc_gust)
-            if 'Wave Height' in ndbcdata:
-                ndbc_wave_height = ndbcdata['Wave Height']
-                if ndbc_wave_height != 0:
-                    ndbc_wave_f = float(ndbc_wave_height)
-                    ndbc_wave_height = ndbcdata['Wave Height']+ ' ft'
-            if 'Wave Period' in ndbcdata:
-                ndbc_wave_period = ndbcdata['Wave Period']+ ' secs'
-            if 'Air Temperature' in ndbcdata:
-                ndbc_air_temp = ndbcdata['Air Temperature']+ '&deg; F'
-            if 'Water Temperature' in ndbcdata:
-                ndbc_water_temp = ndbcdata['Water Temperature']+ '&deg; F'
+            # A value the buoy hasn't reported (blank, or None from the
+            # database) is left blank: no float() of it, and no units.
+            def ndbc_value(key):
+                value = ndbcdata.get(key)
+                return '' if value is None else str(value).strip()
+            def to_float(text):
+                try:
+                    return float(text)
+                except (TypeError, ValueError):
+                    return ''
+            ndbc_wind_direction = ndbc_value('Wind Direction')
+            ndbc_wind = ndbc_value('Wind Speed')
+            ndbc_wind_f = to_float(ndbc_wind)
+            if ndbc_wind != '':
+                ndbc_wind = (ndbc_wind_direction+' '+ndbc_wind).strip()
+            ndbc_gust = ndbc_value('Wind Gust')
+            ndbc_gust_f = to_float(ndbc_gust)
+            ndbc_wave_height = ndbc_value('Wave Height')
+            ndbc_wave_f = to_float(ndbc_wave_height)
+            if ndbc_wave_height != '':
+                ndbc_wave_height = ndbc_wave_height+' ft'
+            ndbc_wave_period = ndbc_value('Wave Period')
+            if ndbc_wave_period != '':
+                ndbc_wave_period = ndbc_wave_period+' secs'
+            ndbc_air_temp = ndbc_value('Air Temperature')
+            if ndbc_air_temp != '':
+                ndbc_air_temp = ndbc_air_temp+'&deg; F'
+            ndbc_water_temp = ndbc_value('Water Temperature')
+            if ndbc_water_temp != '':
+                ndbc_water_temp = ndbc_water_temp+'&deg; F'
             if 'Wave Direction' in ndbcdata:
                 ndbc_wave_direction = ndbcdata['Wave Direction']
             if 'Atmospheric Pressure' in ndbcdata:
