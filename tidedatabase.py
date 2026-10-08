@@ -591,15 +591,46 @@ class DbManage:
         """
         CLOUD_SYNC_BATCH_SIZE = 500
         CLOUD_SYNC_BATCH_DELAY_SECONDS = 0.5
+        # InfluxDB 3 Core refuses a query that would scan more Parquet
+        # files than its --query-file-limit (432 by default, roughly
+        # three days of a table at one file per 10 minutes), so each
+        # query covers at most CLOUD_SYNC_WINDOW past the watermark. A
+        # larger backlog is worked through one window per call.
+        CLOUD_SYNC_WINDOW = timedelta(hours=12)
+        # Without a watermark file (a new node), start this far back.
+        CLOUD_SYNC_FIRST_LOOKBACK = timedelta(hours=24)
+        # A window that returned nothing is only skipped past once it
+        # ends this far before now, so readings still being written
+        # near the present aren't stepped over.
+        CLOUD_SYNC_SETTLE = timedelta(hours=1)
+        # A watermark older than this (a node that hasn't synced in a
+        # long time, or the old 1970 first-run default) jumps forward
+        # to here rather than crawling through months of windows.
+        CLOUD_SYNC_MAX_BACKLOG = timedelta(days=7)
 
         measurement = self.cons.INFLUXDB_MEASUREMENT
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        watermark = None
         try:
             with open(self.cloud_sync_watermark_path, 'r') as f:
                 watermark = f.read().strip()
         except FileNotFoundError:
-            # First run on this node -- sync everything currently in
-            # local InfluxDB rather than assuming a start time.
-            watermark = '1970-01-01T00:00:00.000000Z'
+            pass
+        watermark_time = self._parse_sync_time(watermark)
+        if watermark_time is None:
+            if watermark:
+                logging.warning('sync_influxdb_cloud: unreadable watermark '
+                  f'{watermark!r}, starting {CLOUD_SYNC_FIRST_LOOKBACK} back')
+            watermark_time = now - CLOUD_SYNC_FIRST_LOOKBACK
+            watermark = watermark_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        elif watermark_time < now - CLOUD_SYNC_MAX_BACKLOG:
+            logging.warning(f'sync_influxdb_cloud: watermark {watermark} is '
+              f'more than {CLOUD_SYNC_MAX_BACKLOG.days} days old; data before '
+              f'then is not forwarded')
+            watermark_time = now - CLOUD_SYNC_MAX_BACKLOG
+            watermark = watermark_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        window_end = min(watermark_time + CLOUD_SYNC_WINDOW, now)
+        window_end_text = window_end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
         # Exclude any station whose S<n>CLOUD_ENABLE flag is off --
         # those stations' data is now routed directly from Notehub to
@@ -608,6 +639,8 @@ class DbManage:
         disabled_stations = sorted(
           {n for n, enabled in self.cons.STATION_CLOUD_ENABLE.items()
            if not enabled} | set(self.cloud_read_slots))
+        if not set(self.cons.STATION_CLOUD_ENABLE) - set(disabled_stations):
+            return  # no slot forwards through this node -- nothing to query
         station_filter = ''
         if disabled_stations:
             station_filter = (
@@ -616,7 +649,7 @@ class DbManage:
 
         sync_query = (
             f'SELECT * FROM "{measurement}" '
-            f"WHERE time > '{watermark}'"
+            f"WHERE time > '{watermark}' AND time <= '{window_end_text}'"
             f'{station_filter} '
             f'ORDER BY time ASC'
         )
@@ -629,7 +662,16 @@ class DbManage:
             return
 
         if not records:
-            return  # nothing new since the last sync -- watermark unchanged
+            # An empty window well in the past is a reporting gap: move
+            # the watermark to its end so the next call looks further on.
+            if window_end <= now - CLOUD_SYNC_SETTLE:
+                try:
+                    with open(self.cloud_sync_watermark_path, 'w') as f:
+                        f.write(window_end_text)
+                except Exception as errmsg:
+                    logging.warning(
+                      'sync_influxdb_cloud watermark write failed: '+str(errmsg))
+            return
 
         cloud_client = self.cons.INFLUXDB_CLOUD_WRITE_CLIENT
         write_api = cloud_client.write_api(write_options=SYNCHRONOUS)
@@ -686,6 +728,21 @@ class DbManage:
 
             if len(batches) > 1 and batch_num < len(batches) - 1:
                 time.sleep(CLOUD_SYNC_BATCH_DELAY_SECONDS)
+
+    @staticmethod
+    def _parse_sync_time(text):
+        """The sync watermark as a naive UTC datetime, or None. It's
+        written either as ISO text ('2026-10-08T12:00:00.000000Z') or
+        as str() of a time read back from InfluxDB
+        ('2026-10-08 12:00:00.123456789'); whole seconds are enough
+        for working out the query window."""
+        if not text:
+            return None
+        try:
+            return datetime.strptime(text[:19].replace('T', ' '),
+                                     '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            return None
 
     def update_stationid(self, stationid):
         self.sql_cursor.execute(f"update iparams set stationid = {stationid}")
