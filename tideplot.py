@@ -633,7 +633,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            x_start = 30
            gridx = self.plot_width
            gridy = self.tide_end_y
-           for x in range(0,self.tide_grid_nbr+1):
+           for x in range(0,self.tide_grid_nbr+1 if self.tide_panel else 0):
               if x == 0 or x == self.tide_grid_nbr:
                  self.outfile.write ('ctx.strokeStyle = "black";\n')
               else:
@@ -1522,57 +1522,58 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
                        self.outfile.write (f'ctx.fillText("{hrmin}", {startx}, {self.tag_y+42+high_shift});\n')
                  startx = endx
                  #starty = endy
-           self.outfile.write (f'ctx.strokeStyle = "blue";\n')
-           self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/5-60},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/5-30},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.stroke();\n')
-           self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/5+30},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/5+60},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.stroke();\n')
-           self.outfile.write (f'ctx.strokeStyle = "darkgreen";\n')
-           self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/5*2-60},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/5*2-30},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.stroke();\n')
-           self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/5*2+30},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/5*2+60},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.stroke();\n')
-           self.outfile.write (f'ctx.strokeStyle = "brown";\n')
-           self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/5*3-60},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/5*3-30},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.stroke();\n')
-           self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/5*3+30},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/5*3+60},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.stroke();\n')
-           if self.pred:
-              self.outfile.write (f'ctx.strokeStyle = "gray";\n')
-              self.outfile.write (f'ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width/5*4-70},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width/5*4-40},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.stroke();\n')
-              self.outfile.write (f'ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width/5*4+40},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width/5*4+70},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.stroke();\n')
            self.outfile.write ('ctx.textAlign = "center";\n')
            self.outfile.write ('ctx.font = "14px Arial";\n')
-           self.outfile.write ('ctx.fillStyle = "blue";\n')
-           self.outfile.write (f'ctx.fillText("Sensor 1", {self.plot_width/5}, {self.tide_start_y-4});\n')
-           self.outfile.write ('ctx.fillStyle = "darkgreen";\n')
-           self.outfile.write (f'ctx.fillText("Sensor 2", {self.plot_width/5*2}, {self.tide_start_y-4});\n')
-           self.outfile.write ('ctx.fillStyle = "brown";\n')
-           self.outfile.write (f'ctx.fillText("Sensor 3", {self.plot_width/5*3}, {self.tide_start_y-4});\n')
-           if not self.tidesup and self.banflag == '1':
-              self.outfile.write ('ctx.fillStyle = "black";\n')
-              self.outfile.write (f'ctx.fillText("{self.banner}", {self.plot_width/2}, {self.tide_end_y-10});\n')      
-           if self.pred:
-              self.outfile.write ('ctx.fillStyle = "gray";\n')
-              self.outfile.write (f'ctx.fillText("Predicted", {self.plot_width/5*4}, {self.tide_start_y-4});\n')
+           if self.tide_panel:
+              self.outfile.write (f'ctx.strokeStyle = "blue";\n')
+              self.outfile.write (f'ctx.beginPath();\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width/5-60},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width/5-30},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.stroke();\n')
+              self.outfile.write (f'ctx.beginPath();\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width/5+30},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width/5+60},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.stroke();\n')
+              self.outfile.write (f'ctx.strokeStyle = "darkgreen";\n')
+              self.outfile.write (f'ctx.beginPath();\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width/5*2-60},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width/5*2-30},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.stroke();\n')
+              self.outfile.write (f'ctx.beginPath();\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width/5*2+30},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width/5*2+60},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.stroke();\n')
+              self.outfile.write (f'ctx.strokeStyle = "brown";\n')
+              self.outfile.write (f'ctx.beginPath();\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width/5*3-60},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width/5*3-30},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.stroke();\n')
+              self.outfile.write (f'ctx.beginPath();\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width/5*3+30},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width/5*3+60},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.stroke();\n')
+              if self.pred:
+                 self.outfile.write (f'ctx.strokeStyle = "gray";\n')
+                 self.outfile.write (f'ctx.beginPath();\n')
+                 self.outfile.write (f'ctx.moveTo({self.plot_width/5*4-70},{self.tide_start_y-10});\n')
+                 self.outfile.write (f'ctx.lineTo({self.plot_width/5*4-40},{self.tide_start_y-10});\n')
+                 self.outfile.write (f'ctx.stroke();\n')
+                 self.outfile.write (f'ctx.beginPath();\n')
+                 self.outfile.write (f'ctx.moveTo({self.plot_width/5*4+40},{self.tide_start_y-10});\n')
+                 self.outfile.write (f'ctx.lineTo({self.plot_width/5*4+70},{self.tide_start_y-10});\n')
+                 self.outfile.write (f'ctx.stroke();\n')
+              self.outfile.write ('ctx.fillStyle = "blue";\n')
+              self.outfile.write (f'ctx.fillText("Sensor 1", {self.plot_width/5}, {self.tide_start_y-4});\n')
+              self.outfile.write ('ctx.fillStyle = "darkgreen";\n')
+              self.outfile.write (f'ctx.fillText("Sensor 2", {self.plot_width/5*2}, {self.tide_start_y-4});\n')
+              self.outfile.write ('ctx.fillStyle = "brown";\n')
+              self.outfile.write (f'ctx.fillText("Sensor 3", {self.plot_width/5*3}, {self.tide_start_y-4});\n')
+              if not self.tidesup and self.banflag == '1':
+                 self.outfile.write ('ctx.fillStyle = "black";\n')
+                 self.outfile.write (f'ctx.fillText("{self.banner}", {self.plot_width/2}, {self.tide_end_y-10});\n')      
+              if self.pred:
+                 self.outfile.write ('ctx.fillStyle = "gray";\n')
+                 self.outfile.write (f'ctx.fillText("Predicted", {self.plot_width/5*4}, {self.tide_start_y-4});\n')
            if self.s1enable and self.station1:
               self.outfile.write ('ctx.fillStyle = "blue";\n')
               self.outfile.write (f'ctx.fillText("Variation between Sensor 1 and predicted tide in feet", {self.plot_width/2}, {self.vari1_start_y-4});\n')
@@ -2092,7 +2093,14 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
               self.mintide = self.minpred
            self.tide_grid_nbr = round(maxtide+0.5)-math.floor(self.mintide)
            self.vari_grid_nbr = 4
-           total_grids = self.tide_grid_nbr
+           # The tide panel is left out when nothing would be drawn in it:
+           # no sensor selected and the predicted tide unchecked. It then
+           # takes no height, so the drawing code's tide-panel lines and
+           # dashes come out zero-length; the grid, scale, legend and
+           # banner are skipped explicitly.
+           self.tide_panel = self.pred or any(
+             s.selected and s.enabled for s in self.stations)
+           total_grids = self.tide_grid_nbr if self.tide_panel else 0
            nbr_gaps = 0
            for s in self.stations:
               if s.selected and s.enabled:
@@ -2160,6 +2168,8 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            self.tide_height = self.tide_grid_nbr*self.grid_height
            vari_height = self.vari_grid_nbr*self.grid_height
            self.tide_grid_y = round(self.tide_height/self.tide_grid_nbr,3)
+           if not self.tide_panel:
+              self.tide_height = 0
            self.wind_start_y = 0
            self.wind_end_y = 0
            self.rain_start_y = 0
