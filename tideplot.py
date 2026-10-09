@@ -95,7 +95,8 @@ class TidePlotRenderer:
     halftide = math.pi / 2
     fulltide = math.pi
     grid_height = 30
-    left_scale_x = 15
+    SCALE_MARGIN = 4
+    left_scale_x = SCALE_MARGIN
     mintimeformat = "%Y-%m-%d %H:%M"
     sqltimeformat = "%Y-%m-%d %H:%M:%S"
     sam_int = 60
@@ -545,6 +546,18 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            self.outfile.write ('ctx.strokeStyle = "#1A53FF";\n')
            self.outfile.write ('ctx.textAlign = "left";\n')  
            self.outfile.write ('ctx.strokeStyle = "black";\n')
+           # Grid scale values: left-justified SCALE_MARGIN px from the
+           # canvas's left edge and right-justified the same distance
+           # from its right edge, so they stay clear of the grid however
+           # wide the value is and whatever textAlign is in effect.
+           self.outfile.write ('function scaleLabel(text, y) {\n')
+           self.outfile.write ('ctx.save();\n')
+           self.outfile.write ('ctx.textAlign = "left";\n')
+           self.outfile.write (f'ctx.fillText(text, {self.left_scale_x}, y);\n')
+           self.outfile.write ('ctx.textAlign = "right";\n')
+           self.outfile.write (f'ctx.fillText(text, {self.right_scale_x}, y);\n')
+           self.outfile.write ('ctx.restore();\n')
+           self.outfile.write ('}\n')
            if len(self.tidelist) == 0:
               with open('/var/www/html/tideplot.log', 'a') as self.logfile:
                  self.logfile.write ('tidelist length is zero - exiting\n')
@@ -629,8 +642,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
               self.outfile.write (f'ctx.moveTo({x_start},{int(gridy)});\n')
               self.outfile.write (f'ctx.lineTo({gridx},{int(gridy)});\n')
               self.outfile.write ('ctx.stroke();\n')
-              self.outfile.write (f'ctx.fillText("{linbr}", {self.left_scale_x}, {int(gridy)});\n')
-              self.outfile.write (f'ctx.fillText("{linbr}", {self.right_scale_x}, {int(gridy)});\n')
+              self.outfile.write (f'scaleLabel("{linbr}", {int(gridy)});\n')
               gridy = gridy-self.grid_height
            for s in self.stations:
               if not (s.selected and s.enabled):
@@ -662,8 +674,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
                  self.outfile.write (f'ctx.lineTo({self.plot_width},{int(s.vari_start_y+gridy)});\n')
                  self.outfile.write ('ctx.stroke();\n')
                  self.outfile.write ('ctx.fillStyle = "black";\n')
-                 self.outfile.write (f'ctx.fillText("{str(2-x)}", {self.left_scale_x}, {int(s.vari_start_y+gridy+label_offset)});\n')
-                 self.outfile.write (f'ctx.fillText("{str(2-x)}", {self.right_scale_x}, {int(s.vari_start_y+gridy+label_offset)});\n')
+                 self.outfile.write (f'scaleLabel("{str(2-x)}", {int(s.vari_start_y+gridy+label_offset)});\n')
                  gridy += self.grid_height
            if self.wind:
               gridy = 0
@@ -680,8 +691,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
                  if x == 0:
                     gridy += self.wind_grid_y*5
                     continue
-                 self.outfile.write (f'ctx.fillText("{str(((self.wind_grid_nbr-x)+1)*5)}", {self.left_scale_x}, {int(self.windir_start_y+gridy+6)});\n')                          
-                 self.outfile.write (f'ctx.fillText("{str(((self.wind_grid_nbr-x)+1)*5)}", {self.right_scale_x}, {int(self.windir_start_y+gridy+6)});\n')                          
+                 self.outfile.write (f'scaleLabel("{str(((self.wind_grid_nbr-x)+1)*5)}", {int(self.windir_start_y+gridy+6)});\n')
                  gridy += self.wind_grid_y*5
               self.outfile.write ('ctx.beginPath();\n')
               self.outfile.write (f'ctx.moveTo({x_start},{self.windir_start_y});\n')
@@ -703,8 +713,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
                  self.outfile.write (f'ctx.lineTo({self.plot_width},{int(self.rain_start_y+gridy)});\n')
                  self.outfile.write ('ctx.stroke();\n')
                  self.outfile.write ('ctx.fillStyle = "black";\n')
-                 self.outfile.write (f'ctx.fillText("{str((self.rain_grid_nbr-x)/2)}", {self.left_scale_x}, {int(self.rain_start_y+gridy)});\n')                          
-                 self.outfile.write (f'ctx.fillText("{str((self.rain_grid_nbr-x)/2)}", {self.right_scale_x}, {int(self.rain_start_y+gridy)});\n')                          
+                 self.outfile.write (f'scaleLabel("{str((self.rain_grid_nbr-x)/2)}", {int(self.rain_start_y+gridy)});\n')
                  gridy += self.rain_grid_y         
               self.outfile.write ('ctx.beginPath();\n')
               self.outfile.write (f'ctx.moveTo({x_start},{self.rain_start_y});\n')
@@ -726,8 +735,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
                  self.outfile.write (f'ctx.lineTo({self.plot_width},{int(self.temp_start_y+gridy)});\n')
                  self.outfile.write ('ctx.stroke();\n')
                  self.outfile.write ('ctx.fillStyle = "black";\n')
-                 self.outfile.write (f'ctx.fillText("{str((self.temp_grid_nbr-x)*5+(round(self.mintemp/5)*5))}", {self.left_scale_x}, {int(self.temp_start_y+gridy+5)});\n')                          
-                 self.outfile.write (f'ctx.fillText("{str((self.temp_grid_nbr-x)*5+(round(self.mintemp/5)*5))}", {self.right_scale_x}, {int(self.temp_start_y+gridy+5)});\n')                          
+                 self.outfile.write (f'scaleLabel("{str((self.temp_grid_nbr-x)*5+(round(self.mintemp/5)*5))}", {int(self.temp_start_y+gridy+5)});\n')
                  gridy += self.temp_grid_y         
                  #outfile.write (f'ctx.fillText("{str((temp_grid_nbr-x)*10)}", {left_scale_x},
                  #{int(temp_start_y+gridy+5)});\n')                          
@@ -754,8 +762,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
                  self.outfile.write ('ctx.stroke();\n')
                  self.outfile.write ('ctx.fillStyle = "black";\n')
                  label = str((self.wtemp_grid_nbr-x)*self.wtemp_step+self.wtemp_base)
-                 self.outfile.write (f'ctx.fillText("{label}", {self.left_scale_x}, {int(self.wtemp_start_y+gridy+5)});\n')
-                 self.outfile.write (f'ctx.fillText("{label}", {self.right_scale_x}, {int(self.wtemp_start_y+gridy+5)});\n')
+                 self.outfile.write (f'scaleLabel("{label}", {int(self.wtemp_start_y+gridy+5)});\n')
                  gridy += self.wtemp_grid_y
               self.outfile.write ('ctx.beginPath();\n')
               self.outfile.write (f'ctx.moveTo({x_start},{self.wtemp_start_y});\n')
@@ -779,8 +786,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
                  self.outfile.write (f'ctx.lineTo({self.plot_width},{int(s.batv_start_y+gridy)});\n')
                  self.outfile.write ('ctx.stroke();\n')
                  self.outfile.write ('ctx.fillStyle = "black";\n')
-                 self.outfile.write (f'ctx.fillText({format(s.max_batv-x*0.05,".2f")}, {self.left_scale_x}, {int(s.batv_start_y+gridy+5)});\n')
-                 self.outfile.write (f'ctx.fillText({format(s.max_batv-x*0.05,".2f")}, {self.right_scale_x}, {int(s.batv_start_y+gridy+5)});\n')
+                 self.outfile.write (f'scaleLabel("{format(s.max_batv-x*0.05,".2f")}", {int(s.batv_start_y+gridy+5)});\n')
                  gridy += s.batv_grid_y
               self.outfile.write ('ctx.beginPath();\n')
               self.outfile.write (f'ctx.moveTo({x_start},{s.batv_start_y});\n')
@@ -2150,7 +2156,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            total_gaps = gap_size*nbr_gaps
            self.canvas_height = dtime_height+self.title_height+total_gaps+footer_height+total_grid_height
            self.plot_width = self.canvas_width-30
-           self.right_scale_x = self.plot_width+15
+           self.right_scale_x = self.canvas_width-self.SCALE_MARGIN
            dtime_end_y = self.dtime_start_y + dtime_height
            self.tide_start_y = dtime_end_y
            self.tide_end_y = int(self.tide_height+self.tide_start_y)
