@@ -14,6 +14,16 @@ This should report "aarch64." If it instead reports "armv7l" or
 similar, this station's OS itself would need reinstalling as 64-bit
 before continuing.
 
+On a Raspberry Pi 5, also check the memory page size:
+
+    getconf PAGESIZE
+
+InfluxDB 3 Core needs 4096. The Pi 5's default kernel uses 16384;
+if that's what it prints, add this line to /boot/firmware/config.txt,
+reboot, and check again:
+
+    kernel=kernel8.img
+
 Run InfluxData's own installer:
 
     curl -O https://www.influxdata.com/d/install_influxdb3.sh
@@ -26,6 +36,18 @@ container. When prompted for a storage solution, choose "File
 storage (Persistent)" -- Object storage adds an unnecessary remote
 dependency for what is a single, local RPi, and In-memory storage
 would lose every reading on the next reboot.
+
+Confirm the installer left the influxdb3 command where the service
+expects it:
+
+    ls -l /usr/local/bin/influxdb3
+
+If it's missing, link it by hand. Link rather than copy: the binary
+loads the Python library installed beside it in ~/.influxdb, so a
+copy elsewhere fails to start.
+
+    sudo ln -sf /home/tide/.influxdb/influxdb3 /usr/local/bin/influxdb3
+    influxdb3 --version
 
 The installer leaves a temporary, foreground instance of InfluxDB 3
 Core running once it finishes, using its own defaults -- a
@@ -74,9 +96,14 @@ That last command should show the service active and running, with
 no errors. Finally, generate the admin token that
 tide_constants.json's INFLUXDB_LOCAL_TOKEN needs:
 
-    influxdb3 create token --admin
+    influxdb3 create token --admin | tee ~/influxdb3_token.txt
 
-This prints the actual token value directly to the terminal, and
-only ever does so this once -- copy it somewhere safe immediately,
-since it is hashed on the server side right afterward, with no way
-to recover the original value later.
+This prints the actual token value, and only ever does so this
+once -- it is hashed on the server side right afterward, with no way
+to recover the original value later. The tee keeps a copy in
+~/influxdb3_token.txt, since opening an editor clears the screen;
+copy the token from there into tide_constants.json's
+INFLUXDB_LOCAL_TOKEN, then delete the file.
+
+The TideData database itself doesn't need creating: it is created on
+tide.py's first write.

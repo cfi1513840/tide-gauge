@@ -58,13 +58,20 @@ the same sqlite3/InfluxDB connections if run simultaneously.
 
 ### 1.3 Data flow, at a glance
 
-- **Sensor input** arrives one of two ways:
-  - **LoRa** — a local radio receiver, read directly over serial by
-    the RPi.
-  - **Blues Notecard / Notehub** — a cellular-connected sensor unit
-    that posts readings to Notehub, which forwards them to the RPi
-    over HTTPS. An alternate path is a direct link
+- **Sensor input** arrives one of three ways, set per sensor slot by
+  `STATION<n>_TYPE` in `tide.env`:
+  - **LoRa** (`lora`) — a local radio receiver, read directly over
+    serial by the RPi.
+  - **Blues Notecard / Notehub** (`note`) — a cellular-connected
+    sensor unit that posts readings to Notehub, which forwards them to
+    the RPi over HTTPS. An alternate path is a direct link
     from Notehub to the InfluxDB cloud database.
+  - **InfluxDB Cloud** (`cloud`) — readings of a sensor that already
+    reach the cloud database are read back from it by the RPi, in the
+    background, and stored locally like any other reading.
+
+  A station uses `note` or `cloud` slots, not both; `lora` slots can
+  be combined with either.
 - **Storage**: readings are written to a local sqlite3 database (a
   secondary diagnostic log, plus cached NOAA predictions, weather/NDBC
   data, station configuration, and alert-subscriber accounts) and to
@@ -394,6 +401,18 @@ would be needed to roll back to a previous stable version — and
 skips the update entirely if the answer is no, leaving both the
 existing backup and the current `tide.env` untouched.
 
+Two settings to check in particular while the file is open:
+
+- **`STATION<n>_TYPE`** (n = 1–3) — how each sensor slot's readings
+  arrive: `lora`, `note`, `cloud`, or `''` for an empty slot. tide.py
+  reads these once at startup. A slot of type `cloud` must also have
+  its `STATION<n>_SENSOR_ID` set, as must a `note` slot when the
+  station has more than one. tide.py refuses to start, with a message
+  saying why, if the types are invalid or mix `note` and `cloud`.
+  Leave `SERIAL_PORTS` blank on a station with no `lora` slot.
+- **`12H_TIME`** — `true` (the default) shows times on the display,
+  web pages and alert messages as 2:05 PM; `false` shows 14:05.
+
 ### 3.6 systemd service
 
 The script checks whether `/etc/systemd/system/tide.service` already
@@ -461,9 +480,10 @@ group-writable permissions (`tide.py` needs to keep writing new
 readings to it). Since this is a genuinely fresh database, the script
 then runs an interactive wizard (`configure_iparams.py`) that asks,
 for each of up to three sensors, whether it's installed, and if so
-its link type (`lora` or `note`) and calibration value — resetting
-any sensor marked as not installed to disabled with no stale
-calibration or type left over from the starter file. If more than one
+its calibration value — resetting any sensor marked as not installed
+to disabled with no stale calibration left over from the starter
+file. Each sensor's link type is not set here: it is
+`STATION<n>_TYPE` in `tide.env` (Section 3.5). If more than one
 sensor is installed, it also asks which one should serve as the
 primary station display; with only one installed, that one is
 selected automatically. If `tides.db` already exists, none of this
@@ -611,10 +631,10 @@ after a cutover, copy the original keys back from `tidegauge-save`
 with `cp -p` and run `install.sh` again.
 
 The watermark matters less. Without it, the first cloud sync after
-cutover starts again from the beginning and re-sends the station's
-entire local history to InfluxDB Cloud. That's harmless, since
-identical points simply overwrite themselves, but slow. `install.sh`
-prints a reminder if it wasn't copied, but carries on.
+cutover starts 24 hours back, so readings older than that which hadn't
+yet reached InfluxDB Cloud are never sent; anything already sent is
+unaffected. `install.sh` prints a reminder if it wasn't copied, but
+carries on.
 
 **Why the new directory can be prepared, but not run, in place.** `tidehelper.py`
 loads `tide_constants.json` (and `tidecrypto.py` loads the Fernet
@@ -702,14 +722,25 @@ development, just the ones likely to recur on a future station.
 
 ### 4.1 InfluxDB 3 Core installation
 
+- **On a Raspberry Pi 5, switch to the 4K-page kernel first.** The
+  Pi 5's default kernel uses 16K memory pages, which InfluxDB 3 Core
+  can't run on. Check with `getconf PAGESIZE`; if it prints 16384,
+  add this line to `/boot/firmware/config.txt` and reboot, after which
+  it should print 4096:
+  ```
+  kernel=kernel8.img
+  ```
+  A Pi 4 already uses 4K pages.
 - **The quick-installer's own symlink step can fail** (most likely a
   `$EUID`/POSIX `sh` incompatibility, the same class of bug seen in
   other installer scripts shaped this way) — regardless of what it
-  reports, confirm the binary actually landed where it should, and
-  if not, copy it manually rather than trust the symlink:
+  reports, confirm `/usr/local/bin/influxdb3` exists. If not, create
+  the symlink by hand. Link the binary rather than copy it: it loads
+  the Python library bundled beside it in `~/.influxdb/`
+  (libpython3.13), so a copy elsewhere fails to start.
   ```bash
-  sudo cp ~/.influxdb/influxdb3 /usr/local/bin/influxdb3
-  sudo chmod +x /usr/local/bin/influxdb3
+  sudo ln -sf /home/tide/.influxdb/influxdb3 /usr/local/bin/influxdb3
+  influxdb3 --version
   ```
 - Its own printed instruction — "Run `source '/home/tide/.bashrc'`"
   — must actually be *sourced*, not executed directly
@@ -739,6 +770,15 @@ development, just the ones likely to recur on a future station.
   (`~/.influxdb/data`, hidden and dot-prefixed) to the project's own
   convention (`~/influxdb3/data`) also avoids confusing it with any
   InfluxDB V2 install already present on the same machine.
+- The `TideData` database doesn't need creating: InfluxDB 3 Core
+  creates it on tide.py's first write. Until then, queries report
+  "database not found", which is expected on a new station.
+- **Queries are limited to 432 data files by default**
+  (`--query-file-limit`). A query over too long a time range fails
+  with "Query would scan N Parquet files, exceeding the file limit".
+  tide.py keeps its own queries within the limit (the cloud sync
+  reads at most 12 hours at a time); for a wide ad hoc query, narrow
+  the time range rather than raise the limit.
 
 ### 4.2 Grafana and the InfluxDB 3 datasource
 
@@ -817,6 +857,17 @@ web root (several CGI scripts hardcode that exact path rather than
 searching from their own working directory), mailspool directory
 permissions, and the CGI file's own executable bit.
 
+`tideplot.cgi` is a symlink to `tideplot.py` in `/home/tide/bin/tidegauge`,
+so Apache (`www-data`) needs to pass through `/home/tide`, and the
+script appends to `/var/www/html/tideplot.log`. A "Permission denied"
+for either in the error log is fixed with:
+
+```bash
+sudo chmod 711 /home/tide
+sudo chown tide:tide /var/www/html/tideplot.log
+sudo chmod 664 /var/www/html/tideplot.log
+```
+
 ### 4.5 Editing JSON configuration files
 
 JSON supports no comments at all, in any form — adding a
@@ -841,8 +892,19 @@ authentication. Easy to reach for the wrong one when editing
 `tide_constants.json`.
 
 `influxdb3 create token --admin` prints the plaintext token exactly
-once — copy it immediately; it's hashed server-side right after,
-with no way to recover the original value later.
+once — it's hashed server-side right after, with no way to recover
+the original value later. Opening an editor clears it from the
+screen, so save it to a file as it's created, copy it from there, and
+delete the file afterwards:
+
+```bash
+influxdb3 create token --admin | tee ~/influxdb3_token.txt
+```
+
+If the token is lost, the only way back is to stop the service,
+delete `/home/tide/influxdb3/data`, start the service again and
+create a new token — which also deletes the station's local data,
+so do it only on a new station.
 
 ### 4.7 "Illegal instruction" on a Raspberry Pi 4
 

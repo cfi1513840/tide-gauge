@@ -38,9 +38,9 @@ if [ "$workdir" != "$livedir_real" ] && test -e "${livedir}/tide_constants.json"
   fi
   if ! test -e "${workdir}/.cloud_sync_watermark" && test -e "${livedir}/.cloud_sync_watermark"; then
     echo -e "\e[33mNote: .cloud_sync_watermark was not copied from ${livedir}."
-    echo "  Without it, the first cloud sync after cutover re-sends this"
-    echo "  station's entire local history to InfluxDB Cloud (harmless, but"
-    echo "  slow). To avoid that:  cp -p ${livedir}/.cloud_sync_watermark ${workdir}/"
+    echo "  Without it, the first cloud sync after cutover starts 24 hours"
+    echo "  back, so older readings not yet sent to InfluxDB Cloud would"
+    echo "  never be. To avoid that:  cp -p ${livedir}/.cloud_sync_watermark ${workdir}/"
     echo -e "\e[0m"
   fi
 fi
