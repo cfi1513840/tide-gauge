@@ -65,8 +65,9 @@ else:
 
 con = sqlite3.connect(db_path)
 cur = con.cursor()
-# The s<n>type columns are no longer used (types are in tide.env) and
-# are left as they are.
+# The s<n>type columns are no longer used (types are in tide.env); on
+# an older database they're left as they are (drop_iparams_types.py
+# removes them).
 cur.execute(
     "UPDATE iparams SET stationid=?, "
     "station1cal=?, s1enable=?, "

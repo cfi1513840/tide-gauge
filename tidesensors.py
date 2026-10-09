@@ -46,7 +46,13 @@ def resolve_station_types(env_types, iparams):
     notes = []
     for n in SLOTS:
         value = env_types.get(n)
-        if value is None:
+        if value is None and f's{n}type' not in iparams:
+            # iparams no longer has the column (drop_iparams_types.py).
+            value = ''
+            notes.append(
+              f"tide.env has no STATION{n}_TYPE; treating slot {n} as "
+              f"empty. Add STATION{n}_TYPE to tide.env.")
+        elif value is None:
             value = (iparams.get(f's{n}type') or '')
             value = str(value).strip().lower()
             notes.append(

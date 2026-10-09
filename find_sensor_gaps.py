@@ -104,18 +104,22 @@ def lora_enabled_stations(conn):
     """
     env_types = env_station_types()
     cur = conn.cursor()
-    cur.execute("SELECT s1type, s1enable, s2type, s2enable, "
-                "s3type, s3enable FROM iparams LIMIT 1")
+    # The s<n>type columns are gone once drop_iparams_types.py has run;
+    # they're only read, as a fallback, while they still exist.
+    columns = {c[1] for c in cur.execute("PRAGMA table_info('iparams')")}
+    wanted = ['s1enable', 's2enable', 's3enable'] + [
+      f's{n}type' for n in (1, 2, 3) if f's{n}type' in columns]
+    cur.execute(f"SELECT {', '.join(wanted)} FROM iparams LIMIT 1")
     row = cur.fetchone()
     if row is None:
         return []
-    s1type, s1enable, s2type, s2enable, s3type, s3enable = row
+    values = dict(zip(wanted, row))
     stations = []
-    for n, stype, senable in ((1, s1type, s1enable), (2, s2type, s2enable),
-                               (3, s3type, s3enable)):
-        if env_types[n] is not None:
-            stype = env_types[n]
-        if stype == 'lora' and str(senable) == '1':
+    for n in (1, 2, 3):
+        stype = env_types[n]
+        if stype is None:
+            stype = values.get(f's{n}type')
+        if stype == 'lora' and str(values[f's{n}enable']) == '1':
             stations.append(n)
     return stations
 
