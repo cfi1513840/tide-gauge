@@ -504,6 +504,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            for s in self.stations:
               if s.enabled:
                  tide_opts += option(f'station{s.num}', station_chk_value[s.num], s.selected_chk, f'Sensor {s.num}')
+           tide_opts += option('pred', '1', self.predchk, 'Predicted')
            tide_opts += option('tags', '1', self.tagchk, 'Tide Markers')
            weather_opts = (option('wind', '1', self.windchk, 'Wind') +
                            option('rain', '1', self.rainchk, 'Rain') +
@@ -1190,11 +1191,12 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
                  self.outfile.write (f'ctx.fillText("{linedate}", {predstartx}, {self.dtime_start_y+17});\n')                          
                  self.outfile.write (f'ctx.fillText("{linedate}", {predstartx}, {self.canvas_height-5});\n')                          
               if pidx % 10 == 0:
-                 self.outfile.write (f'ctx.strokeStyle = "gray";\n')
-                 self.outfile.write (f'ctx.beginPath();\n')
-                 self.outfile.write (f'ctx.moveTo({predstarthx},{predstarthy});\n')
-                 self.outfile.write (f'ctx.lineTo({predendx},{predendy});\n')
-                 self.outfile.write (f'ctx.stroke();\n')
+                 if self.pred:
+                    self.outfile.write (f'ctx.strokeStyle = "gray";\n')
+                    self.outfile.write (f'ctx.beginPath();\n')
+                    self.outfile.write (f'ctx.moveTo({predstarthx},{predstarthy});\n')
+                    self.outfile.write (f'ctx.lineTo({predendx},{predendy});\n')
+                    self.outfile.write (f'ctx.stroke();\n')
                  predstarthx = predendx
                  predstarthy = predendy         
               predstartx = predendx
@@ -1502,7 +1504,7 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
                           self.outfile.write (f'ctx.stroke();\n')
                           dash_end_y += dash_size*2
                     self.prestate1 = predstate
-                    if self.tags:                  
+                    if self.tags and self.pred:
                        # Same high/low split as the measured tags: predicted
                        # high tide tags sit one grid height (30px) lower than
                        # predicted low tide tags so they clear the trace near
@@ -1547,15 +1549,16 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            self.outfile.write (f'ctx.moveTo({self.plot_width/5*3+30},{self.tide_start_y-10});\n')
            self.outfile.write (f'ctx.lineTo({self.plot_width/5*3+60},{self.tide_start_y-10});\n')
            self.outfile.write (f'ctx.stroke();\n')
-           self.outfile.write (f'ctx.strokeStyle = "gray";\n')
-           self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/5*4-70},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/5*4-40},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.stroke();\n')
-           self.outfile.write (f'ctx.beginPath();\n')
-           self.outfile.write (f'ctx.moveTo({self.plot_width/5*4+40},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.lineTo({self.plot_width/5*4+70},{self.tide_start_y-10});\n')
-           self.outfile.write (f'ctx.stroke();\n')
+           if self.pred:
+              self.outfile.write (f'ctx.strokeStyle = "gray";\n')
+              self.outfile.write (f'ctx.beginPath();\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width/5*4-70},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width/5*4-40},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.stroke();\n')
+              self.outfile.write (f'ctx.beginPath();\n')
+              self.outfile.write (f'ctx.moveTo({self.plot_width/5*4+40},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.lineTo({self.plot_width/5*4+70},{self.tide_start_y-10});\n')
+              self.outfile.write (f'ctx.stroke();\n')
            self.outfile.write ('ctx.textAlign = "center";\n')
            self.outfile.write ('ctx.font = "14px Arial";\n')
            self.outfile.write ('ctx.fillStyle = "blue";\n')
@@ -1567,8 +1570,9 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            if not self.tidesup and self.banflag == '1':
               self.outfile.write ('ctx.fillStyle = "black";\n')
               self.outfile.write (f'ctx.fillText("{self.banner}", {self.plot_width/2}, {self.tide_end_y-10});\n')      
-           self.outfile.write ('ctx.fillStyle = "gray";\n')
-           self.outfile.write (f'ctx.fillText("Predicted", {self.plot_width/5*4}, {self.tide_start_y-4});\n')
+           if self.pred:
+              self.outfile.write ('ctx.fillStyle = "gray";\n')
+              self.outfile.write (f'ctx.fillText("Predicted", {self.plot_width/5*4}, {self.tide_start_y-4});\n')
            if self.s1enable and self.station1:
               self.outfile.write ('ctx.fillStyle = "blue";\n')
               self.outfile.write (f'ctx.fillText("Variation between Sensor 1 and predicted tide in feet", {self.plot_width/2}, {self.vari1_start_y-4});\n')
@@ -1628,6 +1632,11 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            self.outfile = open(self.filetag, "w")
 
         self.tags = False
+        # Predicted tide trace, its legend and its high/low markers.
+        # The predictions are still used for the variation panels and
+        # the dashed high/low lines when this is off.
+        self.pred = True
+        self.predchk = 'checked'
         self.station1 = False
         self.station2 = False
         self.station3 = False
@@ -1728,6 +1737,8 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
               self.plotdays = 3
               self.tags =  True
               self.tagchk = 'checked'
+              self.pred = True
+              self.predchk = 'checked'
               self.station1 = (default_station_id == 1)
               self.station1chk = 'checked' if self.station1 else ''
               self.station2 = (default_station_id == 2)
@@ -1757,6 +1768,12 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
               else:
                  self.tags = True
                  self.tagchk = 'checked'
+              if form.getvalue('pred') == None:
+                 self.pred = False
+                 self.predchk = ''
+              else:
+                 self.pred = True
+                 self.predchk = 'checked'
               self.station1 = form.getvalue('station1')
               if self.station1 == None:
                  self.station1 = False
