@@ -23,6 +23,7 @@ Two classes: Station holds the static, per-station configuration
 built once per render (iparams, form parameters); TidePlotRenderer
 does the actual drawing.
 """
+import json
 import time
 import sys
 import os
@@ -106,6 +107,36 @@ class TidePlotRenderer:
     # of the plot; on a narrow screen its groups stack and it scrolls
     # within the window. The page-wide div rule (width = canvas width,
     # auto margins) is overridden for the panel.
+    LEGEND_JS = '''function drawLegend(entries, centerX, y, maxWidth) {
+  var PAD = 6, LINE, GAP, total, i;
+  ctx.save();
+  ctx.font = "14px Arial";
+  ctx.textAlign = "left";
+  ctx.lineWidth = 1;
+  var widths = entries.map(function (e) { return ctx.measureText(e[0]).width; });
+  // Shorter lines and gaps when the full-size row won't fit (phones).
+  var sizes = [[30, 40], [15, 20], [8, 10]];
+  for (var k = 0; k < sizes.length; k++) {
+    LINE = sizes[k][0]; GAP = sizes[k][1]; total = 0;
+    for (i = 0; i < widths.length; i++) total += widths[i] + 2 * (LINE + PAD);
+    total += GAP * Math.max(entries.length - 1, 0);
+    if (total <= maxWidth) break;
+  }
+  var x = centerX - total / 2;
+  for (i = 0; i < entries.length; i++) {
+    var w = widths[i];
+    ctx.strokeStyle = entries[i][1];
+    ctx.fillStyle = entries[i][1];
+    ctx.beginPath();
+    ctx.moveTo(x, y - 6); ctx.lineTo(x + LINE, y - 6);
+    ctx.moveTo(x + LINE + 2 * PAD + w, y - 6); ctx.lineTo(x + 2 * (LINE + PAD) + w, y - 6);
+    ctx.stroke();
+    ctx.fillText(entries[i][0], x + LINE + PAD, y);
+    x += w + 2 * (LINE + PAD) + GAP;
+  }
+  ctx.restore();
+}
+'''
     PLOT_OPTIONS_CSS = '''
 #myForm { position: relative; }
 details.plotopts { display: inline-block; }
@@ -551,6 +582,10 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            # canvas's left edge and right-justified the same distance
            # from its right edge, so they stay clear of the grid however
            # wide the value is and whatever textAlign is in effect.
+           # Tide legend: [[label, color], ...] drawn as  --- label ---
+           # entries LEGEND_GAP px apart, the row centered on center_x
+           # with the text baseline at y.
+           self.outfile.write (self.LEGEND_JS)
            self.outfile.write ('function scaleLabel(text, y) {\n')
            self.outfile.write ('ctx.save();\n')
            self.outfile.write ('ctx.textAlign = "left";\n')
@@ -1525,55 +1560,18 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            self.outfile.write ('ctx.textAlign = "center";\n')
            self.outfile.write ('ctx.font = "14px Arial";\n')
            if self.tide_panel:
-              self.outfile.write (f'ctx.strokeStyle = "blue";\n')
-              self.outfile.write (f'ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width/5-60},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width/5-30},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.stroke();\n')
-              self.outfile.write (f'ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width/5+30},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width/5+60},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.stroke();\n')
-              self.outfile.write (f'ctx.strokeStyle = "darkgreen";\n')
-              self.outfile.write (f'ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width/5*2-60},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width/5*2-30},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.stroke();\n')
-              self.outfile.write (f'ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width/5*2+30},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width/5*2+60},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.stroke();\n')
-              self.outfile.write (f'ctx.strokeStyle = "brown";\n')
-              self.outfile.write (f'ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width/5*3-60},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width/5*3-30},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.stroke();\n')
-              self.outfile.write (f'ctx.beginPath();\n')
-              self.outfile.write (f'ctx.moveTo({self.plot_width/5*3+30},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.lineTo({self.plot_width/5*3+60},{self.tide_start_y-10});\n')
-              self.outfile.write (f'ctx.stroke();\n')
+              # Legend: one entry for each selected sensor and for the
+              # predicted tide when checked, closed up and centered over
+              # the grid. Widths come from the browser (measureText), so
+              # the spacing holds whatever the font renders as.
+              entries = [(f'Sensor {st.num}', st.color) for st in self.stations
+                         if st.selected and st.enabled]
               if self.pred:
-                 self.outfile.write (f'ctx.strokeStyle = "gray";\n')
-                 self.outfile.write (f'ctx.beginPath();\n')
-                 self.outfile.write (f'ctx.moveTo({self.plot_width/5*4-70},{self.tide_start_y-10});\n')
-                 self.outfile.write (f'ctx.lineTo({self.plot_width/5*4-40},{self.tide_start_y-10});\n')
-                 self.outfile.write (f'ctx.stroke();\n')
-                 self.outfile.write (f'ctx.beginPath();\n')
-                 self.outfile.write (f'ctx.moveTo({self.plot_width/5*4+40},{self.tide_start_y-10});\n')
-                 self.outfile.write (f'ctx.lineTo({self.plot_width/5*4+70},{self.tide_start_y-10});\n')
-                 self.outfile.write (f'ctx.stroke();\n')
-              self.outfile.write ('ctx.fillStyle = "blue";\n')
-              self.outfile.write (f'ctx.fillText("Sensor 1", {self.plot_width/5}, {self.tide_start_y-4});\n')
-              self.outfile.write ('ctx.fillStyle = "darkgreen";\n')
-              self.outfile.write (f'ctx.fillText("Sensor 2", {self.plot_width/5*2}, {self.tide_start_y-4});\n')
-              self.outfile.write ('ctx.fillStyle = "brown";\n')
-              self.outfile.write (f'ctx.fillText("Sensor 3", {self.plot_width/5*3}, {self.tide_start_y-4});\n')
+                 entries.append(('Predicted', 'gray'))
+              self.outfile.write (f'drawLegend({json.dumps(entries)}, {(30+self.plot_width)/2}, {self.tide_start_y-4}, {self.plot_width-30});\n')
               if not self.tidesup and self.banflag == '1':
                  self.outfile.write ('ctx.fillStyle = "black";\n')
                  self.outfile.write (f'ctx.fillText("{self.banner}", {self.plot_width/2}, {self.tide_end_y-10});\n')      
-              if self.pred:
-                 self.outfile.write ('ctx.fillStyle = "gray";\n')
-                 self.outfile.write (f'ctx.fillText("Predicted", {self.plot_width/5*4}, {self.tide_start_y-4});\n')
            if self.s1enable and self.station1:
               self.outfile.write ('ctx.fillStyle = "blue";\n')
               self.outfile.write (f'ctx.fillText("Variation between Sensor 1 and predicted tide in feet", {self.plot_width/2}, {self.vari1_start_y-4});\n')
