@@ -351,7 +351,9 @@ class Tide:
                     # Only stored for a slot tide.env sets as 'lora' and
                     # iparams has enabled.
                     if (sensor_packet and
-                      sensor_ctx.accepts(sensor_packet.get('S'), 'lora')):
+                      sensor_ctx.accepts(sensor_packet.get('S'), 'lora') and
+                      not sensor_ctx.is_phantom(sensor_packet.get('S'),
+                                                sensor_packet)):
                         cal = station_cal.get(sensor_packet.get('S'))
                         if cal is not None:
                             sensor_packet['H'] = cal

@@ -250,6 +250,12 @@ class Constants:
         # -- a missed LoRa sync is easy to notice and backfill from the
         # watermark, while silently duplicating already-delivered
         # Notecard data is a messier cleanup.
+        # Phantom distances per slot, as written in tide.env
+        # (STATION<n>_PHANTOM_MM); parsed and checked in tidesensors.py.
+        STATION_PHANTOM_MM = {}
+        for _n in (1, 2, 3):
+            STATION_PHANTOM_MM[_n] = (os.getenv(f'STATION{_n}_PHANTOM_MM')
+                                      or '').strip().strip('\'"')
         STATION_CLOUD_ENABLE = {}
         for _n in (1, 2, 3):
             STATION_CLOUD_ENABLE[_n] = (

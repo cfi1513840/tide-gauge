@@ -21,12 +21,30 @@ It is re-read every minute, so a slot can be shut off without a restart.
 
 Notecard and cloud readings name their sensor by its 3-character ID
 ("PRO"); STATION<n>_SENSOR_ID in tide.env says which slot that is.
+
+Phantom readings: some installations return a false echo at a fixed
+distance -- a reflection off the dock structure -- for hours at a time
+at certain tide levels. Its distance hardly varies, and since it agrees
+with itself it can pass the outlier screen, or even become its
+baseline and get the real readings rejected instead. STATION<n>_PHANTOM_MM
+in tide.env lists a slot's known phantom distances, each a single value
+in mm (matched within PHANTOM_TOLERANCE_MM) or a range "lo-hi":
+
+    STATION2_PHANTOM_MM='1155'            1145-1165 mm
+    STATION2_PHANTOM_MM='1150-1162,2310'  either
+
+A reading from that slot at a phantom distance is dropped before
+anything else sees it: not stored, not outlier-screened, not checked
+for alerts, on every path (LoRa, Notecard, cloud).
 """
 import logging
+import re
 from datetime import datetime
 
 VALID_TYPES = ('lora', 'note', 'cloud', '')
 SLOTS = (1, 2, 3)
+# A single STATION<n>_PHANTOM_MM value matches this many mm either side.
+PHANTOM_TOLERANCE_MM = 10
 
 
 class StationConfigError(Exception):
@@ -85,6 +103,28 @@ def station_mode(types):
     return None
 
 
+def parse_phantoms(text):
+    """STATION<n>_PHANTOM_MM text -> list of (low, high) mm ranges.
+    Raises ValueError on anything that isn't a number or a range."""
+    ranges = []
+    for item in (text or '').split(','):
+        item = item.strip()
+        if not item:
+            continue
+        m = re.fullmatch(r'(\d+)\s*-\s*(\d+)', item)
+        if m:
+            low, high = int(m.group(1)), int(m.group(2))
+            if low > high:
+                low, high = high, low
+        elif item.isdigit():
+            low = int(item) - PHANTOM_TOLERANCE_MM
+            high = int(item) + PHANTOM_TOLERANCE_MM
+        else:
+            raise ValueError(item)
+        ranges.append((low, high))
+    return ranges
+
+
 def check_station_config(types, cons):
     """Settings each type needs, checked once at startup. Raises
     StationConfigError naming what's missing."""
@@ -95,6 +135,12 @@ def check_station_config(types, cons):
     if station_mode(types) == 'note' and not getattr(cons, 'NOTEHUB_SECRET', None):
         problems.append("a slot is 'note' but NOTEHUB_SECRET is not set in "
                         "tide_constants.json")
+    for n in SLOTS:
+        try:
+            parse_phantoms(getattr(cons, 'STATION_PHANTOM_MM', {}).get(n))
+        except ValueError as bad:
+            problems.append(f"STATION{n}_PHANTOM_MM has '{bad}', which is "
+                            f"not a distance in mm or a range like 1150-1162")
     cloud_ids = {}
     for n in SLOTS:
         if types[n] != 'cloud':
@@ -142,6 +188,17 @@ class SensorContext:
         self.sunset = None
         self.debug = 0
         self._logged = set()
+        self.phantoms = {}
+        for n in SLOTS:
+            try:
+                self.phantoms[n] = parse_phantoms(
+                  getattr(cons, 'STATION_PHANTOM_MM', {}).get(n))
+            except ValueError:
+                self.phantoms[n] = []    # reported by check_station_config
+        # slot -> [count, first time, lowest mm, highest mm] for the
+        # current run of phantom readings, so a run is logged once when
+        # it starts and once, with a count, when it ends.
+        self._phantom_runs = {}
 
     def refresh(self, cal, enabled, active_slot, weather, ndbc_data,
                 sunrise, sunset, debug):
@@ -183,6 +240,40 @@ class SensorContext:
             return False
         return True
 
+    def is_phantom(self, slot, record):
+        """True if this reading's distance (R, or U from some LoRa
+        sensors) is one of the slot's phantom distances; the caller then
+        drops it. Logs the start of a run of phantom readings, and its
+        length once a real reading arrives."""
+        ranges = self.phantoms.get(slot)
+        if not ranges:
+            return False
+        mm = record.get('R', record.get('U'))
+        try:
+            mm = float(mm)
+        except (TypeError, ValueError):
+            return False
+        run = self._phantom_runs.get(slot)
+        if any(low <= mm <= high for low, high in ranges):
+            if run is None:
+                self._phantom_runs[slot] = [1, datetime.now(), mm, mm]
+                logging.warning(
+                  f'Slot {slot} ({self.sensor_ids.get(slot, "")}): dropping '
+                  f'phantom readings at {mm:.0f} mm (STATION{slot}_PHANTOM_MM)')
+            else:
+                run[0] += 1
+                run[2] = min(run[2], mm)
+                run[3] = max(run[3], mm)
+            return True
+        if run is not None:
+            count, since, low, high = run
+            del self._phantom_runs[slot]
+            logging.warning(
+              f'Slot {slot} ({self.sensor_ids.get(slot, "")}): {count} '
+              f'phantom reading(s) at {low:.0f}-{high:.0f} mm dropped since '
+              f'{since:%H:%M}; now reading {mm:.0f} mm')
+        return False
+
     def slot_for_sensor_id(self, sensor_id, kind):
         """Slot of this type whose STATION<n>_SENSOR_ID matches. For a
         Notecard reading with no match, a station with exactly one 'note'
@@ -218,6 +309,8 @@ def ingest_records(ctx, records, kind):
     for record in records:
         slot = record.get('S')
         if not ctx.accepts(slot, kind):
+            continue
+        if ctx.is_phantom(slot, record):
             continue
         ctx.db.insert_tide(record)
         handled += 1
