@@ -6,7 +6,9 @@ notifications when one is triggered. Called once per minute from
 tide.py's main loop with the current tide level plus the latest
 weather/NDBC data.
 
-Alert types: tide level crossing a threshold (rising or falling),
+Alert types: tide level crossing a threshold (rising or falling; each
+rising and each falling crossing reported once, re-armed at every turn
+of the tide),
 tidal variation from the next predicted high/low, an upcoming
 high/low tide event reminder (N minutes ahead), wind speed, air
 temperature, and water temperature. The air and water temperature
@@ -58,6 +60,20 @@ class TideAlerts:
         self.tide_average = []
         self._last_stationid = None
         self.PHASE_WINDOW_SIZE = 20
+        # Tide level alerts. Each subscriber's tide_level_status (2 after
+        # a rising alert, 1 after a falling one, 0 when ready) is reset to
+        # 0 whenever the phase changes, so every rising and every falling
+        # crossing is reported once. low_mark is the lowest level since
+        # the tide last turned to Falling, high_mark the highest since it
+        # last turned to Rising: a rising alert needs the tide to have
+        # been below the subscriber's level since then, a falling alert
+        # above it. That catches a crossing made before the phase
+        # detection (which lags the turn of the tide by some minutes)
+        # caught up, without repeating an alert if the phase flips back
+        # and forth near slack water.
+        self._level_phase = ''
+        self.low_mark = None
+        self.high_mark = None
         self.last_average = 0
         self.average = 0
         self.phase = ''
@@ -204,6 +220,8 @@ class TideAlerts:
         if stationid is not None and stationid != self._last_stationid:
             self._outlier_tracker.reset()
             self.tide_average = []
+            self.low_mark = None
+            self.high_mark = None
             self._last_stationid = stationid
         # candidate_time lets a caller pass the reading's own timestamp
         # instead of wall-clock "now" -- essential for do_POST(), which
@@ -361,6 +379,23 @@ class TideAlerts:
                 self.phase = 'Rising'
             elif self.average < self.last_average - 0.05:
                 self.phase = 'Falling'
+        # The turn of the tide re-arms every tide level alert and starts
+        # a new low or high mark.
+        if self.phase != self._level_phase:
+            if self._level_phase:
+                logging.info(f'check_alerts: tide now {self.phase}, '
+                             f'tide level alerts re-armed')
+                for alert_dict in alert_list:
+                    alert_dict['tide_level_status'] = 0
+            if self.phase == 'Falling':
+                self.low_mark = tide_level
+            elif self.phase == 'Rising':
+                self.high_mark = tide_level
+            self._level_phase = self.phase
+        self.low_mark = (tide_level if self.low_mark is None
+                         else min(self.low_mark, tide_level))
+        self.high_mark = (tide_level if self.high_mark is None
+                          else max(self.high_mark, tide_level))
         for index, alert_dict in enumerate(alert_list):
             emailAddress = alert_dict['email_address'].encode()
             emailAddress = self.f1.decrypt(emailAddress).decode()
@@ -393,76 +428,36 @@ class TideAlerts:
                   "To: "+email_recipient,"MIME-Versiion:1.0",
                   "Content-Type:text/html"]
                 email_headers = "\r\n".join(email_headers)
-                if status == 0 and self.phase == 'Rising':                        
-                    if (tide_level >= db_level and 
-                      tide_level < db_level+0.1):
-                        alert_list[index]['tide_level_status'] = 2
-                        if (not dayonly or (dayonly and (localtime > sunrise and
-                          localtime < sunset))):
-                            text_message = (
-                              alert_time+" - The tide level is "+
-                              format(tide_level, '.2f')+
-                              " feet and Rising, please check "+
-                              f"{self.cons.TIDE_URL} "+
-                              "for current conditions")
-                            self.notify.send_email(email_recipient,
-                              email_headers, text_message, debug)
-                            if len(telnbr) != 0:
-                                self.notify.send_SMS(telnbr,
-                                  text_message, debug, self.cons.STATION_LOCATION) 
-
-                elif status == 0 and self.phase == 'Falling':          
-                    if (tide_level <= db_level and
-                      tide_level > db_level-0.1):
-                        alert_list[index]['tide_level_status'] = 1
-                        if (not dayonly or (dayonly and (localtime > sunrise and
-                          localtime < sunset))):
-                            text_message = (
-                              alert_time+" - The tide Level is "+
-                              format(tide_level, '.2f')+
-                              " feet and Falling, please check "+
-                              f"{self.cons.TIDE_URL} "+
-                              "for current conditions")
-                            self.notify.send_email(email_recipient,
-                              email_headers, text_message, debug)
-                            if len(telnbr) != 0:
-                                self.notify.send_SMS(telnbr,
-                              text_message, debug, self.cons.STATION_LOCATION) 
-
-                elif status == 1 and self.phase == 'Rising':
-                    if (tide_level >= db_level and
-                      tide_level < db_level+0.1):
-                        alert_list[index]['tide_level_status'] = 2
-                        if (not dayonly or (dayonly and (localtime > sunrise and
-                          localtime < sunset))):
-                            text_message = (
-                              alert_time+" - The tide level is "+
-                              format(tide_level, '.2f')+
-                              " feet and Rising, please check "+
-                              f"{self.cons.TIDE_URL} "+
-                              "for current conditions")
-                            self.notify.send_email(email_recipient,
-                              email_headers, text_message, debug)
-                            if len(telnbr) != 0:
-                                self.notify.send_SMS(telnbr,
-                                  text_message, debug, self.cons.STATION_LOCATION) 
-                            
-                elif status == 2 and self.phase == 'Falling':
-                    if (tide_level <= db_level and
-                      tide_level > db_level-0.1):
-                        alert_list[index]['tide_level_status'] = 1
-                        if (not dayonly or (dayonly and (localtime > sunrise and
-                          localtime < sunset))):
-                            text_message = (
-                              alert_time+" - The tide level is "+
-                              format(tide_level, '.2f')+" feet and Falling, "+
-                              f"please check {self.cons.TIDE_URL} "+
-                              "for current conditions")
-                            self.notify.send_email(email_recipient,
-                              email_headers, text_message, debug)
-                            if len(telnbr) != 0:
-                                self.notify.send_SMS(telnbr,
-                                  text_message, debug, self.cons.STATION_LOCATION) 
+                # A crossing: the tide is now at or past the level, in
+                # the direction it is moving, and has been on the other
+                # side of it since the tide last turned (low_mark /
+                # high_mark). Reported once per phase; the status is
+                # re-armed when the phase changes (above).
+                if self.phase == 'Rising':
+                    crossed = (status != 2 and tide_level >= db_level and
+                               self.low_mark < db_level)
+                    new_status = 2
+                elif self.phase == 'Falling':
+                    crossed = (status != 1 and tide_level <= db_level and
+                               self.high_mark > db_level)
+                    new_status = 1
+                else:
+                    crossed = False
+                if crossed:
+                    alert_list[index]['tide_level_status'] = new_status
+                    if (not dayonly or (dayonly and (localtime > sunrise and
+                      localtime < sunset))):
+                        text_message = (
+                          alert_time+" - The tide level is "+
+                          format(tide_level, '.2f')+
+                          f" feet and {self.phase}, please check "+
+                          f"{self.cons.TIDE_URL} "+
+                          "for current conditions")
+                        self.notify.send_email(email_recipient,
+                          email_headers, text_message, debug)
+                        if len(telnbr) != 0:
+                            self.notify.send_SMS(telnbr,
+                              text_message, debug, self.cons.STATION_LOCATION)
             #
             # Process air temperature alerts
             #
