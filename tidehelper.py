@@ -442,8 +442,19 @@ class SunTime:
             current_time = datetime.now()
             display_date = current_time.strftime("%b %d, %Y")
             sun = Sun(cons.LATITUDE, cons.LONGITUDE)
-            sunrise = sun.get_local_sunrise_time(time_zone=cons.LOCAL_TZ)
-            sunset = sun.get_local_sunset_time(time_zone=cons.LOCAL_TZ)
+            # Today's date is passed explicitly. Older suntime releases
+            # (1.3.x) default it to datetime.now() evaluated once, when
+            # the package is imported, so without it every daily refresh
+            # returned the sunrise and sunset of the day tide.py started --
+            # and daylight-only alerts stopped after that first day.
+            # The times are computed in UTC and converted to local time
+            # here: handing suntime a pytz time zone directly makes it use
+            # that zone's historical local mean time offset (-4:56 for
+            # US/Eastern, not -5:00), which put both times 4 minutes off.
+            sunrise = sun.get_sunrise_time(current_time).astimezone(
+              cons.LOCAL_TZ)
+            sunset = sun.get_sunset_time(current_time).astimezone(
+              cons.LOCAL_TZ)
             if sunset < sunrise:
                 sunset = sunset + timedelta(1)
             # 12- or 24-hour per tide.env 12H_TIME. These strings are
