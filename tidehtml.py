@@ -842,6 +842,22 @@ class CreateHTML:
         outfile.write (f'ctx.strokeRect({box_right} - mtWidth, 4, mtWidth, 23);\n')
         outfile.write (f'ctx.fillStyle = "{box_color}";\n')
         outfile.write (f'ctx.fillText(mtLabel, {box_right} - mtWidth/2, 22);\n')
+        # Trace legend, at the right end of the header so the measured
+        # tide box has the left side to grow into:
+        #   -- Measured Tide --   -- Predicted Tide --
+        legend_right = bored+plot_width
+        outfile.write ('ctx.font = "bold 14px Arial";\n')
+        outfile.write ('function legendEntry(label, color, xEnd) {\n'
+          '  var w = ctx.measureText(label).width;\n'
+          '  var x = xEnd - (w + 80);\n'
+          '  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;\n'
+          '  ctx.beginPath(); ctx.moveTo(x, 15); ctx.lineTo(x + 30, 15);\n'
+          '  ctx.moveTo(x + 50 + w, 15); ctx.lineTo(x + 80 + w, 15); ctx.stroke();\n'
+          '  ctx.fillText(label, x + 40 + w/2, 20);\n'
+          '  return x;\n'
+          '}\n')
+        outfile.write (f'var lgX = legendEntry("Predicted Tide", "#808080", {legend_right});\n')
+        outfile.write ('legendEntry("Measured Tide", "#1A53FF", lgX - 20);\n')
        
         outfile.write (f'ctx.font = "bold 14px Arial";\n')
         outfile.write ('ctx.fillStyle = "#1932E1";\n')

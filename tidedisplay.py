@@ -597,43 +597,37 @@ class TideDisplay:
         tide_color = "SlateGray4" if tide_stale else "RoyalBlue3"
         curhrmin = tidetime.format_time(current_time)
         text_font = tkfont.Font(family="Arial", size=12, weight="bold")
-        start_text = self.x_plot_start
-        self.plot_window.create_line(
-          start_text, 15, start_text+30, 15, fill="RoyalBlue3", width=2)
-        text_field = "Actual Tide Trace"
-        text_size = text_font.measure(text_field)
-        self.plot_window.create_text(start_text+35,15,
-           anchor="w", fill="RoyalBlue3", text=text_field,
-           font=("Arial", 12, 'bold'))
-        self.plot_window.create_line(
-          start_text+40+text_size, 15, start_text+70+text_size,
-          15, fill="RoyalBlue3", width=2)
-        cdbox = self.plot_window.create_text(
-           self.canvas_width/2-145, 18, fill=tide_color, text=" "+tide_label+" ",
-           font=("Arial", 14, 'bold'))
-        cdboxcors = self.plot_window.bbox(cdbox)
-        # The Time box starts just right of the Measured Tide box, rather
-        # than at a fixed centre, so neither box can overlap the other
-        # however wide the tide value or the time ("12:45 PM") gets.
+        # Header: the Time box centred over the current-time line
+        # (mid_point), the measured tide box ending just left of it and
+        # growing to the left, and both trace legends at the right end,
+        # leaving the left side free for a long "Last Measured ... at
+        # <time>" label -- the same layout as tide.html.
         tbox = self.plot_window.create_text(
-          cdboxcors[2]+8, 18, anchor="w", fill="black",
+          mid_point, 18, anchor="center", fill="black",
           text=" Time "+curhrmin+" ", font=("Arial", 14, 'bold'))
-        cdboxwid = self.plot_window.create_rectangle(
-          cdboxcors, outline=tide_color, fill="white", width=2)
-        self.plot_window.tag_lower(cdboxwid,cdbox)
         tboxcors = self.plot_window.bbox(tbox)
         tboxwid = self.plot_window.create_rectangle(
           tboxcors, outline="black", fill="white", width=2)
         self.plot_window.tag_lower(tboxwid,tbox)
-        text_field = "Predicted Tide Trace"
-        text_size = text_font.measure(text_field)
-        start_text = self.canvas_width-(text_size+80)
-        self.plot_window.create_line(start_text, 15, start_text+30, 15,
-          fill="gray", width=2)
-        self.plot_window.create_text(start_text+35,15,
-          anchor="w", fill="gray", text=text_field,
-          font=("Arial", 12, 'bold'))
-        self.plot_window.create_line(start_text+40+text_size, 15,
-          start_text+70+text_size, 15,
-          fill="gray", width=2)
+        cdbox = self.plot_window.create_text(
+           tboxcors[0]-8, 18, anchor="e", fill=tide_color,
+           text=" "+tide_label+" ", font=("Arial", 14, 'bold'))
+        cdboxcors = self.plot_window.bbox(cdbox)
+        cdboxwid = self.plot_window.create_rectangle(
+          cdboxcors, outline=tide_color, fill="white", width=2)
+        self.plot_window.tag_lower(cdboxwid,cdbox)
+        # Legend entries, right to left: -- text --
+        legend_end = self.canvas_width
+        for text_field, color in (("Predicted Tide Trace", "gray"),
+                                  ("Actual Tide Trace", "RoyalBlue3")):
+            text_size = text_font.measure(text_field)
+            start_text = legend_end-(text_size+80)
+            self.plot_window.create_line(start_text, 15, start_text+30, 15,
+              fill=color, width=2)
+            self.plot_window.create_text(start_text+35,15,
+              anchor="w", fill=color, text=text_field,
+              font=("Arial", 12, 'bold'))
+            self.plot_window.create_line(start_text+40+text_size, 15,
+              start_text+70+text_size, 15, fill=color, width=2)
+            legend_end = start_text-10
 
