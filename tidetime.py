@@ -19,7 +19,7 @@ Log files, database timestamps, file names and anything parsed back
 with strptime() keep their fixed 24-hour formats and must not use this.
 """
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 _FALSE_WORDS = ('false', '0', 'no', 'off')
 
@@ -48,6 +48,31 @@ def format_time(when, style='time'):
     if style == 'hour':
         return f'{hour} {suffix}'
     return f'{hour}:{when.minute:02d} {suffix}'
+
+
+# A measured tide reading older than this is shown as "Last Measured ...
+# at <time>" instead of "Measured Tide ...". Matches the 5-minute
+# reporting gap the outlier filter and the plots treat as a break.
+MEASURED_STALE_AFTER = timedelta(minutes=5)
+
+
+def measured_tide_label(tide_text, reading_time, now=None):
+    """Label for the measured tide box on tide.html and the Tk display.
+
+    Returns (text, stale). A reading no more than MEASURED_STALE_AFTER
+    old is "Measured Tide 7.82 ft"; an older one -- a sensor gap, a run
+    of dropped phantom readings, or a Notecard between its reports -- is
+    "Last Measured 4.43 ft at 10:28 AM", with the date added when the
+    reading is from an earlier day. reading_time None: the plain label.
+    """
+    if now is None:
+        now = datetime.now()
+    if reading_time is None or now - reading_time <= MEASURED_STALE_AFTER:
+        return f'Measured Tide {tide_text}', False
+    when = format_time(reading_time)
+    if reading_time.date() != now.date():
+        when = reading_time.strftime('%b %d ') + when
+    return f'Last Measured {tide_text} at {when}', True
 
 
 # How tideget.py stores the local weather obs_time and the NDBC DateTime.

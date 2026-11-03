@@ -57,12 +57,11 @@ class CreateHTML:
         timeformat = "%Y-%m-%d %H:%M:%S"
         current_time = datetime.now()
         hrtime = tidetime.format_time(current_time)
-        # High/low tag boxes and the top-centre Time box are wider for
-        # 12-hour times: "12:45 PM" in bold 14px Arial is 61 px against
-        # a 52 px tag box, and " Time 12:45 PM " in bold 20px is 150 px
-        # against a 110 px Time box. The Time box grows to the right,
-        # into the empty space before the predicted-tide station name,
-        # so the Measured Tide box beside it stays where it was.
+        # High/low tag boxes and the Time box are wider for 12-hour
+        # times: "12:45 PM" in bold 14px Arial is 61 px against a 52 px
+        # tag box, and " Time 12:45 PM " in bold 20px is 150 px against
+        # a 110 px Time box. The Time box is centred over the current-
+        # time line either way.
         if tidetime.use_12_hour():
             tag_w, time_w = 68, 145
         else:
@@ -239,6 +238,7 @@ class CreateHTML:
         max_tide = -99
         min_tide = 99
         tide = '--'
+        last_reading_time = None
         offtime = 0
         if tidelist:
             for chkent in tidelist:
@@ -250,6 +250,11 @@ class CreateHTML:
             offtime = starttime.timestamp() - then.timestamp()   
             tide = tidelist[len(tidelist)-1][1]
             tide = round(tide,2)
+            try:
+                last_reading_time = datetime.strptime(
+                  tidelist[len(tidelist)-1][0], timeformat)
+            except (TypeError, ValueError):
+                last_reading_time = None
         if predicts:
             for chkent in predicts:
                 if chkent[2] > max_tide:
@@ -805,51 +810,38 @@ class CreateHTML:
                         outfile.write (f'ctx.fillText("{hm}", {plotx}, {midcanvas+24});\n')
                         outfile.write (f'ctx.fillText("{peak}", {plotx}, {midcanvas+9});\n')
                         
+        # Header: the Time box centred over the current-time line (the
+        # middle of the 48-hour plot), and the measured tide box ending
+        # just left of it. The measured tide box keeps its usual 219 px
+        # for "Measured Tide 7.82 ft" and grows to the left for the
+        # longer "Last Measured 4.43 ft at 10:28 AM" shown once the
+        # newest reading is more than 5 minutes old (see
+        # tidetime.measured_tide_label), drawn in a muted blue so it
+        # doesn't read as a live value.
+        now_x = plot_width/2+bored
+        time_left = now_x - time_w/2
         outfile.write (f'ctx.font = "bold 20px Arial";\n')
         outfile.write ('ctx.strokeStyle = "black";\n')
         outfile.write ('ctx.lineWidth = 2;\n')
         outfile.write (f'ctx.fillStyle = "white";\n')
-        outfile.write (f'ctx.fillRect({canvas_width/2-50}, 4, {time_w}, 23);\n')
-        outfile.write (f'ctx.strokeRect({canvas_width/2-50}, 4, {time_w}, 23);\n')
+        outfile.write (f'ctx.fillRect({time_left}, 4, {time_w}, 23);\n')
+        outfile.write (f'ctx.strokeRect({time_left}, 4, {time_w}, 23);\n')
         outfile.write ('ctx.fillStyle = "black";\n')
-        outfile.write (f'ctx.fillText(" Time {hrtime} ", {canvas_width/2-50+time_w/2},22);\n')
-        
-        outfile.write ('ctx.strokeStyle = "#1A53FF";\n')
+        outfile.write (f'ctx.fillText(" Time {hrtime} ", {now_x},22);\n')
+
+        label, stale = tidetime.measured_tide_label(
+          f'{tide} ft', last_reading_time, current_time)
+        box_color = '#7A8AB8' if stale else '#1A53FF'
+        box_right = time_left-4
+        outfile.write (f'ctx.strokeStyle = "{box_color}";\n')
         outfile.write ('ctx.lineWidth = 2;\n')
+        outfile.write (f'var mtLabel = "{label}";\n')
+        outfile.write (f'var mtWidth = Math.max(219, ctx.measureText(mtLabel).width + 14);\n')
         outfile.write (f'ctx.fillStyle = "white";\n')
-        outfile.write (f'ctx.fillRect({canvas_width/2-273}, 4, 219, 23);\n')
-        outfile.write (f'ctx.strokeRect({canvas_width/2-273}, 4, 219, 23);\n')
-        outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
-        outfile.write (f'ctx.fillText("Measured Tide {tide} ft ", {canvas_width/2-162},22);\n')
-        outfile.write (f'ctx.font = "bold 14px Arial";\n')
-        outfile.write (f'ctx.fillStyle = "#1A53FF";\n')
-        #outfile.write (f'ctx.fillText("Actual Tide Trace", {canvas_width/2-400},20);\n')    
-        outfile.write (f'ctx.fillText("{self.STATION_NAME}", {canvas_width/2-400},20);\n')    
-        #outfile.write ('ctx.strokeStyle = "#1A53FF";\n')
-        #outfile.write ('ctx.beginPath();\n')
-        #outfile.write (f'ctx.moveTo({canvas_width/2-500},15);\n')
-        #outfile.write (f'ctx.lineTo({canvas_width/2-470},15);\n')
-        #outfile.write ('ctx.stroke();\n')
-        
-        #outfile.write ('ctx.beginPath();\n')
-        #outfile.write (f'ctx.moveTo({canvas_width/2-335},15);\n')
-        #outfile.write (f'ctx.lineTo({canvas_width/2-305},15);\n')
-        #outfile.write ('ctx.stroke();\n')
-       
-        outfile.write (f'ctx.fillStyle = "#808080";\n')
-        #outfile.write (f'ctx.fillText("Predicted Tide Trace", {canvas_width/2+350},20);\n')
-        outfile.write (f'ctx.fillText("{self.NOAA_STATION_NAME}", {canvas_width/2+350},20);\n')
-    
-        #outfile.write ('ctx.strokeStyle = "#808080";\n')
-        #outfile.write ('ctx.beginPath();\n')
-        #outfile.write (f'ctx.moveTo({canvas_width/2+240},15);\n')
-        #outfile.write (f'ctx.lineTo({canvas_width/2+270},15);\n')
-        #outfile.write ('ctx.stroke();\n')
-        
-        #outfile.write ('ctx.beginPath();\n')
-        #outfile.write (f'ctx.moveTo({canvas_width/2+430},15);\n')
-        #outfile.write (f'ctx.lineTo({canvas_width/2+460},15);\n')
-        #outfile.write ('ctx.stroke();\n')
+        outfile.write (f'ctx.fillRect({box_right} - mtWidth, 4, mtWidth, 23);\n')
+        outfile.write (f'ctx.strokeRect({box_right} - mtWidth, 4, mtWidth, 23);\n')
+        outfile.write (f'ctx.fillStyle = "{box_color}";\n')
+        outfile.write (f'ctx.fillText(mtLabel, {box_right} - mtWidth/2, 22);\n')
        
         outfile.write (f'ctx.font = "bold 14px Arial";\n')
         outfile.write ('ctx.fillStyle = "#1932E1";\n')

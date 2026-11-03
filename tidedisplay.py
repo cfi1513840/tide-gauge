@@ -545,6 +545,7 @@ class TideDisplay:
         # tidehtml.py), and each run starts with a dot so a lone reading
         # between two gaps still shows.
         tide = 0
+        last_reading_time = None
         if measurements:
             start_time = datetime.strptime(measurements[0][0], "%Y-%m-%d %H:%M:%S")
             off_time = start_time.timestamp() - start_plot_time.timestamp()
@@ -581,8 +582,19 @@ class TideDisplay:
                     self.plot_window.create_line(
                       *coords, fill="RoyalBlue3", width=2, joinstyle="round")
             tide = measurements[len(measurements)-1][1]
+            try:
+                last_reading_time = datetime.strptime(
+                  measurements[len(measurements)-1][0], "%Y-%m-%d %H:%M:%S")
+            except (TypeError, ValueError):
+                last_reading_time = None
         tide_text = format(tide, '.2f')+' ft'
         current_time = datetime.now()
+        # "Measured Tide 7.82 ft", or "Last Measured 4.43 ft at 10:28 AM"
+        # in a muted blue once the newest reading is more than 5 minutes
+        # old (tidetime.measured_tide_label, shared with tide.html).
+        tide_label, tide_stale = tidetime.measured_tide_label(
+          tide_text, last_reading_time, current_time)
+        tide_color = "SlateGray4" if tide_stale else "RoyalBlue3"
         curhrmin = tidetime.format_time(current_time)
         text_font = tkfont.Font(family="Arial", size=12, weight="bold")
         start_text = self.x_plot_start
@@ -597,8 +609,8 @@ class TideDisplay:
           start_text+40+text_size, 15, start_text+70+text_size,
           15, fill="RoyalBlue3", width=2)
         cdbox = self.plot_window.create_text(
-           self.canvas_width/2-145, 18, fill="RoyalBlue3", text=" Measured Tide "+
-           tide_text+" ", font=("Arial", 14, 'bold'))
+           self.canvas_width/2-145, 18, fill=tide_color, text=" "+tide_label+" ",
+           font=("Arial", 14, 'bold'))
         cdboxcors = self.plot_window.bbox(cdbox)
         # The Time box starts just right of the Measured Tide box, rather
         # than at a fixed centre, so neither box can overlap the other
@@ -607,7 +619,7 @@ class TideDisplay:
           cdboxcors[2]+8, 18, anchor="w", fill="black",
           text=" Time "+curhrmin+" ", font=("Arial", 14, 'bold'))
         cdboxwid = self.plot_window.create_rectangle(
-          cdboxcors, outline="RoyalBlue3", fill="white", width=2)
+          cdboxcors, outline=tide_color, fill="white", width=2)
         self.plot_window.tag_lower(cdboxwid,cdbox)
         tboxcors = self.plot_window.bbox(tbox)
         tboxwid = self.plot_window.create_rectangle(
