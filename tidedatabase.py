@@ -298,7 +298,7 @@ class DbManage:
             else:
                 candidate_time = datetime.now(timezone.utc)
             if not self._check_outlier(sensor_id, candidate_ft, candidate_time):
-                return
+                return 'rejected as outlier'
         try:
             now = datetime.now()
             database_time = datetime.strftime(now, self.cons.TIME_FORMAT)
@@ -396,9 +396,11 @@ class DbManage:
             # this call returns immediately regardless of how long the
             # actual InfluxDB write takes.
             self._write_queue.put(point_command)
+            return 'stored'
 
         except Exception as errmsg:
-            logging.warning('insert_tide: '+str(errmsg), exc_info=True)            
+            logging.warning('insert_tide: '+str(errmsg), exc_info=True)
+            return f'failed: {errmsg}'
 
     def fetch_predicts(self, tide_start_time):
         try:        

@@ -136,6 +136,12 @@ logging.info(f'Sensor slot types {station_types}, mode {station_mode}')
 sensor_ctx = tidesensors.SensorContext(cons, db, alerts, station_types)
 sensor = (tideget.ReadSensor(cons, val)
   if 'lora' in station_types.values() else None)
+if cons.LORA_TRACE:
+    logging.warning(
+      f'LORA_TRACE: slot types {station_types}, SERIAL_PORTS '
+      f'{cons.SERIAL_PORTS}, sensor IDs {cons.STATION_SENSOR_IDS}, '
+      + (f'ports open {sorted(sensor.ports)}' if sensor else
+         "no LoRa reader (no slot has STATION<n>_TYPE='lora')"))
 note_receiver = (NotehubReceiver(cons, sensor_ctx)
   if station_mode == 'note' else None)
 cloud_reader = (tidecloud.CloudReader(cons, sensor_ctx)
@@ -350,15 +356,29 @@ class Tide:
                     sensor_packet = sensor.read_sensor(port)
                     # Only stored for a slot tide.env sets as 'lora' and
                     # iparams has enabled.
-                    if (sensor_packet and
-                      sensor_ctx.accepts(sensor_packet.get('S'), 'lora') and
-                      not sensor_ctx.is_phantom(sensor_packet.get('S'),
-                                                sensor_packet)):
-                        cal = station_cal.get(sensor_packet.get('S'))
-                        if cal is not None:
-                            sensor_packet['H'] = cal
-                        sensor_packet['L'] = 'lora'
-                        db.insert_tide(sensor_packet)
+                    if not sensor_packet:
+                        continue
+                    slot = sensor_packet.get('S')
+                    if not sensor_ctx.accepts(slot, 'lora'):
+                        if cons.LORA_TRACE:
+                            logging.warning(
+                              f'LORA_TRACE: slot {slot} not accepted: type '
+                              f'{sensor_ctx.types.get(slot)!r}, enabled '
+                              f'{sensor_ctx.enabled.get(slot)}')
+                        continue
+                    if sensor_ctx.is_phantom(slot, sensor_packet):
+                        if cons.LORA_TRACE:
+                            logging.warning(f'LORA_TRACE: slot {slot} phantom, dropped')
+                        continue
+                    cal = station_cal.get(slot)
+                    if cal is not None:
+                        sensor_packet['H'] = cal
+                    sensor_packet['L'] = 'lora'
+                    outcome = db.insert_tide(sensor_packet)
+                    if cons.LORA_TRACE:
+                        logging.warning(
+                          f'LORA_TRACE: slot {slot} calibration {cal}, '
+                          f'insert_tide: {outcome}')
             # Notecard readings: each one stored, and the active slot's
             # checked for alerts at its own time, inside poll() -- see
             # tidesensors.ingest_records().

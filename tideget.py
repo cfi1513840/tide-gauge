@@ -29,6 +29,7 @@ from datetime import datetime, timedelta
 import json
 import requests
 import socket
+import time
 import serial
 import urllib3.util.connection
 import logging
@@ -615,6 +616,13 @@ class ReadSensor:
         # instead of tide.py failing to start. Reconnect the receiver and
         # restart tide.py to read it again.
         self.ports = {}
+        self.trace = bool(getattr(self.cons, 'LORA_TRACE', False))
+        # Discard reason -> time it was last logged. A packet discarded
+        # for a reason not seen in the last DISCARD_LOG_INTERVAL is logged
+        # with its contents, so a sensor whose every packet fails a
+        # format check shows up in newtide.log instead of vanishing.
+        self._discards_logged = {}
+        self.DISCARD_LOG_INTERVAL = 3600
         for port in (self.cons.SERIAL_PORTS or []):
             if port == 'USB0':
                 device, baud = '/dev/ttyUSB0', self.cons.USB0_BAUDRATE
@@ -629,10 +637,24 @@ class ReadSensor:
                   timeout = 1)
                 serial_input.reset_input_buffer()
                 self.ports[port] = serial_input
+                if self.trace:
+                    logging.warning(f'LORA_TRACE: opened {device} at {baud} baud')
             except Exception as errmsg:
                 logging.warning(
                   f'Cannot open LoRa receiver on {device}: {errmsg} -- no '
                   f'LoRa readings from it until tide.py is restarted')
+
+    def _discard(self, port, reason, raw):
+        """Note why a packet was thrown away: always under LORA_TRACE,
+        otherwise the first time in DISCARD_LOG_INTERVAL for each reason."""
+        now = time.time()
+        last = self._discards_logged.get(reason)
+        if self.trace or last is None or now - last >= self.DISCARD_LOG_INTERVAL:
+            self._discards_logged[reason] = now
+            note = '' if self.trace else ' (logged at most hourly per reason)'
+            logging.warning(f'{port}: discarding LoRa packet, {reason}: '
+                            f'{raw!r}{note}')
+        return {}
 
     def read_sensor(self, port):
 
@@ -642,21 +664,25 @@ class ReadSensor:
             if serial_input is None:
                 return data_dict
             if serial_input.in_waiting > 0:
-                packet = serial_input.readline()
+                raw = serial_input.readline()
             else:
                 return data_dict
+            if self.trace:
+                logging.warning(f'LORA_TRACE: {port} received {raw!r}')
             try:
-                packet = packet.decode().split(',')
-            except:
-                return data_dict
-            if packet[0][0] != 'S':
-                return data_dict
+                packet = raw.decode().strip().split(',')
+            except Exception:
+                return self._discard(port, 'not text', raw)
+            if not packet[0] or packet[0][0] != 'S':
+                return self._discard(port, "does not start with 'S'", raw)
+            reason = None
             for field in packet:
                 if field != '' and field[0].isalpha():
                     code = field[0]
                     raw_value = field[1:]
                     this_var = self.val.var_type(raw_value, int)
                     if this_var == -99:
+                        reason = f'field {field!r} is not a whole number'
                         data_dict = {}
                         break
                     # Field-specific format/range checks -- catch corruption
@@ -669,15 +695,19 @@ class ReadSensor:
                     # C, s, t are optional depending on installation and get
                     # no format check here.
                     if code in ('V', 'R', 'U') and len(raw_value) != 4:
+                        reason = f'field {field!r} is not 4 digits'
                         data_dict = {}
                         break
                     if code == 'M' and (len(raw_value) != 2 or not (1 <= this_var <= 20)):
+                        reason = f'field {field!r} is not 2 digits from 01 to 20'
                         data_dict = {}
                         break
                     if code == 'S' and not (1 <= this_var <= 3):
+                        reason = f'field {field!r} is not slot 1, 2 or 3'
                         data_dict = {}
                         break
                     if (code == 'R' or code == 'U') and this_var == 0:
+                        reason = f'field {field!r} is a zero distance'
                         data_dict = {}
                         break
                     data_dict[code] = this_var
@@ -697,10 +727,9 @@ class ReadSensor:
                 has_signal = 'P' in data_dict or 'r' in data_dict
                 if (not required_singly.issubset(data_dict.keys())
                   or not has_distance or not has_signal):
-                    logging.warning(
-                      f'Discarding incomplete/garbled sensor packet '
-                      f'(fields present: {sorted(data_dict.keys())}): {packet}')
-                    data_dict = {}
+                    data_dict = self._discard(port,
+                      f'incomplete (fields present: {sorted(data_dict.keys())})',
+                      raw)
                 elif 'S' in data_dict:
                     # LoRa packets have no native Sensor ID field -- look
                     # one up from the station-number table (STATIONn_NUM/
@@ -709,6 +738,10 @@ class ReadSensor:
                     # same "I" tag Notecard records already carry natively.
                     data_dict['I'] = self.cons.STATION_SENSOR_IDS.get(
                       data_dict['S'], '')
+                    if self.trace:
+                        logging.warning(f'LORA_TRACE: {port} parsed {data_dict}')
+            if reason is not None:
+                return self._discard(port, reason, raw)
             return data_dict
 
         except Exception as errmsg:

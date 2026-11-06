@@ -222,6 +222,13 @@ class Constants:
         WX_OPEN_URL = os.getenv('WX_OPEN_URL')
         USB0_BAUDRATE = os.getenv('USB0_BAUDRATE')
         USB1_BAUDRATE = os.getenv('USB1_BAUDRATE')
+        # LORA_TRACE=true in tide.env logs every LoRa packet and what
+        # became of it (parsed, discarded and why, accepted for a slot,
+        # stored or rejected). For diagnosing a receiver whose readings
+        # don't reach the databases; leave off otherwise -- it writes a
+        # few lines a minute per sensor.
+        LORA_TRACE = (os.getenv('LORA_TRACE') or '').strip().strip('\'"').lower() in (
+          'true', '1', 'yes', 'on')
         SENSOR_SOURCE = os.getenv('SENSOR_SOURCE')
 
         # Station number -> Sensor ID lookup, built from the indexed
