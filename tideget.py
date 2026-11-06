@@ -692,10 +692,19 @@ class ReadSensor:
                     # fewer digits than expected due to a lost leading
                     # digit is still caught (int() would silently accept
                     # "459" as 459, losing the length information).
+                    # V (battery millivolts) is always 4 digits. A distance
+                    # (R/U, mm) may be 3 or 4: a sensor less than a metre
+                    # from the water, or a bench test, reads under 1000 mm.
+                    # A 4-digit distance that lost a leading digit is then
+                    # left to the outlier screen, which rejects the jump.
                     # C, s, t are optional depending on installation and get
                     # no format check here.
-                    if code in ('V', 'R', 'U') and len(raw_value) != 4:
+                    if code == 'V' and len(raw_value) != 4:
                         reason = f'field {field!r} is not 4 digits'
+                        data_dict = {}
+                        break
+                    if code in ('R', 'U') and len(raw_value) not in (3, 4):
+                        reason = f'field {field!r} is not 3 or 4 digits'
                         data_dict = {}
                         break
                     if code == 'M' and (len(raw_value) != 2 or not (1 <= this_var <= 20)):
