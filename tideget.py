@@ -670,9 +670,20 @@ class ReadSensor:
             if self.trace:
                 logging.warning(f'LORA_TRACE: {port} received {raw!r}')
             try:
-                packet = raw.decode().strip().split(',')
+                text = raw.decode().strip()
             except Exception:
                 return self._discard(port, 'not text', raw)
+            # The receiver's own status lines, not sensor packets: the
+            # heltec_unofficial library's RADIOLIB() macros print
+            # "[RadioLib] radio.startReceive(...) returned 0 (ERR_NONE)"
+            # after each radio call. A success is ignored (traced only);
+            # anything else is a radio error worth seeing, logged at most
+            # hourly per message.
+            if text.startswith('[RadioLib]'):
+                if '(ERR_NONE)' in text:
+                    return {}
+                return self._discard(port, 'receiver reported a radio error', raw)
+            packet = text.split(',')
             if not packet[0] or packet[0][0] != 'S':
                 return self._discard(port, "does not start with 'S'", raw)
             reason = None
