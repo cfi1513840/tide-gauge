@@ -1910,8 +1910,11 @@ details.plotopts .optapply { text-align: center; margin-top: 4px; }
            self.listDate = 0
 
            self.dbquerytime = self.curtime - timedelta(days=self.plotdays)
+           # Rows without a distance (phantom readings, stored for their
+           # battery and signal values) aren't part of the tide trace.
            self.sqlcur.execute("select dtime, stationid, distance from sensors where dtime "+ \
-                         "between ? and ? order by dtime", (str(self.dbquerytime),str(self.curtime)))
+                         "between ? and ? and distance is not null order by dtime",
+                         (str(self.dbquerytime),str(self.curtime)))
            self.tidelist = self.sqlcur.fetchall()
 
            self.tidelist = self._get_epochs(self.tidelist)

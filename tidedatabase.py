@@ -315,6 +315,11 @@ class DbManage:
                 elif 'U' in data_dict:
                     distance = data_dict.get('U')
                     distance_feet = round(distance*0.03937007874,2)
+                else:
+                    # A phantom reading stored for its other values
+                    # (tidesensors.py): no distance.
+                    distance = None
+                    distance_feet = None
                 if 's' in data_dict:
                     solar = data_dict.get('s')
                     solarv = round(solar/1000,3)

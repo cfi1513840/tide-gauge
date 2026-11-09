@@ -33,9 +33,14 @@ in mm (matched within PHANTOM_TOLERANCE_MM) or a range "lo-hi":
     STATION2_PHANTOM_MM='1155'            1145-1165 mm
     STATION2_PHANTOM_MM='1150-1162,2310'  either
 
-A reading from that slot at a phantom distance is dropped before
-anything else sees it: not stored, not outlier-screened, not checked
-for alerts, on every path (LoRa, Notecard, cloud).
+A reading from that slot at a phantom distance loses its distance
+before anything else sees it: the rest of it (battery and solar
+voltage, signal strength, counts, temperature) is still stored, with
+no distance, so the sensor's health stays on record through a phantom
+spell. With no distance it is not outlier-screened, not checked for
+alerts and not part of any tide plot -- every reader of the tide
+already skips rows without one. This holds on every path (LoRa,
+Notecard, cloud).
 """
 import logging
 import re
@@ -274,6 +279,12 @@ class SensorContext:
               f'{since:%H:%M}; now reading {mm:.0f} mm')
         return False
 
+    @staticmethod
+    def without_distance(record):
+        """The reading with its distance (R, or U) removed, for storing
+        the rest of a phantom reading."""
+        return {k: v for k, v in record.items() if k not in ('R', 'U')}
+
     def slot_for_sensor_id(self, sensor_id, kind):
         """Slot of this type whose STATION<n>_SENSOR_ID matches. For a
         Notecard reading with no match, a station with exactly one 'note'
@@ -311,7 +322,7 @@ def ingest_records(ctx, records, kind):
         if not ctx.accepts(slot, kind):
             continue
         if ctx.is_phantom(slot, record):
-            continue
+            record = ctx.without_distance(record)
         ctx.db.insert_tide(record)
         handled += 1
         if (slot == ctx.active_slot and record.get('H') is not None and

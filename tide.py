@@ -367,9 +367,12 @@ class Tide:
                               f'{sensor_ctx.enabled.get(slot)}')
                         continue
                     if sensor_ctx.is_phantom(slot, sensor_packet):
+                        # Stored without its distance, so battery, signal
+                        # and counts are still recorded.
+                        sensor_packet = sensor_ctx.without_distance(sensor_packet)
                         if cons.LORA_TRACE:
-                            logging.warning(f'LORA_TRACE: slot {slot} phantom, dropped')
-                        continue
+                            logging.warning(f'LORA_TRACE: slot {slot} phantom, '
+                                            f'storing without distance')
                     cal = station_cal.get(slot)
                     if cal is not None:
                         sensor_packet['H'] = cal
