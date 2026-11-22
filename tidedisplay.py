@@ -616,18 +616,33 @@ class TideDisplay:
         cdboxwid = self.plot_window.create_rectangle(
           cdboxcors, outline=tide_color, fill="white", width=2)
         self.plot_window.tag_lower(cdboxwid,cdbox)
-        # Legend entries, right to left: -- text --
-        legend_end = self.canvas_width
-        for text_field, color in (("Predicted Tide Trace", "gray"),
-                                  ("Actual Tide Trace", "RoyalBlue3")):
+        # Legend entries, right to left: -- text --, labelled as on
+        # tide.html. On a narrow screen the lines beside each label are
+        # shortened, then dropped, so the legend never runs into the
+        # Time box.
+        entries = (("Predicted Tide", "gray"), ("Measured Tide", "RoyalBlue3"))
+        room = self.canvas_width - (tboxcors[2] + 12)
+        for line_len in (30, 12, 0):
+            gap = 5 if line_len else 0
+            total = sum(text_font.measure(t) + 2*(line_len+gap)
+                        for t, c in entries) + 16*len(entries)
+            if total <= room:
+                break
+        legend_end = self.canvas_width - 10
+        for text_field, color in entries:
             text_size = text_font.measure(text_field)
-            start_text = legend_end-(text_size+80)
-            self.plot_window.create_line(start_text, 15, start_text+30, 15,
-              fill=color, width=2)
-            self.plot_window.create_text(start_text+35,15,
+            start_text = legend_end-(text_size+2*(line_len+gap))
+            x = start_text
+            if line_len:
+                self.plot_window.create_line(x, 15, x+line_len, 15,
+                  fill=color, width=2)
+                x += line_len+gap
+            self.plot_window.create_text(x, 15,
               anchor="w", fill=color, text=text_field,
               font=("Arial", 12, 'bold'))
-            self.plot_window.create_line(start_text+40+text_size, 15,
-              start_text+70+text_size, 15, fill=color, width=2)
-            legend_end = start_text-10
+            x += text_size+gap
+            if line_len:
+                self.plot_window.create_line(x, 15, x+line_len, 15,
+                  fill=color, width=2)
+            legend_end = start_text-16
 
