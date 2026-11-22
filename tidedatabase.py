@@ -81,6 +81,10 @@ class DbManage:
         # sensors share this one write path and each needs its own
         # independent tracker.
         self._outlier_trackers = {}
+        # A second tracker per sensor for readings older than the newest
+        # one already accepted -- a Notecard batch that reaches tide.py
+        # after the batch that followed it (see _check_outlier).
+        self._late_trackers = {}
         self.sql_connection = sqlite3.connect(f'{self.sqlpath}')
         self.sql_cursor = self.sql_connection.cursor()
         self.local_tz = pytz.timezone('US/Eastern')
@@ -246,7 +250,13 @@ class DbManage:
         if db_commit:
             self.sql_connection.commit()
 
-    def _check_outlier(self, sensor_id, candidate_ft, candidate_time):
+    # A reporting gap up to this long between timestamped (Notecard or
+    # cloud) readings is logged at info level only: batches every 15-30
+    # minutes, sometimes one late, make such resets routine there.
+    BATCH_GAP_QUIET_SECONDS = 3600
+
+    def _check_outlier(self, sensor_id, candidate_ft, candidate_time,
+                       batched=False):
         """Delegates to tidehelper.OutlierTracker (see there for the full
         rationale), keeping one tracker per sensor_id since multiple
         physical sensors share this write path and each needs its own
@@ -260,18 +270,38 @@ class DbManage:
         """
         tracker = self._outlier_trackers.setdefault(
           sensor_id, tidehelper.OutlierTracker())
+        late = ''
+        if (tracker.last_accepted_time is not None and
+          candidate_time < tracker.last_accepted_time):
+            # Older than the newest accepted reading: a Notecard batch
+            # delivered after the one that followed it (Notehub sends
+            # two queued batches at once after a missed sync, in either
+            # order). Judging it against the newer baseline would reject
+            # the whole batch -- the tide moved meanwhile -- so it is
+            # screened on its own by a separate tracker, the same way:
+            # a fresh baseline from its first readings, then within the
+            # batch. A new late run starting further back starts afresh.
+            late_tracker = self._late_trackers.get(sensor_id)
+            if (late_tracker is None or
+              late_tracker.last_accepted_time is None or
+              candidate_time < late_tracker.last_accepted_time):
+                late_tracker = tidehelper.OutlierTracker()
+                self._late_trackers[sensor_id] = late_tracker
+            tracker = late_tracker
+            late = ' (late batch)'
         accepted, baseline, gap_reset_seconds = tracker.check(
           candidate_ft, candidate_time)
         if gap_reset_seconds is not None:
-            logging.warning(
+            quiet = batched and gap_reset_seconds <= self.BATCH_GAP_QUIET_SECONDS
+            (logging.info if quiet else logging.warning)(
               f'insert_tide: sensor {sensor_id} reporting gap of '
               f'{gap_reset_seconds:.0f}s exceeds '
               f'{tracker.OUTLIER_GAP_RESET_SECONDS}s -- resetting outlier '
-              f'baseline to re-establish')
+              f'baseline to re-establish{late}')
         if not accepted:
             logging.warning(
               f'insert_tide: rejecting outlier for sensor {sensor_id}: '
-              f'{candidate_ft} versus baseline {baseline}')
+              f'{candidate_ft} versus baseline {baseline}{late}')
         return accepted
 
     def insert_tide(self, data_dict):
@@ -297,7 +327,8 @@ class DbManage:
                   data_dict["T"], tz=timezone.utc)
             else:
                 candidate_time = datetime.now(timezone.utc)
-            if not self._check_outlier(sensor_id, candidate_ft, candidate_time):
+            if not self._check_outlier(sensor_id, candidate_ft, candidate_time,
+                                       batched="T" in data_dict):
                 return 'rejected as outlier'
         try:
             now = datetime.now()

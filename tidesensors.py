@@ -193,6 +193,10 @@ class SensorContext:
         self.sunset = None
         self.debug = 0
         self._logged = set()
+        # slot -> timestamp (T) of the newest reading checked for alerts,
+        # so a late batch's older readings aren't alert-checked after
+        # newer ones have been.
+        self.last_alert_T = {}
         self.phantoms = {}
         for n in SLOTS:
             try:
@@ -317,6 +321,8 @@ def ingest_records(ctx, records, kind):
     still reject a reading as an outlier).
     """
     handled = 0
+    # Oldest first, whatever order the batch arrived in.
+    records = sorted(records, key=lambda r: r.get('T') or 0)
     for record in records:
         slot = record.get('S')
         if not ctx.accepts(slot, kind):
@@ -326,7 +332,9 @@ def ingest_records(ctx, records, kind):
         ctx.db.insert_tide(record)
         handled += 1
         if (slot == ctx.active_slot and record.get('H') is not None and
-          record.get('R') is not None and ctx.alerts is not None):
+          record.get('R') is not None and ctx.alerts is not None and
+          record.get('T', 0) > ctx.last_alert_T.get(slot, 0)):
+            ctx.last_alert_T[slot] = record.get('T', 0)
             tide_level = round(record['H'] - record['R']/304.8, 2)
             # Naive local time, matching datetime.now() and the LoRa
             # path, since both feed the same outlier tracker.
