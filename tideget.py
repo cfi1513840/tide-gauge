@@ -714,20 +714,25 @@ class ReadSensor:
                         reason = f'field {field!r} is not 4 digits'
                         data_dict = {}
                         break
+                    # R0: the transmitter found no usable distance (no
+                    # samples, or none agreeing) -- checked first so the log
+                    # says so rather than reporting a bad length.
+                    if (code == 'R' or code == 'U') and this_var == 0:
+                        reason = f'field {field!r} is a zero distance'
+                        data_dict = {}
+                        break
                     if code in ('R', 'U') and len(raw_value) not in (3, 4):
                         reason = f'field {field!r} is not 3 or 4 digits'
                         data_dict = {}
                         break
-                    if code == 'M' and (len(raw_value) != 2 or not (1 <= this_var <= 20)):
-                        reason = f'field {field!r} is not 2 digits from 01 to 20'
+                    # M, the number of agreeing samples, is 1 to 20, with or
+                    # without a leading zero ("M9" or "M09").
+                    if code == 'M' and (len(raw_value) not in (1, 2) or not (1 <= this_var <= 20)):
+                        reason = f'field {field!r} is not a count from 1 to 20'
                         data_dict = {}
                         break
                     if code == 'S' and not (1 <= this_var <= 3):
                         reason = f'field {field!r} is not slot 1, 2 or 3'
-                        data_dict = {}
-                        break
-                    if (code == 'R' or code == 'U') and this_var == 0:
-                        reason = f'field {field!r} is a zero distance'
                         data_dict = {}
                         break
                     data_dict[code] = this_var
