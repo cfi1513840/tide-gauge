@@ -64,9 +64,13 @@ def measured_tide_label(tide_text, reading_time, now=None):
     of dropped phantom readings, or a Notecard between its reports -- is
     "Last Measured 4.43 ft at 10:28 AM", with the date added when the
     reading is from an earlier day. reading_time None: the plain label.
+    tide_text None -- no reading in the 24 hours shown -- is "No Tide
+    Readings in 24 Hours", also marked stale.
     """
     if now is None:
         now = datetime.now()
+    if tide_text is None:
+        return 'No Tide Readings in 24 Hours', True
     if reading_time is None or now - reading_time <= MEASURED_STALE_AFTER:
         return f'Measured Tide {tide_text}', False
     when = format_time(reading_time)

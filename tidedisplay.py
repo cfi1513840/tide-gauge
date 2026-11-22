@@ -587,7 +587,7 @@ class TideDisplay:
                   measurements[len(measurements)-1][0], "%Y-%m-%d %H:%M:%S")
             except (TypeError, ValueError):
                 last_reading_time = None
-        tide_text = format(tide, '.2f')+' ft'
+        tide_text = format(tide, '.2f')+' ft' if measurements else None
         current_time = datetime.now()
         # "Measured Tide 7.82 ft", or "Last Measured 4.43 ft at 10:28 AM"
         # in a muted blue once the newest reading is more than 5 minutes

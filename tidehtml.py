@@ -830,7 +830,7 @@ class CreateHTML:
         outfile.write (f'ctx.fillText(" Time {hrtime} ", {now_x},22);\n')
 
         label, stale = tidetime.measured_tide_label(
-          f'{tide} ft', last_reading_time, current_time)
+          f'{tide} ft' if tidelist else None, last_reading_time, current_time)
         box_color = '#7A8AB8' if stale else '#1A53FF'
         box_right = time_left-4
         outfile.write (f'ctx.strokeStyle = "{box_color}";\n')

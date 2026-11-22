@@ -192,6 +192,11 @@ class Tide:
         self.visit = False
         self.sensor_readings = {}
         self.sensor_read_list = []
+        # True while the active station has had no reading with a tide
+        # level in the 24 hours fetch_tide() covers, so that is logged
+        # once when it starts and once when readings return, rather than
+        # failing every minute.
+        self.no_readings = False
         self.station_oos = False # Station out of service
         self.stationid = self.iparams_dict.get('stationid')
         self.station1cal = self.iparams_dict.get('station1cal')
@@ -543,59 +548,77 @@ class Tide:
                       self.stationid, self.stationcal, self.influx_duration)
                     volts = 0
                     rssi = 0
-                    try:
-                        self.sensor_readings = self.sensor_read_list[len(self.sensor_read_list)-1]
-                        tide_time = self.sensor_readings.get("T")
-                        tide_mm = self.sensor_readings['R']
-                        station = self.sensor_readings['S']
-                        volts = self.sensor_readings['V']/1000
-                        rssi = self.sensor_readings['P']
-                        if station == 1:
-                            self.last_station1_time = self.current_time
-                            if self.stationid == 1:
-                                if self.display:
-                                    self.display.station_battery_voltage_tk_var.set(
-                                      str(volts))
-                                    self.display.station_signal_strength_tk_var.set(
-                                      str(rssi))
-                                self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
-                                self.station_oos = False
-                        elif station == 2:
-                            self.last_station2_time = self.current_time
-                            if self.stationid == 2:
-                                if self.display:
-                                    self.display.station_battery_voltage_tk_var.set(
-                                      str(volts))
-                                    self.display.station_signal_strength_tk_var.set(
-                                      str(rssi))
-                                self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
-                                self.station_oos = False
-                        elif station == 3:
-                            self.last_station3_time = self.current_time
-                            if self.stationid == 3:
-                                if self.display:
-                                    self.display.station_battery_voltage_tk_var.set(
-                                      str(volts))
-                                    self.display.station_signal_strength_tk_var.set(
-                                      str(rssi))
-                                self.tide_ft = round(self.station3cal-tide_mm/304.8, 2)
-                                self.station_oos = False
-                        if self.tide_ft != 99:
-                            # self.process is only created at startup when
-                            # there were already readings; a station that
-                            # started with none (new, or after an outage)
-                            # creates it with its first readings here.
-                            if getattr(self, 'process', None) is None:
-                                self.process = tideprocess.ProcTide(tide_list)
-                                self.tide_list = self.process.get_tide_list()
-                            else:
-                                self.tide_list = self.process.update_tide_list(
-                                  tide_list)
-                              #self.tide_list, self.tide_ft, tide_time)
-                    except Exception as errmsg:
-                        pass
-                        print (str(errmsg))
-                        logging.warning(str(errmsg), exc_info=True)
+                    if not self.sensor_read_list:
+                        # Nothing with a tide level in the last 24 hours:
+                        # a sensor or receiver down that long, a phantom
+                        # spell, or a failed query (logged by fetch_tide).
+                        # The display and web page show no measured tide,
+                        # alerts wait (tide_ft stays 99), and the out-of-
+                        # service check below sees the station as silent.
+                        if not self.no_readings:
+                            logging.warning(
+                              f'Station {self.stationid}: no readings with a '
+                              f'tide level in the last 24 hours')
+                            self.no_readings = True
+                        self.tide_list = []
+                    elif self.no_readings:
+                        logging.warning(
+                          f'Station {self.stationid}: readings resumed')
+                        self.no_readings = False
+                    if self.sensor_read_list:
+                        try:
+                            self.sensor_readings = self.sensor_read_list[len(self.sensor_read_list)-1]
+                            tide_time = self.sensor_readings.get("T")
+                            tide_mm = self.sensor_readings['R']
+                            station = self.sensor_readings['S']
+                            volts = self.sensor_readings['V']/1000
+                            rssi = self.sensor_readings['P']
+                            if station == 1:
+                                self.last_station1_time = self.current_time
+                                if self.stationid == 1:
+                                    if self.display:
+                                        self.display.station_battery_voltage_tk_var.set(
+                                          str(volts))
+                                        self.display.station_signal_strength_tk_var.set(
+                                          str(rssi))
+                                    self.tide_ft = round(self.station1cal-tide_mm/304.8, 2)
+                                    self.station_oos = False
+                            elif station == 2:
+                                self.last_station2_time = self.current_time
+                                if self.stationid == 2:
+                                    if self.display:
+                                        self.display.station_battery_voltage_tk_var.set(
+                                          str(volts))
+                                        self.display.station_signal_strength_tk_var.set(
+                                          str(rssi))
+                                    self.tide_ft = round(self.station2cal-tide_mm/304.8, 2)
+                                    self.station_oos = False
+                            elif station == 3:
+                                self.last_station3_time = self.current_time
+                                if self.stationid == 3:
+                                    if self.display:
+                                        self.display.station_battery_voltage_tk_var.set(
+                                          str(volts))
+                                        self.display.station_signal_strength_tk_var.set(
+                                          str(rssi))
+                                    self.tide_ft = round(self.station3cal-tide_mm/304.8, 2)
+                                    self.station_oos = False
+                            if self.tide_ft != 99:
+                                # self.process is only created at startup when
+                                # there were already readings; a station that
+                                # started with none (new, or after an outage)
+                                # creates it with its first readings here.
+                                if getattr(self, 'process', None) is None:
+                                    self.process = tideprocess.ProcTide(tide_list)
+                                    self.tide_list = self.process.get_tide_list()
+                                else:
+                                    self.tide_list = self.process.update_tide_list(
+                                      tide_list)
+                                  #self.tide_list, self.tide_ft, tide_time)
+                        except Exception as errmsg:
+                            pass
+                            print (str(errmsg))
+                            logging.warning(str(errmsg), exc_info=True)
 
                 if self.display:
                     self.display.active_station_tk_var.set(str(self.stationid))
